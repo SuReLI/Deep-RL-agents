@@ -15,6 +15,7 @@ import tensorflow.contrib.slim as slim
 import scipy.signal
 import gym
 import os
+import pickle
 
 from time import sleep
 
@@ -268,7 +269,7 @@ class Worker:
                             break
 
                     self.episode_rewards.append(episode_reward)
-                    print("Episode reward for worker {} : {}".format(self.number, episode_reward))
+#                     print("Episode reward for worker {} : {}".format(self.number, episode_reward))
                     self.episode_lengths.append(episode_step_count)
                     self.episode_mean_values.append(np.mean(episode_values))
 
@@ -281,10 +282,19 @@ class Worker:
                     # Periodically save gifs of episodes, model parameters,
                     # and summary statistics.
                     if episode_count % 5 == 0 and episode_count != 0:
+                        saving_rate = 1
+
                         if self.name == 'worker_0' and episode_count % 25 == 0:
                             saver.save(sess, self.model_path + '/model-' +
                                        str(episode_count) + '.cptk')
                             print("Saved Model")
+                            
+                        if episode_count % saving_rate == 0:
+                            print("Save datas for " + self.name)
+                            with open("./SpaceInvaders_result/data/"+self.name, "wb") as file:
+                                pickle.dump(self.episode_lengths, file)
+                                pickle.dump(self.episode_mean_values, file)
+                                pickle.dump(self.episode_rewards, file)
 
                         mean_reward = np.mean(self.episode_rewards[-5:])
                         mean_length = np.mean(self.episode_lengths[-5:])
@@ -357,9 +367,8 @@ max_episode_length = 300
 gamma = .99  # discount rate for advantage estimation and reward discounting
 s_size = 100800  # Observations are greyscale frames of 84 * 84 * 1
 a_size = 5  # Agent can move Left, Right, or Fire
-load_model = True
-model_path = './model'
-best = None
+load_model = False
+model_path = './SpaceInvaders_result'
 
 
 tf.reset_default_graph()

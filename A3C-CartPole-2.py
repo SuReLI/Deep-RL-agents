@@ -22,9 +22,9 @@ from keras import backend as K
 # -- constants
 ENV = 'CartPole-v0'
 
-RUN_TIME = 120
-THREADS = 16
-OPTIMIZERS = 4
+RUN_TIME = 60
+THREADS = 4
+OPTIMIZERS = 2
 THREAD_DELAY = 0.001
 
 GAMMA = 0.99

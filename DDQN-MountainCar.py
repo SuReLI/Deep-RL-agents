@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Sep 14 14:35:38 2017
+Created on Fri Sep 15 10:48:06 2017
 
-@author: jaromir janish
+@author: valentin
 """
-
-# OpenGym CartPole-v0
-# -------------------
-#
 
 import random
 import numpy
@@ -29,22 +25,34 @@ class Brain:
         self.state_size = state_size
         self.action_size = action_size
 
-        self.model = Sequential()
-        self.model.add(Dense(units=64, activation='relu',
-                             input_dim=state_size))
-        self.model.add(Dense(units=action_size, activation='linear'))
+        self.model = self._create_model()
+        self.target_model = self._create_model()
+
+    def _create_model(self):
+        model = Sequential()
+        model.add(Dense(units=64, activation='relu',
+                        input_dim=state_size))
+        model.add(Dense(units=action_size, activation='linear'))
 
         opt = RMSprop(lr=0.00025)
-        self.model.compile(loss='mse', optimizer=opt)
+        model.compile(loss='mse', optimizer=opt)
+
+        return model
 
     def train(self, x, y, epoch=1, verbose=0):
-        self.model.fit(x, y, batch_size=64, nb_epoch=epoch, verbose=verbose)
+        self.model.fit(x, y, batch_size=64, epochs=epoch, verbose=verbose)
 
-    def predict(self, s):
-        return self.model.predict(s)
+    def predict(self, s, target=False):
+        if target:
+            return self.target_model.predict(s)
+        else:
+            return self.model.predict(s)
 
-    def predictOne(self, s):
-        return self.predict(s.reshape(1, self.state_size)).flatten()
+    def predictOne(self, s, target=False):
+        return self.predict(s.reshape(1, self.state_size), target).flatten()
+
+    def update_target_model(self):
+        self.target_model.set_weights(self.model.get_weights())
 
 
 # -------------------- MEMORY --------------------------
@@ -64,16 +72,20 @@ class Memory:   # stored as ( s, a, r, s_ )
         n = min(n, len(self.samples))
         return random.sample(self.samples, n)
 
+    def is_full(self):
+        return len(self.samples) >= self.capacity
+
 
 # -------------------- AGENT ---------------------------
-MEMORY_CAPACITY = 100000
-BATCH_SIZE = 64
+MEMORY_CAPACITY = 200000
+BATCH_SIZE = 32
 
 GAMMA = 0.99
 
 MAX_EPSILON = 1
 MIN_EPSILON = 0.01
 LAMBDA = 0.001      # speed of decay
+UPDATE_TARGET_FREQ = 1000
 
 
 class Agent:
@@ -88,6 +100,7 @@ class Agent:
         self.memory = Memory(MEMORY_CAPACITY)
 
         self.rewards = []
+        self.steps = 0
 
     def save(self, R):
         self.rewards.append(R)
@@ -103,6 +116,8 @@ class Agent:
 
     def observe(self, sample):  # in (s, a, r, s_) format
         self.memory.add(sample)
+        if self.steps % UPDATE_TARGET_FREQ == 0:
+            self.brain.update_target_model()
 
         # slowly decrease Epsilon based on our eperience
         self.steps += 1
@@ -116,11 +131,12 @@ class Agent:
         no_state = numpy.zeros(self.state_size)
 
         states = numpy.array([obs[0] for obs in batch])
-        rewards = numpy.array([(no_state if obs[3] is None else obs[3])
+        states_ = numpy.array([(no_state if obs[3] is None else obs[3])
                                for obs in batch])
 
         p = agent.brain.predict(states)
-        p_ = agent.brain.predict(rewards)
+        p_ = agent.brain.predict(states_)
+        p_target = agent.brain.predict(states_, target=True)
 
         x = numpy.zeros((batchLen, self.state_size))
         y = numpy.zeros((batchLen, self.action_size))
@@ -132,12 +148,21 @@ class Agent:
             if s_ is None:
                 Q_target[a] = r
             else:
-                Q_target[a] = r + GAMMA * numpy.amax(p_[i])
+                Q_target[a] = r + GAMMA * p_target[i][numpy.argmax(p_[i])]
 
             x[i] = s
             y[i] = Q_target
 
         self.brain.train(x, y)
+
+
+class RandomAgent(Agent):
+
+    def act(self, s):
+        return random.randint(0, self.action_size-1)
+
+    def replay(self):
+        pass
 
 
 # -------------------- ENVIRONMENT ---------------------
@@ -152,6 +177,7 @@ class Environment:
         done = False
 
         while not done:
+            # self.env.render()
 
             a = agent.act(s)
 
@@ -177,22 +203,28 @@ class Environment:
 
 
 # -------------------- MAIN ----------------------------
-PROBLEM = 'CartPole-v0'
+PROBLEM = 'MountainCar-v0'
 environment = Environment(PROBLEM)
 
 state_size = environment.env.observation_space.shape[0]
 action_size = environment.env.action_space.n
 
 agent = Agent(state_size, action_size)
+randomAgent = RandomAgent(state_size, action_size)
 
 try:
+    while not randomAgent.memory.is_full():
+        environment.run(randomAgent)
+    print("RandomAgent memory is full")
+    agent.memory = randomAgent.memory
+
     i = 0
     while i < 1000 and (i == 0 or
                         not all([r == 200 for r in agent.rewards[-10:]])):
-        environment.run(agent)
+        environment.run(agent, ((i+1) % 100 == 0))
         i += 1
 except KeyboardInterrupt:
     print("Arret de la session")
 finally:
-    agent.brain.model.save("results/DQN-CartPole_results.h5")
+    agent.brain.model.save("results/DDQN-MountainCar_results.h5")
     environment.end()

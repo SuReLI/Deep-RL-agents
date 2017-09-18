@@ -115,8 +115,8 @@ class Worker:
         self.episode_rewards = []
         self.episode_lengths = []
         self.episode_mean_values = []
-        self.summary_writer = tf.summary.FileWriter(
-            "train_" + str(self.number))
+#        self.summary_writer = tf.summary.FileWriter(
+#            "train_" + str(self.number))
 
         # Create the local copy of the network and the tensorflow op
         # to copy global paramters to local network
@@ -236,26 +236,26 @@ class Worker:
                         mean_reward = np.mean(self.episode_rewards[-5:])
                         mean_length = np.mean(self.episode_lengths[-5:])
                         mean_value = np.mean(self.episode_mean_values[-5:])
-                        summary = tf.Summary()
-                        summary.value.add(tag='Perf/Reward',
-                                          simple_value=float(mean_reward))
-                        summary.value.add(tag='Perf/Length',
-                                          simple_value=float(mean_length))
-                        summary.value.add(tag='Perf/Value',
-                                          simple_value=float(mean_value))
-                        summary.value.add(tag='Losses/Value Loss',
-                                          simple_value=float(v_l))
-                        summary.value.add(tag='Losses/Policy Loss',
-                                          simple_value=float(p_l))
-                        summary.value.add(tag='Losses/Entropy',
-                                          simple_value=float(e_l))
-                        summary.value.add(tag='Losses/Grad Norm',
-                                          simple_value=float(g_n))
-                        summary.value.add(tag='Losses/Var Norm',
-                                          simple_value=float(v_n))
-                        self.summary_writer.add_summary(summary, episode_count)
-
-                        self.summary_writer.flush()
+#                        summary = tf.Summary()
+#                        summary.value.add(tag='Perf/Reward',
+#                                          simple_value=float(mean_reward))
+#                        summary.value.add(tag='Perf/Length',
+#                                          simple_value=float(mean_length))
+#                        summary.value.add(tag='Perf/Value',
+#                                          simple_value=float(mean_value))
+#                        summary.value.add(tag='Losses/Value Loss',
+#                                          simple_value=float(v_l))
+#                        summary.value.add(tag='Losses/Policy Loss',
+#                                          simple_value=float(p_l))
+#                        summary.value.add(tag='Losses/Entropy',
+#                                          simple_value=float(e_l))
+#                        summary.value.add(tag='Losses/Grad Norm',
+#                                          simple_value=float(g_n))
+#                        summary.value.add(tag='Losses/Var Norm',
+#                                          simple_value=float(v_n))
+#                        self.summary_writer.add_summary(summary, episode_count)
+#
+#                        self.summary_writer.flush()
                     if self.name == 'worker_0':
                         sess.run(self.increment)
                     episode_count += 1
@@ -298,19 +298,15 @@ max_episode_length = 300
 gamma = .99  # discount rate for advantage estimation and reward discounting
 s_size = 4
 a_size = 2  # Agent can move Left, Right
-load_model = True
+load_model = False
 env = 'CartPole-v0'
-model_path = './' + env[:-3] + '_results'
+model_path = './results/A3C-CartPole_results/'
 
 
 tf.reset_default_graph()
 
 if not os.path.exists(model_path):
     os.makedirs(model_path)
-
-# Create a directory to save episode playback gifs to
-if not os.path.exists('./frames'):
-    os.makedirs('./frames')
 
 with tf.device("/cpu:0"):
     global_episodes = tf.Variable(

@@ -119,11 +119,11 @@ class Agent:
         no_state = numpy.zeros(self.state_size)
 
         states = numpy.array([obs[0] for obs in batch])
-        rewards = numpy.array([(no_state if obs[3] is None else obs[3])
+        states_ = numpy.array([(no_state if obs[3] is None else obs[3])
                                for obs in batch])
 
         p = agent.brain.predict(states)
-        p_ = agent.brain.predict(rewards)
+        p_ = agent.brain.predict(states_)
 
         x = numpy.zeros((batchLen, self.state_size))
         y = numpy.zeros((batchLen, self.action_size))
@@ -158,7 +158,7 @@ class Environment:
     def __init__(self, problem):
         self.env = gym.make(problem)
 
-    def run(self, agent):
+    def run(self, agent, render=False):
         s = self.env.reset()
         R = 0
         done = False
@@ -169,6 +169,8 @@ class Environment:
             a = agent.act(s)
 
             s_, r, done, info = self.env.step(a)
+            if render:
+                self.env.render()
 
             if done:      # terminal state
                 s_ = None
@@ -206,7 +208,7 @@ try:
     i = 0
     while i < 1000 and (i == 0 or
                         not all([r == 200 for r in agent.rewards[-10:]])):
-        environment.run(agent)
+        environment.run(agent, ((i+1) % 100 == 0))
         i += 1
 except KeyboardInterrupt:
     print("Arret de la session")

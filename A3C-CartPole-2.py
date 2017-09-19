@@ -23,8 +23,8 @@ from keras import backend as K
 ENV = 'CartPole-v0'
 
 RUN_TIME = 60
-THREADS = 4
-OPTIMIZERS = 2
+THREADS = 8
+OPTIMIZERS = 4
 THREAD_DELAY = 0.001
 
 GAMMA = 0.99
@@ -32,7 +32,7 @@ GAMMA = 0.99
 N_STEP_RETURN = 8
 GAMMA_N = GAMMA ** N_STEP_RETURN
 
-EPSILON_START = 0.6
+EPSILON_START = 0.8
 EPSILON_STOP = .01
 EPSILON_STEPS = 100000
 
@@ -162,7 +162,8 @@ class Brain:
 
     def add_reward(self, R, agent):
         self.rewards[agent].append(R)
-        self.sequential_rewards.append(R)
+        if agent != 0:
+            self.sequential_rewards.append(R)
 
 
 # -------------------- AGENT ---------------------------
@@ -311,6 +312,15 @@ class Optimizer(threading.Thread):
 
 
 # -------------------- MAIN ----------------------------
+def disp():
+
+    plt.plot(brain.sequential_rewards)
+    x = [np.mean(brain.sequential_rewards[max(i-100, 1):i])
+         for i in range(2, len(brain.sequential_rewards))]
+    plt.plot(x)
+    env_test.agent.disp()
+
+
 env_test = Environment(0, eps_start=0., eps_end=0.)
 NUM_STATE = env_test.env.observation_space.shape[0]
 NUM_ACTIONS = env_test.env.action_space.n

@@ -30,7 +30,7 @@ class Brain:
 
     def _create_model(self):
         model = Sequential()
-        model.add(Dense(units=64, activation='relu',
+        model.add(Dense(units=16, activation='relu',
                         input_dim=state_size))
         model.add(Dense(units=action_size, activation='linear'))
 
@@ -77,15 +77,15 @@ class Memory:   # stored as ( s, a, r, s_ )
 
 
 # -------------------- AGENT ---------------------------
-MEMORY_CAPACITY = 200000
-BATCH_SIZE = 32
+MEMORY_CAPACITY = 100000
+BATCH_SIZE = 64
 
 GAMMA = 0.99
 
 MAX_EPSILON = 1
-MIN_EPSILON = 0.01
+MIN_EPSILON = 0.1
 LAMBDA = 0.001      # speed of decay
-UPDATE_TARGET_FREQ = 1000
+UPDATE_TARGET_FREQ = 1500
 
 
 class Agent:
@@ -181,7 +181,7 @@ class Environment:
 
             a = agent.act(s)
 
-            s_, r, done, info = self.env.step(a)
+            s_, r, done, info = self.env.step(2*a)
             if render:
                 self.env.render()
 
@@ -207,7 +207,7 @@ PROBLEM = 'MountainCar-v0'
 environment = Environment(PROBLEM)
 
 state_size = environment.env.observation_space.shape[0]
-action_size = environment.env.action_space.n
+action_size = environment.env.action_space.n-1
 
 agent = Agent(state_size, action_size)
 randomAgent = RandomAgent(state_size, action_size)
@@ -219,8 +219,9 @@ try:
     agent.memory = randomAgent.memory
 
     i = 0
-    while i < 1000 and (i == 0 or
-                        not all([r == 200 for r in agent.rewards[-10:]])):
+    while i < 5000 and (i == 0 or
+                        not all([r == 200 for r in agent.rewards[-50:]])):
+        print("Run ", i+1, end=" : ")
         environment.run(agent, ((i+1) % 100 == 0))
         i += 1
 except KeyboardInterrupt:

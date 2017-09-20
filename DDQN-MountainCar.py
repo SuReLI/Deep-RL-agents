@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 # -------------------- BRAIN ---------------------------
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.optimizers import RMSprop
+from keras.optimizers import Adam
 
 
 class Brain:
@@ -30,11 +30,11 @@ class Brain:
 
     def _create_model(self):
         model = Sequential()
-        model.add(Dense(units=16, activation='relu',
+        model.add(Dense(units=8, activation='relu',
                         input_dim=state_size))
         model.add(Dense(units=action_size, activation='linear'))
 
-        opt = RMSprop(lr=0.00025)
+        opt = Adam(lr=0.00025)
         model.compile(loss='mse', optimizer=opt)
 
         return model
@@ -77,15 +77,15 @@ class Memory:   # stored as ( s, a, r, s_ )
 
 
 # -------------------- AGENT ---------------------------
-MEMORY_CAPACITY = 100000
+MEMORY_CAPACITY = 200000
 BATCH_SIZE = 64
 
 GAMMA = 0.99
 
-MAX_EPSILON = 1
+MAX_EPSILON = 0.8
 MIN_EPSILON = 0.1
-LAMBDA = 0.001      # speed of decay
-UPDATE_TARGET_FREQ = 1500
+LAMBDA = 0.0001      # speed of decay
+UPDATE_TARGET_FREQ = 500
 
 
 class Agent:
@@ -105,8 +105,11 @@ class Agent:
     def save(self, R):
         self.rewards.append(R)
 
-    def disp(self):
+    def disp(self, m=50):
         plt.plot(self.rewards)
+        mean = [numpy.mean(self.rewards[max(0, i-m):i])
+                for i in range(1, len(self.rewards))]
+        plt.plot(mean)
 
     def act(self, s):
         if random.random() < self.epsilon:
@@ -175,6 +178,7 @@ class Environment:
         s = self.env.reset()
         R = 0
         done = False
+        max_speed = 0
 
         while not done:
             # self.env.render()
@@ -193,7 +197,10 @@ class Environment:
 
             s = s_
             R += r
+            if s is not None:
+                max_speed = max(max_speed, abs(s[1]))
 
+        R += 1000*max_speed
         print("Total reward:", R)
         agent.save(R)
 
@@ -222,10 +229,16 @@ try:
     while i < 5000 and (i == 0 or
                         not all([r == 200 for r in agent.rewards[-50:]])):
         print("Run ", i+1, end=" : ")
-        environment.run(agent, ((i+1) % 100 == 0))
+        try:
+            environment.run(agent)
+        except KeyboardInterrupt:
+            environment.run(agent, True)
         i += 1
+        if i % 100 == 0:
+            agent.disp()
+            plt.show(block=False)
 except KeyboardInterrupt:
     print("Arret de la session")
 finally:
-    agent.brain.model.save("results/DDQN-MountainCar_results.h5")
+    # agent.brain.model.save("results/DDQN-MountainCar_results.h5")
     environment.end()

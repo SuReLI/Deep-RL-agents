@@ -282,9 +282,10 @@ class Environment(threading.Thread):
             if done or self.stop_signal:
                 break
 
-        # print("Total R:", R)
-        self.agent.save(R)
-        brain.add_reward(R, self.n_agent)
+        if not self.stop_signal:
+            # print("Total R:", R)
+            self.agent.save(R)
+            brain.add_reward(R, self.n_agent)
 
     def run(self, render=False):
         while not self.stop_signal:

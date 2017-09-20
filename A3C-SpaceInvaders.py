@@ -22,7 +22,7 @@ from keras import backend as K
 # -- constants
 ENV = 'SpaceInvaders-v0'
 
-RUN_TIME = 30
+RUN_TIME = 10000
 THREADS = 4
 OPTIMIZERS = 2
 THREAD_DELAY = 0.001
@@ -288,9 +288,11 @@ class Environment(threading.Thread):
             if done or self.stop_signal:
                 break
 
-        print("Total R:", R)
-        self.agent.save(R)
-        brain.add_reward(R, self.n_agent)
+        if not self.stop_signal:
+            if self.n_agent == 1:
+                print("Total R:", R)
+            self.agent.save(R)
+            brain.add_reward(R, self.n_agent)
 
     def run(self, render=False):
         while not self.stop_signal:
@@ -318,6 +320,15 @@ class Optimizer(threading.Thread):
 
 
 # -------------------- MAIN ----------------------------
+def disp():
+
+    plt.plot(brain.sequential_rewards)
+    x = [np.mean(brain.sequential_rewards[max(i-100, 1):i])
+         for i in range(2, len(brain.sequential_rewards))]
+    plt.plot(x)
+    env_test.agent.disp()
+
+
 env_test = Environment(0, eps_start=0., eps_end=0.)
 NUM_STATE = env_test.env.observation_space.shape
 NUM_ACTIONS = env_test.env.action_space.n
@@ -328,32 +339,31 @@ brain = Brain()  # brain is global in A3C
 envs = [Environment(i + 1) for i in range(THREADS)]
 opts = [Optimizer() for i in range(OPTIMIZERS)]
 
+for o in opts:
+    o.start()
+
+for e in envs:
+    e.start()
+
 try:
-    for o in opts:
-        o.start()
-
-    for e in envs:
-        e.start()
-
     time.sleep(RUN_TIME)
+except KeyboardInterrupt:
+    print("End of the training")
 
-except KeyboardInterrupt as e:
-    print("Interruption : ", e)
+for e in envs:
+    e.stop()
+for e in envs:
+    e.join()
 
-finally:
-    for e in envs:
-        e.stop()
-    for e in envs:
-        e.join()
-
-    for o in opts:
-        o.stop()
-    for o in opts:
-        o.join()
+for o in opts:
+    o.stop()
+for o in opts:
+    o.join()
 
 print("Training finished")
 try:
     env_test.run(render=True)
-except (KeyboardInterrupt, ValueError) as e:
-    print("End of the session :", e)
+except KeyboardInterrupt as e:
+    print("End of the session")
     env_test.env.render(close=True)
+    disp()

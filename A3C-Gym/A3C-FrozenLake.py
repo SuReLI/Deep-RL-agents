@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Sep 15 15:06:04 2017
+Created on Mon Sep 18 16:46:52 2017
 
 @author: valentin
 """
@@ -16,15 +16,15 @@ import random
 import matplotlib.pyplot as plt
 
 from keras.models import Model
-from keras.layers import Input, Dense, Lambda
+from keras.layers import Input, Dense
 from keras import backend as K
 
 # -- constants
-ENV = 'BipedalWalker-v2'
+ENV = 'Blackjack-v0'
 
-RUN_TIME = 10000
-THREADS = 16
-OPTIMIZERS = 8
+RUN_TIME = 720
+THREADS = 8
+OPTIMIZERS = 4
 THREAD_DELAY = 0.001
 
 GAMMA = 0.99
@@ -32,11 +32,11 @@ GAMMA = 0.99
 N_STEP_RETURN = 8
 GAMMA_N = GAMMA ** N_STEP_RETURN
 
-EPSILON_START = 0.8
+EPSILON_START = 0.9
 EPSILON_STOP = .01
-EPSILON_STEPS = 10000000
+EPSILON_STEPS = 150000
 
-MIN_BATCH = 64
+MIN_BATCH = 32
 LEARNING_RATE = 5e-3
 
 LOSS_V = .5         # v loss coefficient
@@ -59,33 +59,15 @@ class Brain:
         self.session.run(tf.global_variables_initializer())
         self.default_graph = tf.get_default_graph()
 
-        # self.default_graph.finalize()   # avoid modifications
-
-        self.rewards = [[] for i in range(THREADS+1)]
+        self.rewards = [[] for i in range(THREADS + 1)]
         self.sequential_rewards = []
 
     def _build_model(self):
 
         l_input = Input(batch_shape=(None, NUM_STATE))
-        l_dense = Dense(64, activation='relu')(l_input)
+        l_dense = Dense(16, activation='relu')(l_input)
 
-        mu_sigma = Dense(NUM_ACTIONS, activation='linear')(l_dense)
-
-        def generate_normal_sample(mu_sigma):
-
-            # ----------------------- To Do ----------------------- #
-            # zip mu and sigma together, and in the lambda layer,   #
-            # unzip the tuples and then apply the normal randomizer #
-            # ----------------------------------------------------- #
-
-            mu = mu_sigma[:, :NUM_ACTIONS]
-            sigma = mu_sigma[:, NUM_ACTIONS:]
-            actions = K.random_normal([4], mu, sigma)
-            out_actions = K.clip(actions, -1, 1)
-            print("-"*200, out_actions)
-            return out_actions
-
-        out_actions = Lambda(generate_normal_sample)(mu_sigma)
+        out_actions = Dense(NUM_ACTIONS, activation='softmax')(l_dense)
         out_value = Dense(1, activation='linear')(l_dense)
 
         model = Model(inputs=[l_input], outputs=[out_actions, out_value])
@@ -139,8 +121,8 @@ class Brain:
         s_ = np.vstack(s_)
         s_mask = np.vstack(s_mask)
 
-        if len(s) > 5 * MIN_BATCH:
-            print("Optimizer alert! Minimizing batch of %d" % len(s))
+#        if len(s) > 5 * MIN_BATCH:
+#            print("Optimizer alert! Minimizing batch of %d" % len(s))
 
         v = self.predict_v(s_)
         r = r + GAMMA_N * v * s_mask    # set v to 0 where s_ is terminal state
@@ -178,8 +160,7 @@ class Brain:
 
     def add_reward(self, R, agent):
         self.rewards[agent].append(R)
-        if agent != 0:
-            self.sequential_rewards.append(R)
+        self.sequential_rewards.append(R)
 
 
 # -------------------- AGENT ---------------------------
@@ -209,7 +190,7 @@ class Agent:
         else:
             # linearly interpolate
             return self.eps_start + frames * (self.eps_end - self.eps_start) \
-                    / self.eps_steps
+                / self.eps_steps
 
     def act(self, s):
         eps = self.getEpsilon()
@@ -217,15 +198,15 @@ class Agent:
         frames += 1
 
         if random.random() < eps:
-            mu = np.random.uniform(-1, 1, 4)
-            sigma = np.random.uniform(0.1, 1.9, 4)
-            a = np.random.normal(mu, sigma)
-            return a
+            return random.randint(0, NUM_ACTIONS - 1)
 
         else:
             s = np.array([s])
-            a = brain.predict_p(s)[0]
-            assert all([x < 10 for x in a])
+            p = brain.predict_p(s)[0]
+
+            # a = np.argmax(p)
+            a = np.random.choice(NUM_ACTIONS, p=p)
+
             return a
 
     def train(self, s, a, r, s_):
@@ -235,7 +216,11 @@ class Agent:
 
             return s, a, self.R, s_
 
-        self.memory.append((s, a, r, s_))
+        # turn action into one-hot representation
+        a_onehot = np.zeros(NUM_ACTIONS)
+        a_onehot[a] = 1
+
+        self.memory.append((s, a_onehot, r, s_))
 
         self.R = (self.R + r * GAMMA_N) / GAMMA
 
@@ -294,13 +279,10 @@ class Environment(threading.Thread):
             if done or self.stop_signal:
                 break
 
-        # R += max_speed
-        if not self.stop_signal and self.n_agent == 1:
-            print("Total R:", R)
+        if not self.stop_signal:
+            # print("Total R:", R)
             self.agent.save(R)
             brain.add_reward(R, self.n_agent)
-            if len(self.agent.rewards) % 100 == 0:
-                disp()
 
     def run(self, render=False):
         while not self.stop_signal:
@@ -331,7 +313,7 @@ class Optimizer(threading.Thread):
 def disp():
 
     plt.plot(brain.sequential_rewards)
-    x = [np.mean(brain.sequential_rewards[max(i-50, 1):i])
+    x = [np.mean(brain.sequential_rewards[max(i - 50, 1):i])
          for i in range(2, len(brain.sequential_rewards))]
     plt.plot(x)
     plt.show(block=False)
@@ -339,13 +321,14 @@ def disp():
 
 
 env_test = Environment(0, eps_start=0., eps_end=0.)
-NUM_STATE = env_test.env.observation_space.shape[0]
-NUM_ACTIONS = env_test.env.action_space.shape[0]
+NUM_STATE = len(env_test.env.observation_space.spaces)
+NUM_SUBSTATE = env_test.env.observation_space.spaces
+NUM_ACTIONS = env_test.env.action_space.n
 NONE_STATE = np.zeros(NUM_STATE)
 
 brain = Brain()  # brain is global in A3C
 
-envs = [Environment(i+1) for i in range(THREADS)]
+envs = [Environment(i + 1) for i in range(THREADS)]
 opts = [Optimizer() for i in range(OPTIMIZERS)]
 
 for o in opts:
@@ -356,22 +339,28 @@ for e in envs:
 
 try:
     time.sleep(RUN_TIME)
-except KeyboardInterrupt:
-    print("End of the training")
 
-for e in envs:
-    e.stop()
-for e in envs:
-    e.join()
+except KeyboardInterrupt as e:
+    print("Interruption : ", e)
 
-for o in opts:
-    o.stop()
-for o in opts:
-    o.join()
+finally:
+    for e in envs:
+        e.stop()
+    for e in envs:
+        e.join()
+
+    for o in opts:
+        o.stop()
+    for o in opts:
+        o.join()
+
 
 print("Training finished")
 try:
-    env_test.run(render=True)
+    t = time.time()
+    while time.time()-t < 20:
+        env_test.run(render=True)
+    raise KeyboardInterrupt
 except KeyboardInterrupt as e:
     print("End of the session")
     env_test.env.render(close=True)

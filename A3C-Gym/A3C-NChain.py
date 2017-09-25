@@ -281,9 +281,10 @@ class Environment(threading.Thread):
             if done or self.stop_signal:
                 break
 
-        # print("Total R:", R)
-        self.agent.save(R)
-        brain.add_reward(R, self.n_agent)
+        if not self.stop_signal:
+            # print("Total R:", R)
+            self.agent.save(R)
+            brain.add_reward(R, self.n_agent)
 
     def run(self, render=False):
         while not self.stop_signal:
@@ -311,6 +312,16 @@ class Optimizer(threading.Thread):
 
 
 # -------------------- MAIN ----------------------------
+def disp():
+
+    plt.plot(brain.sequential_rewards)
+    x = [np.mean(brain.sequential_rewards[max(i-50, 1):i])
+         for i in range(2, len(brain.sequential_rewards))]
+    plt.plot(x)
+    plt.show(block=False)
+    env_test.agent.disp()
+
+
 env_test = Environment(0, eps_start=0., eps_end=0.)
 NUM_STATE = 1
 NUM_ACTIONS = env_test.env.action_space.n
@@ -321,13 +332,13 @@ brain = Brain()  # brain is global in A3C
 envs = [Environment(i+1) for i in range(THREADS)]
 opts = [Optimizer() for i in range(OPTIMIZERS)]
 
+for o in opts:
+    o.start()
+
+for e in envs:
+    e.start()
+
 try:
-    for o in opts:
-        o.start()
-
-    for e in envs:
-        e.start()
-
     time.sleep(RUN_TIME)
 
 except KeyboardInterrupt as e:
@@ -347,6 +358,8 @@ finally:
 
 print("Training finished")
 try:
-    env_test.run()
+    env_test.run(render=True)
 except KeyboardInterrupt as e:
     print("End of the session")
+    env_test.env.render(close=True)
+    disp()

@@ -23,8 +23,8 @@ from keras import backend as K
 ENV = 'MountainCar-v0'
 
 RUN_TIME = 10000
-THREADS = 8
-OPTIMIZERS = 4
+THREADS = 64
+OPTIMIZERS = 8
 THREAD_DELAY = 0.001
 
 GAMMA = 0.99
@@ -33,8 +33,8 @@ N_STEP_RETURN = 8
 GAMMA_N = GAMMA ** N_STEP_RETURN
 
 EPSILON_START = 0.8
-EPSILON_STOP = .01
-EPSILON_STEPS = 1000000
+EPSILON_STOP = .03
+EPSILON_STEPS = 100000
 
 MIN_BATCH = 32
 LEARNING_RATE = 5e-3
@@ -68,6 +68,8 @@ class Brain:
 
         l_input = Input(batch_shape=(None, NUM_STATE))
         l_dense = Dense(32, activation='relu')(l_input)
+        l_dense = Dense(16, activation='relu')(l_dense)
+#        l_dense = Dense(8, activation='relu')(l_dense)
 
         out_actions = Dense(NUM_ACTIONS, activation='softmax')(l_dense)
         out_value = Dense(1, activation='linear')(l_dense)
@@ -262,7 +264,6 @@ class Environment(threading.Thread):
         s = self.env.reset()
 
         R = 0
-        max_speed = 0
         while True:
             time.sleep(THREAD_DELAY)  # yield
 
@@ -270,7 +271,14 @@ class Environment(threading.Thread):
                 self.env.render()
 
             a = self.agent.act(s)
-            s_, r, done, info = self.env.step(2*a)
+            i = 0
+            done = False
+            while i < 10 and not done:
+                s_, r, done, info = self.env.step(2*a)
+                if render:
+                    self.env.render()
+                R += r
+                i += 1
 
             if done:  # terminal state
                 s_ = None
@@ -278,20 +286,19 @@ class Environment(threading.Thread):
             self.agent.train(s, a, r, s_)
 
             s = s_
-            if s is not None:
-                max_speed = max(max_speed, 1000*abs(s[1]))
-            R += r
 
             if done or self.stop_signal:
                 break
 
-        R += max_speed
         if not self.stop_signal and self.n_agent == 1:
             print("Total R:", R)
             self.agent.save(R)
             brain.add_reward(R, self.n_agent)
             if len(self.agent.rewards) % 100 == 0:
                 disp()
+
+        if not self.stop_signal and self.n_agent == 0:
+            self.agent.save(R) 
 
     def run(self, render=False):
         while not self.stop_signal:

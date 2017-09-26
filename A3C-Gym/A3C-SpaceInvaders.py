@@ -19,10 +19,10 @@ from keras.models import Model
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, Flatten
 from keras import backend as K
 
-# -- constants
+# %% -------------------- CONSTANTS ---------------------------
 ENV = 'SpaceInvaders-v0'
 
-RUN_TIME = 10000
+RUN_TIME = 10
 THREADS = 4
 OPTIMIZERS = 2
 THREAD_DELAY = 0.001
@@ -43,7 +43,7 @@ LOSS_V = .5         # v loss coefficient
 LOSS_ENTROPY = .01  # entropy coefficient
 
 
-# -------------------- BRAIN ---------------------------
+# %% -------------------- BRAIN ---------------------------
 class Brain:
     train_queue = [[], [], [], [], []]  # s, a, r, s', s' terminal mask
     lock_queue = threading.Lock()
@@ -59,7 +59,7 @@ class Brain:
         self.session.run(tf.global_variables_initializer())
         self.default_graph = tf.get_default_graph()
 
-        self.default_graph.finalize()   # avoid modifications
+#        self.default_graph.finalize()   # avoid modifications
 
         self.rewards = [[] for i in range(THREADS + 1)]
         self.sequential_rewards = []
@@ -169,10 +169,11 @@ class Brain:
 
     def add_reward(self, R, agent):
         self.rewards[agent].append(R)
-        self.sequential_rewards.append(R)
+        if agent != 0:
+            self.sequential_rewards.append(R)
 
 
-# -------------------- AGENT ---------------------------
+# %% -------------------- AGENT ---------------------------
 frames = 0
 
 
@@ -185,13 +186,6 @@ class Agent:
 
         self.memory = []    # used for n_step return
         self.R = 0.
-        self.rewards = []
-
-    def save(self, R):
-        self.rewards.append(R)
-
-    def disp(self):
-        plt.plot(self.rewards)
 
     def getEpsilon(self):
         if(frames >= self.eps_steps):
@@ -252,7 +246,7 @@ class Agent:
             self.memory.pop(0)
 
 
-# -------------------- ENVIRONMENT ---------------------
+# %% -------------------- ENVIRONMENT ---------------------
 class Environment(threading.Thread):
     stop_signal = False
 
@@ -291,7 +285,6 @@ class Environment(threading.Thread):
         if not self.stop_signal:
             if self.n_agent == 1:
                 print("Total R:", R)
-            self.agent.save(R)
             brain.add_reward(R, self.n_agent)
 
     def run(self, render=False):
@@ -304,7 +297,7 @@ class Environment(threading.Thread):
         self.env.close()
 
 
-# -------------------- OPTIMIZER ---------------------
+# %% -------------------- OPTIMIZER ---------------------
 class Optimizer(threading.Thread):
     stop_signal = False
 
@@ -319,16 +312,18 @@ class Optimizer(threading.Thread):
         self.stop_signal = True
 
 
-# -------------------- MAIN ----------------------------
+# %% -------------------- DISPLAY ----------------------------
 def disp():
 
     plt.plot(brain.sequential_rewards)
     x = [np.mean(brain.sequential_rewards[max(i-100, 1):i])
          for i in range(2, len(brain.sequential_rewards))]
     plt.plot(x)
-    env_test.agent.disp()
+    plt.show()
+    plt.plot(brain.rewards[0])
 
 
+# %% -------------------- MAIN ----------------------------
 env_test = Environment(0, eps_start=0., eps_end=0.)
 NUM_STATE = env_test.env.observation_space.shape
 NUM_ACTIONS = env_test.env.action_space.n

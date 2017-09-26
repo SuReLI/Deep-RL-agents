@@ -178,16 +178,18 @@ class Environment:
         s = self.env.reset()
         R = 0
         done = False
-        max_speed = 0
 
         while not done:
-            # self.env.render()
 
             a = agent.act(s)
 
-            s_, r, done, info = self.env.step(2*a)
-            if render:
-                self.env.render()
+            i = 0
+            while i < 10 and not done:
+                s_, r, done, info = self.env.step(2*a)
+                R += r
+                if render:
+                    self.env.render()
+                i += 1
 
             if done:      # terminal state
                 s_ = None
@@ -196,12 +198,8 @@ class Environment:
             agent.replay()
 
             s = s_
-            R += r
-            if s is not None:
-                max_speed = max(max_speed, abs(s[1]))
 
-        R += 1000*max_speed
-        print("Total reward:", R)
+#        print("Total reward:", R)
         agent.save(R)
 
     def end(self):
@@ -228,7 +226,7 @@ try:
     i = 0
     while i < 5000 and (i == 0 or
                         not all([r == 200 for r in agent.rewards[-50:]])):
-        print("Run ", i+1, end=" : ")
+        print("Run ", i+1)
         try:
             environment.run(agent)
         except KeyboardInterrupt:

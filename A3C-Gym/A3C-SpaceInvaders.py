@@ -14,17 +14,18 @@ import threading
 import time
 import random
 import matplotlib.pyplot as plt
+from multiprocessing import cpu_count
 
 from keras.models import Model
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, Flatten
+from keras.layers import Input, Dense, Conv2D, LSTM, Reshape
 from keras import backend as K
 
 # %% -------------------- CONSTANTS ---------------------------
 ENV = 'SpaceInvaders-v0'
 
-RUN_TIME = 10
-THREADS = 4
-OPTIMIZERS = 2
+RUN_TIME = 100000
+THREADS = cpu_count()
+OPTIMIZERS = cpu_count()//2
 THREAD_DELAY = 0.001
 
 GAMMA = 0.99
@@ -67,17 +68,19 @@ class Brain:
     def _build_model(self):
 
         l_input = Input(shape=NUM_STATE)
-        conv1 = Conv2D(32, (8, 8))(l_input)
-        max_pooling = MaxPooling2D()(conv1)
-        conv2 = Conv2D(filters=64, kernel_size=(4, 4),
-                       strides=(2, 2), activation='relu')(max_pooling)
-        conv3 = Conv2D(filters=64, kernel_size=(4, 4),
-                       activation='relu')(conv2)
-        l_dense = Flatten()(conv3)
-        l_dense = Dense(512, activation='relu')(l_dense)
+        conv1 = Conv2D(filters=32, kernel_size=(6, 6),
+                       strides=(2, 2), activation='relu')(l_input)
+        conv2 = Conv2D(filters=64, kernel_size=(6, 6),
+                       strides=(2, 2), activation='relu')(conv1)
+        conv3 = Conv2D(filters=64, kernel_size=(6, 6),
+                       strides=(2, 2), activation='relu')(conv2)
+        conv4 = Conv2D(filters=64, kernel_size=(6, 6),
+                       strides=(2, 2), activation='relu')(conv3)
+        l_reshape = Reshape((-1, np.prod(conv4.shape.as_list()[1:])))(conv4)
+        l_lstm = LSTM(256, input_shape=l_reshape.shape[1:])(l_reshape)
 
-        out_actions = Dense(NUM_ACTIONS, activation='softmax')(l_dense)
-        out_value = Dense(1, activation='linear')(l_dense)
+        out_actions = Dense(NUM_ACTIONS, activation='softmax')(l_lstm)
+        out_value = Dense(1, activation='linear')(l_lstm)
 
         model = Model(inputs=[l_input], outputs=[out_actions, out_value])
         model._make_predict_function()  # have to initialize before threading
@@ -316,7 +319,7 @@ class Optimizer(threading.Thread):
 def disp():
 
     plt.plot(brain.sequential_rewards)
-    x = [np.mean(brain.sequential_rewards[max(i-100, 1):i])
+    x = [np.mean(brain.sequential_rewards[max(i - 100, 1):i])
          for i in range(2, len(brain.sequential_rewards))]
     plt.plot(x)
     plt.show()
@@ -324,41 +327,43 @@ def disp():
 
 
 # %% -------------------- MAIN ----------------------------
-env_test = Environment(0, eps_start=0., eps_end=0.)
-NUM_STATE = env_test.env.observation_space.shape
-NUM_ACTIONS = env_test.env.action_space.n
-NONE_STATE = np.zeros(NUM_STATE)
+if __name__ == '__main__':
 
-brain = Brain()  # brain is global in A3C
+    env_test = Environment(0, eps_start=0., eps_end=0.)
+    NUM_STATE = env_test.env.observation_space.shape
+    NUM_ACTIONS = env_test.env.action_space.n
+    NONE_STATE = np.zeros(NUM_STATE)
 
-envs = [Environment(i + 1) for i in range(THREADS)]
-opts = [Optimizer() for i in range(OPTIMIZERS)]
+    brain = Brain()  # brain is global in A3C
 
-for o in opts:
-    o.start()
+    envs = [Environment(i + 1) for i in range(THREADS)]
+    opts = [Optimizer() for i in range(OPTIMIZERS)]
 
-for e in envs:
-    e.start()
+    for o in opts:
+        o.start()
 
-try:
-    time.sleep(RUN_TIME)
-except KeyboardInterrupt:
-    print("End of the training")
+    for e in envs:
+        e.start()
 
-for e in envs:
-    e.stop()
-for e in envs:
-    e.join()
+    try:
+        time.sleep(RUN_TIME)
+    except KeyboardInterrupt:
+        print("End of the training")
 
-for o in opts:
-    o.stop()
-for o in opts:
-    o.join()
+    for e in envs:
+        e.stop()
+    for e in envs:
+        e.join()
 
-print("Training finished")
-try:
-    env_test.run(render=True)
-except KeyboardInterrupt as e:
-    print("End of the session")
-    env_test.env.render(close=True)
-    disp()
+    for o in opts:
+        o.stop()
+    for o in opts:
+        o.join()
+
+    print("Training finished")
+    try:
+        env_test.run(render=True)
+    except KeyboardInterrupt as e:
+        print("End of the session")
+        env_test.env.render(close=True)
+        disp()

@@ -1,30 +1,38 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Sep 15 15:06:04 2017
+Created on Thu Sep 28 14:43:54 2017
 
-@author: valentin
+@author: v.guillet
 """
+
 
 import numpy as np
 import tensorflow as tf
 
-import gym
+import ple
+from ple.games.flappybird import FlappyBird
 import threading
 import time
 import random
 import matplotlib.pyplot as plt
 
 from keras.models import Model
-from keras.layers import Input, Dense
+from keras.layers import Input, Dense, LSTM, Dropout, Embedding
 from keras import backend as K
 
-# -- constants
-ENV = 'BipedalWalker-v2'
+# %% -------------------- CONSTANTS ---------------------------
+ENV = 'FlappyBird-v0'
 
-RUN_TIME = 10000
-THREADS = 16
-OPTIMIZERS = 8
+
+def process_state(state):
+    return np.array([state.values()])
+
+game = FlappyBird()
+
+RUN_TIME = 100000
+THREADS = 32
+OPTIMIZERS = 16
 THREAD_DELAY = 0.001
 
 GAMMA = 0.99
@@ -33,17 +41,17 @@ N_STEP_RETURN = 8
 GAMMA_N = GAMMA ** N_STEP_RETURN
 
 EPSILON_START = 0.8
-EPSILON_STOP = .01
-EPSILON_STEPS = 10000000
+EPSILON_STOP = .1
+EPSILON_STEPS = 1000000
 
-MIN_BATCH = 64
-LEARNING_RATE = 5e-3
+MIN_BATCH = 32
+LEARNING_RATE = 1e-3
 
 LOSS_V = .5         # v loss coefficient
 LOSS_ENTROPY = .01  # entropy coefficient
 
 
-# -------------------- BRAIN ---------------------------
+# %% -------------------- BRAIN ---------------------------
 class Brain:
     train_queue = [[], [], [], [], []]  # s, a, r, s', s' terminal mask
     lock_queue = threading.Lock()
@@ -52,6 +60,7 @@ class Brain:
         self.session = tf.Session()
         K.set_session(self.session)
         K.manual_variable_initialization(True)
+        K.set_learning_phase(0)
 
         self.model = self._build_model()
         self.graph = self._build_graph(self.model)
@@ -59,34 +68,25 @@ class Brain:
         self.session.run(tf.global_variables_initializer())
         self.default_graph = tf.get_default_graph()
 
-        # self.default_graph.finalize()   # avoid modifications
+#        self.default_graph.finalize()   # avoid modifications
 
-        self.rewards = [[] for i in range(THREADS+1)]
+        self.rewards = [[] for i in range(THREADS + 1)]
         self.sequential_rewards = []
 
     def _build_model(self):
 
-        l_input = Input(batch_shape=(None, NUM_STATE))
-        l_dense = Dense(64, activation='relu')(l_input)
+        l_input = Input(shape=(NUM_STATE, ))
+#        l_embed = Embedding(1024, 256, input_length=NUM_STATE)(l_input)
+#        l_lstm = LSTM(256)(l_embed)
+#        l_dense = Dropout(0.2)(l_lstm)
+        l_dense = Dense(512, activation='relu')(l_input)
+#        l_dense = Dense(4, activation='relu')(l_dense)
+#        l_dense = Dense(32, activation='relu')(l_dense)
 
-        # mu_sigma = Dense(2*NUM_ACTIONS, activation='linear')(l_dense)
-        # mu_sigma = Reshape([NUM_ACTIONS, 2])(mu_sigma)
-
-        # def generate_normal_sample(mu_sigma):
-        # mu = mu_sigma[:, :, 0]
-        # sigma = mu_sigma[:, :, 1]
-        # actions = K.random_normal([4], mu, sigma)
-        # out_actions = K.clip(actions, -1, 1)
-        # return mu_sigma[:, :NUM_ACTIONS, 0]
-
-        # out_actions = Lambda(generate_normal_sample)(mu_sigma)
-#        print("HERE ! "*10)
-#        print(out_actions.shape)
-        out_mu = Dense(NUM_ACTIONS, activation='tanh')(l_dense)
-        out_sigma = Dense(NUM_ACTIONS, activation='tanh')(l_dense)
+        out_actions = Dense(NUM_ACTIONS, activation='softmax')(l_dense)
         out_value = Dense(1, activation='linear')(l_dense)
 
-        model = Model(inputs=[l_input], outputs=[out_mu, out_sigma, out_value])
+        model = Model(inputs=[l_input], outputs=[out_actions, out_value])
         model._make_predict_function()  # have to initialize before threading
 
         return model
@@ -97,32 +97,19 @@ class Brain:
         # not immediate, but discounted n step reward
         reward = tf.placeholder(tf.float32, shape=(None, 1))
 
-        mu, sigma, value = model(state)
-        sigma = tf.nn.softplus(sigma) + 1e-5
+        pi, value = model(state)
+
+        log_prob = tf.log(tf.reduce_sum(
+            pi * action, axis=1, keep_dims=True) + 1e-10)
         advantage = reward - value
 
-        pi = tf.contrib.distributions.Normal(mu, sigma)
-        action_sample = pi.sample(1)
-        action_sample = tf.clip_by_value(action_sample, -1, 1)
-
         # maximize policy
-        loss_policy = -pi.log_prob(action_sample) * tf.stop_gradient(advantage)
-
-        # maximize entropy (regularization)
-        entropy = LOSS_ENTROPY * pi.entropy()
-
+        loss_policy = - log_prob * tf.stop_gradient(advantage)
         # minimize value error
         loss_value = LOSS_V * tf.square(advantage)
-#
-#        log_prob = tf.log(tf.reduce_sum(
-#            pi * action, axis=1, keep_dims=True) + 1e-10)
-#
-#        # maximize policy
-#        loss_policy = - log_prob * tf.stop_gradient(advantage)
-#
-#        # maximize entropy (regularization)
-#        entropy = LOSS_ENTROPY * \
-#            tf.reduce_sum(pi * tf.log(pi + 1e-10), axis=1, keep_dims=True)
+        # maximize entropy (regularization)
+        entropy = LOSS_ENTROPY * \
+            tf.reduce_sum(pi * tf.log(pi + 1e-10), axis=1, keep_dims=True)
 
         losstateotal = tf.reduce_mean(loss_policy + loss_value + entropy)
 
@@ -144,10 +131,10 @@ class Brain:
             s, a, r, s_, s_mask = self.train_queue
             self.train_queue = [[], [], [], [], []]
 
-        s = np.vstack(s)
+        s = np.array(s)
         a = np.vstack(a)
         r = np.vstack(r)
-        s_ = np.vstack(s_)
+        s_ = np.array(s_)
         s_mask = np.vstack(s_mask)
 
         if len(s) > 5 * MIN_BATCH:
@@ -174,20 +161,17 @@ class Brain:
 
     def predict(self, s):
         with self.default_graph.as_default():
-            mu, sigma, value = self.model.predict(s)
-            sigma = np.log(1+np.exp(sigma)) + 1e-5
-            return mu, sigma+1, value
+            pi, value = self.model.predict(s)
+            return pi, value
 
     def predict_p(self, s):
         with self.default_graph.as_default():
-            mu, sigma, value = self.model.predict(s)
-            sigma = np.log(1+np.exp(sigma)) + 1e-5
-            return mu, sigma+1
+            pi, value = self.model.predict(s)
+            return pi
 
     def predict_v(self, s):
         with self.default_graph.as_default():
-            mu, sigma, value = self.model.predict(s)
-            sigma = np.log(1+np.exp(sigma)) + 1e-5
+            pi, value = self.model.predict(s)
             return value
 
     def add_reward(self, R, agent):
@@ -196,7 +180,7 @@ class Brain:
             self.sequential_rewards.append(R)
 
 
-# -------------------- AGENT ---------------------------
+# %% -------------------- AGENT ---------------------------
 frames = 0
 
 
@@ -206,16 +190,10 @@ class Agent:
         self.eps_start = eps_start
         self.eps_end = eps_end
         self.eps_steps = eps_steps
+        self.disp_counter = 0
 
         self.memory = []    # used for n_step return
         self.R = 0.
-        self.mus = []
-        self.sigmas = []
-
-    def disp(self):
-        plt.plot(self.rewards)
-        plt.plot(self.mus)
-        plt.plot(self.sigmas)
 
     def getEpsilon(self):
         if(frames >= self.eps_steps):
@@ -223,7 +201,7 @@ class Agent:
         else:
             # linearly interpolate
             return self.eps_start + frames * (self.eps_end - self.eps_start) \
-                    / self.eps_steps
+                / self.eps_steps
 
     def act(self, s):
         eps = self.getEpsilon()
@@ -231,19 +209,15 @@ class Agent:
         frames += 1
 
         if random.random() < eps:
-            mu = np.random.uniform(-1, 1, 4)
-            sigma = np.random.uniform(0.1, 1.9, 4)
-            a = np.random.normal(mu, sigma)
-            return a
+            return random.randint(0, NUM_ACTIONS - 1)
 
         else:
             s = np.array([s])
-            mu, sigma = brain.predict_p(s)
-            mu = mu[0]
-            sigma = sigma[0]
-            self.mus.append(mu)
-            self.sigmas.append(sigma)
-            a = np.random.normal(mu, sigma)
+            p = brain.predict_p(s)[0]
+
+            # a = np.argmax(p)
+            a = np.random.choice(NUM_ACTIONS, p=p)
+
             return a
 
     def train(self, s, a, r, s_):
@@ -253,7 +227,11 @@ class Agent:
 
             return s, a, self.R, s_
 
-        self.memory.append((s, a, r, s_))
+        # turn action into one-hot representation
+        a_onehot = np.zeros(NUM_ACTIONS)
+        a_onehot[a] = 1
+
+        self.memory.append((s, a_onehot, r, s_))
 
         self.R = (self.R + r * GAMMA_N) / GAMMA
 
@@ -276,7 +254,7 @@ class Agent:
             self.memory.pop(0)
 
 
-# -------------------- ENVIRONMENT ---------------------
+# %% -------------------- ENVIRONMENT ---------------------
 class Environment(threading.Thread):
     stop_signal = False
 
@@ -284,51 +262,75 @@ class Environment(threading.Thread):
                  eps_end=EPSILON_STOP, eps_steps=EPSILON_STEPS):
         threading.Thread.__init__(self)
 
-        self.env = gym.make(ENV)
+        self.env = ple.PLE(game, display_screen=True,
+                           state_preprocessor=process_state)
+        self.env.init()
+        self.env.display_screen = False
         self.agent = Agent(eps_start, eps_end, eps_steps)
         self.n_agent = n_agent
 
-    def runEpisode(self, render=False):
-        s = self.env.reset()
+    def runEpisode(self, render, slow):
+        self.env.reset_game()
+        s = list(self.env.getGameState()[0])
+        for i in range(len(s)):
+            s[i] += 512
+            s[i] /= 1024
+        if render:
+            self.env.display_screen = True
 
         R = 0
         while True:
             time.sleep(THREAD_DELAY)  # yield
 
-            if render:
-                self.env.render()
-
             a = self.agent.act(s)
-            s_, r, done, info = self.env.step(a)
+            if a == 0:
+                for i in range(2):
+                    R += self.env.act(118)
+                    if slow:
+                        time.sleep(0.02)
+                r = self.env.act(118)
+            else:
+                r = self.env.act(119)
 
-            if done:  # terminal state
+            if slow:
+                time.sleep(0.02)
+            s_ = list(self.env.getGameState()[0])
+
+            if self.env.game_over():  # terminal state
                 s_ = None
+
+            else:
+                for i in range(len(s_)):
+                    s_[i] += 512
+                    s_[i] /= 1024
 
             self.agent.train(s, a, r, s_)
 
             s = s_
             R += r
 
-            if done or self.stop_signal:
+            if self.env.game_over() or self.stop_signal:
                 break
 
         if not self.stop_signal:
-            print("Total R:", R)
+            if self.n_agent == 1:
+                print("Total R:", R)
+                self.agent.disp_counter += 1
+                if self.agent.disp_counter % 10 == 0:
+                    disp()
             brain.add_reward(R, self.n_agent)
-            if self.n_agent == 1 and len(brain.rewards[1]) % 30 == 0:
-                disp()
 
-    def run(self, render=False):
+        self.env.display_screen = False
+
+    def run(self, render=False, slow=False):
         while not self.stop_signal:
-            self.runEpisode(render)
+            self.runEpisode(render, slow)
 
     def stop(self):
         self.stop_signal = True
-        self.env.render(close=True)
-        self.env.close()
 
 
-# -------------------- OPTIMIZER ---------------------
+# %% -------------------- OPTIMIZER ---------------------
 class Optimizer(threading.Thread):
     stop_signal = False
 
@@ -343,25 +345,26 @@ class Optimizer(threading.Thread):
         self.stop_signal = True
 
 
-# -------------------- MAIN ----------------------------
+# %% -------------------- DISPLAY ----------------------------
 def disp():
 
     plt.plot(brain.sequential_rewards)
-    x = [np.mean(brain.sequential_rewards[max(i-50, 1):i])
+    x = [np.mean(brain.sequential_rewards[max(i-100, 1):i])
          for i in range(2, len(brain.sequential_rewards))]
     plt.plot(x)
     plt.show(block=False)
     plt.plot(brain.rewards[0])
 
 
+# %% -------------------- MAIN ----------------------------
 env_test = Environment(0, eps_start=0., eps_end=0.)
-NUM_STATE = env_test.env.observation_space.shape[0]
-NUM_ACTIONS = env_test.env.action_space.shape[0]
+NUM_STATE = 8  # env_test.env.observation_space.shape[0]
+NUM_ACTIONS = 2  # env_test.env.action_space.n-2
 NONE_STATE = np.zeros(NUM_STATE)
 
 brain = Brain()  # brain is global in A3C
 
-envs = [Environment(i+1) for i in range(THREADS)]
+envs = [Environment(i + 1) for i in range(THREADS)]
 opts = [Optimizer() for i in range(OPTIMIZERS)]
 
 for o in opts:
@@ -387,8 +390,7 @@ for o in opts:
 
 print("Training finished")
 try:
-    env_test.run(render=True)
+    env_test.run(render=True, slow=True)
 except KeyboardInterrupt as e:
     print("End of the session")
-    env_test.env.render(close=True)
     disp()

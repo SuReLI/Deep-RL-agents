@@ -6,6 +6,8 @@ Created on Fri Sep 15 15:06:04 2017
 @author: valentin
 """
 
+import sys
+
 import numpy as np
 import tensorflow as tf
 
@@ -20,12 +22,30 @@ from keras.models import Model, load_model
 from keras.layers import Input, Dense, Conv2D, LSTM, Reshape
 from keras import backend as K
 
+# %% ---------------------- INPUTS ----------------------------
+args = sys.argv
+try:
+    GUI = bool(int(args[1]))
+except:
+    GUI = False
+
+try:
+    LOAD = bool(int(args[2]))
+except:
+    LOAD = True
+
+try:
+    RUN_TIME = int(args[3])
+except:
+    RUN_TIME = 100000
+
+print("Display", GUI)
+print("Load", LOAD)
+print("Run time", RUN_TIME)
+
 # %% -------------------- CONSTANTS ---------------------------
 ENV = 'SpaceInvaders-v0'
-GUI = True
-LOAD = True
 
-RUN_TIME = 10
 THREADS = cpu_count() * 3//4
 OPTIMIZERS = cpu_count() // 4
 THREAD_DELAY = 0.001
@@ -338,7 +358,7 @@ def disp(name):
 
 def run(save):
     try:
-        env_test.run(render=GUI, limit=1)
+        env_test.run(render=GUI, limit=50)
     except KeyboardInterrupt as e:
         pass
     finally:

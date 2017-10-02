@@ -16,16 +16,18 @@ import random
 import matplotlib.pyplot as plt
 from multiprocessing import cpu_count
 
-from keras.models import Model
+from keras.models import Model, load_model
 from keras.layers import Input, Dense, Conv2D, LSTM, Reshape
 from keras import backend as K
 
 # %% -------------------- CONSTANTS ---------------------------
 ENV = 'SpaceInvaders-v0'
+GUI = True
+LOAD = True
 
-RUN_TIME = 100000
-THREADS = cpu_count()
-OPTIMIZERS = cpu_count()//2
+RUN_TIME = 10
+THREADS = cpu_count()*2//3
+OPTIMIZERS = cpu_count() // 3
 THREAD_DELAY = 0.001
 
 GAMMA = 0.99
@@ -175,6 +177,12 @@ class Brain:
         if agent != 0:
             self.sequential_rewards.append(R)
 
+    def save(self):
+        self.model.save_weights('SpaceInvaders-model.h5')
+
+    def load(self):
+        self.model.load_weights('SpaceInvaders-model.h5')
+
 
 # %% -------------------- AGENT ---------------------------
 frames = 0
@@ -210,7 +218,6 @@ class Agent:
             s = np.array([s])
             p = brain.predict_p(s)[0]
 
-            # a = np.argmax(p)
             a = np.random.choice(NUM_ACTIONS, p=p)
 
             return a
@@ -290,9 +297,11 @@ class Environment(threading.Thread):
                 print("Total R:", R)
             brain.add_reward(R, self.n_agent)
 
-    def run(self, render=False):
-        while not self.stop_signal:
+    def run(self, render=False, limit=1e5):
+        i = 0
+        while i < limit and not self.stop_signal:
             self.runEpisode(render)
+            i += 1
 
     def stop(self):
         self.stop_signal = True
@@ -322,9 +331,24 @@ def disp():
     x = [np.mean(brain.sequential_rewards[max(i - 100, 1):i])
          for i in range(2, len(brain.sequential_rewards))]
     plt.plot(x)
-    plt.show()
-    plt.plot(brain.rewards[0])
+    plt.savefig('results/Sequential_rewards.png')
 
+
+def run(save):
+    try:
+        env_test.run(render=GUI, limit=1)
+    except KeyboardInterrupt as e:
+        pass
+    finally:
+        print("End of the run")
+        env_test.env.render(close=True)
+        disp()
+        if save:
+            brain.save()
+            try:
+                brain.save()
+            except:
+                print("Couldn't save the model")
 
 # %% -------------------- MAIN ----------------------------
 if __name__ == '__main__':
@@ -336,34 +360,38 @@ if __name__ == '__main__':
 
     brain = Brain()  # brain is global in A3C
 
+    if LOAD:
+        brain.load()
+
     envs = [Environment(i + 1) for i in range(THREADS)]
     opts = [Optimizer() for i in range(OPTIMIZERS)]
 
+    print("Starting the optimizers")
     for o in opts:
         o.start()
 
+    print("Starting the environments")
     for e in envs:
         e.start()
 
+    print("Beginning the training")
     try:
         time.sleep(RUN_TIME)
     except KeyboardInterrupt:
-        print("End of the training")
+        pass
+    print("End of the training")
 
+    print("Stopping the environments")
     for e in envs:
         e.stop()
     for e in envs:
         e.join()
 
+    print("Stopping the optimizers")
     for o in opts:
         o.stop()
     for o in opts:
         o.join()
 
     print("Training finished")
-    try:
-        env_test.run(render=True)
-    except KeyboardInterrupt as e:
-        print("End of the session")
-        env_test.env.render(close=True)
-        disp()
+    run(save=True)

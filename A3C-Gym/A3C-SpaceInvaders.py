@@ -26,8 +26,8 @@ GUI = True
 LOAD = True
 
 RUN_TIME = 10
-THREADS = cpu_count()*2//3
-OPTIMIZERS = cpu_count() // 3
+THREADS = cpu_count() * 3//4
+OPTIMIZERS = cpu_count() // 4
 THREAD_DELAY = 0.001
 
 GAMMA = 0.99
@@ -176,6 +176,8 @@ class Brain:
         self.rewards[agent].append(R)
         if agent != 0:
             self.sequential_rewards.append(R)
+            if len(self.sequential_rewards) % 5000 == 0:
+                disp(len(self.sequential_rewards))
 
     def save(self):
         self.model.save_weights('SpaceInvaders-model.h5')
@@ -325,13 +327,13 @@ class Optimizer(threading.Thread):
 
 
 # %% -------------------- DISPLAY ----------------------------
-def disp():
+def disp(name):
 
     plt.plot(brain.sequential_rewards)
     x = [np.mean(brain.sequential_rewards[max(i - 100, 1):i])
          for i in range(2, len(brain.sequential_rewards))]
     plt.plot(x)
-    plt.savefig('results/Sequential_rewards.png')
+    plt.savefig('results/Sequential_rewards_{}.png'.format(name))
 
 
 def run(save):
@@ -342,7 +344,7 @@ def run(save):
     finally:
         print("End of the run")
         env_test.env.render(close=True)
-        disp()
+        disp("last")
         if save:
             brain.save()
             try:

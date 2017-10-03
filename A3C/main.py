@@ -16,8 +16,8 @@ if __name__ == '__main__':
         master_agent = Agent(0, render=True, master=True)
 
         workers = []
-        for i in range(1):  #parameters.THREADS):
-            workers.append(Agent(i+1, render=False))
+        for i in range(parameters.THREADS):
+            workers.append(Agent(i + 1, render=False))
 
     with tf.Session() as sess:
         coord = tf.train.Coordinator()
@@ -25,10 +25,23 @@ if __name__ == '__main__':
 
         worker_threads = []
         for i, worker in enumerate(workers):
-            print("Start worker", i)
+            print("Threading worker", i + 1)
             work = lambda: worker.work(sess, coord)
             t = threading.Thread(target=(work))
             t.start()
             sleep(0.5)
             worker_threads.append(t)
-        coord.join(worker_threads)
+        try:
+            coord.join(worker_threads)
+        except KeyboardInterrupt as e:
+            print(e)
+
+        master_agent.play(sess, 10)
+
+
+"""PROBLEM :
+
+coord doesn't end the threads
+
+
+"""

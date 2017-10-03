@@ -8,6 +8,7 @@ class Environment:
     def __init__(self):
 
         self.env = gym.make(ENV)
+        print()
         self.render = False
 
     def get_state_size(self):

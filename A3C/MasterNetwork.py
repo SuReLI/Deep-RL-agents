@@ -113,8 +113,8 @@ class Network:
         if scope != 'global':
             self.actions = tf.placeholder(tf.int32, [None], 'Action')
             self.actions_onehot = tf.one_hot(self.actions,
-                                            self.action_size,
-                                            dtype=tf.float32)
+                                             self.action_size,
+                                             dtype=tf.float32)
             self.advantage = tf.placeholder(tf.float32, [None], 'Advantage')
             self.discounted_reward = tf.placeholder(tf.float32, [None],
                                                     'Discounted_Reward')
@@ -124,7 +124,7 @@ class Network:
             # Estimate the policy loss and regularize it by adding uncertainty
             # (subtracting entropy)
             self.policy_loss = -tf.reduce_sum(
-                    tf.log(self.responsible_outputs) * self.advantage)
+                tf.log(self.responsible_outputs) * self.advantage)
             self.entropy = -tf.reduce_sum(self.policy * tf.log(self.policy))
 
             # Estimate the value loss using the sum of squared errors.

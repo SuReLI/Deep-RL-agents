@@ -4,7 +4,7 @@ import numpy as np
 from Environment import Environment
 from MasterNetwork import Network
 import parameters
-import scipy
+import scipy.signal
 
 
 # Discounting function used to calculate discounted returns.
@@ -29,20 +29,23 @@ def update_target_graph(from_scope, to_scope):
 
 class Agent:
 
-    def __init__(self, worker_index, render=False):
+    def __init__(self, worker_index, render=False, master=False):
         print("Initialization of the agent", str(worker_index))
 
         self.worker_index = worker_index
-        self.name = 'Worker_' + str(worker_index)
+        if master:
+            self.name = 'global'
+        else:
+            self.name = 'Worker_' + str(worker_index)
 
         self.env = Environment()
-        state_size = self.env.get_state_size()
+        self.state_size = self.env.get_state_size()
         self.action_size = self.env.get_action_size()
 
         print("State size ", self.env.get_state_size())
         print("Action size ", self.env.get_action_size())
 
-        self.network = Network(state_size, self.action_size, self.name)
+        self.network = Network(self.state_size, self.action_size, self.name)
         self.update_local_vars = update_target_graph('global', self.name)
 
         self.states_buffer = []
@@ -60,13 +63,13 @@ class Agent:
                        self.network.state_in: lstm_state})
 
         # Add the bootstrap value to our experience
-        self.rewards_buffer.append(bootstrap_value)
-        discounted_reward = discount(self.rewards_buffer)[:-1]
+        self.rewards_plus = np.asarray(self.rewards_buffer + [bootstrap_value])
+        discounted_reward = discount(self.rewards_plus)[:-1]
 
-        self.values_buffer.append(bootstrap_value)
-        advantage = self.rewards_buffer[:-1] + \
-            parameters.DISCOUNT * self.values_buffer[1:] - \
-            self.values_buffer[:-1]
+        self.values_plus = np.asarray(self.values_buffer + [bootstrap_value])
+        advantage = self.rewards_plus[:-1] + \
+            parameters.DISCOUNT * self.values_plus[1:] - \
+            self.values_plus[:-1]
         advantage = discount(advantage)
 
         # Update the global network
@@ -92,7 +95,6 @@ class Agent:
         self.states_buffer = []
         self.actions_buffer = []
         self.rewards_buffer = []
-        self.values_buffer = []
         sess.run(self.update_local_vars)
 
         return lstm_state
@@ -126,6 +128,8 @@ class Agent:
                         [self.network.policy,
                          self.network.value,
                          self.network.state_out], feed_dict=feed_dict)
+
+                    policy, value = policy[0], value[0][0]
 
                     # Choose an action according to the policy
                     action = np.random.choice(self.action_size, p=policy)

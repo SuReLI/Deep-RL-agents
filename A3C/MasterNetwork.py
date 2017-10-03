@@ -27,7 +27,6 @@ class Network:
 
             self.inputs = tf.placeholder(tf.float32, [None, *state_size],
                                          name='Input_state')
-            print(tf.shape(self.inputs))
 
             with tf.variable_scope('Convolutional_Layers'):
                 self.conv1 = slim.conv2d(activation_fn=tf.nn.elu,
@@ -85,15 +84,14 @@ class Network:
                 # dimension of length batch_size.
                 lstm_input = tf.expand_dims(hidden, [0])
                 # [:1] is a trick to correctly get the dynamic shape.
-                print(tf.shape(self.inputs))
-                step_size = tf.shape(self.inputs)[1:]
+                step_size = tf.shape(self.inputs)[:1]
                 state_in = tf.nn.rnn_cell.LSTMStateTuple(c_in, h_in)
 
                 # LSTM Output
                 lstm_output, lstm_state = tf.nn.dynamic_rnn(lstm_cell,
                                                             lstm_input,
-                                                            state_in,
-                                                            step_size)
+                                                            step_size,
+                                                            state_in)
                 lstm_c, lstm_h = lstm_state
                 self.state_out = (lstm_c[:1, :], lstm_h[:1, :])
                 lstm_output = tf.reshape(lstm_output, [-1, 256])
@@ -114,7 +112,7 @@ class Network:
 
         if scope != 'global':
             self.actions = tf.placeholder(tf.int32, [None], 'Action')
-            self.actions_onehot = tf.onehot(self.actions,
+            self.actions_onehot = tf.one_hot(self.actions,
                                             self.action_size,
                                             dtype=tf.float32)
             self.advantage = tf.placeholder(tf.float32, [None], 'Advantage')

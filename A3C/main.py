@@ -13,15 +13,14 @@ if __name__ == '__main__':
 
     with tf.device("/cpu:0"):
 
-        master_agent = Agent(0, master=True, render=True)
-        master_network = Network(master_agent.env.get_state_dims(),
+        master_agent = Agent(0, render=True)
+        pymaster_network = Network(master_agent.env.get_state_size(),
                                  master_agent.env.get_action_size(),
                                  'global')
 
-        sleep(1)
         workers = []
         for i in range(parameters.THREADS):
-            workers.append(Agent(i+1, master=False, render=True))
+            workers.append(Agent(i+1, render=False))
 
     with tf.Session() as sess:
         coord = tf.train.Coordinator()

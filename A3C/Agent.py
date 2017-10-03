@@ -2,7 +2,8 @@
 import tensorflow as tf
 import numpy as np
 from Environment import Environment
-from parameters import ENV
+from MasterNetwork import Network
+import parameters
 import scipy
 
 
@@ -36,9 +37,12 @@ class Agent:
 
         self.env = Environment()
         state_size = self.env.get_state_size()
-        action_size = self.env.get_action_size()
+        self.action_size = self.env.get_action_size()
 
-        self.network = Network(state_size, action_size, self.name)
+        print("State size ", self.env.get_state_size())
+        print("Action size ", self.env.get_action_size())
+
+        self.network = Network(state_size, self.action_size, self.name)
         self.update_local_vars = update_target_graph('global', self.name)
 
         self.states_buffer = []
@@ -49,10 +53,11 @@ class Agent:
         self.rewards = []
         self.mean_values = []
 
-    def update_global_network(self, sess, lstm_state):
-        bootstrap_value = sess.run(self.network.value,
-                                   feed_dict={self.network.inputs: [s],
-                                              self.network.state_in: lstm_state})
+    def update_global_network(self, sess, s, lstm_state):
+        bootstrap_value = sess.run(
+            self.network.value,
+            feed_dict={self.network.inputs: [s],
+                       self.network.state_in: lstm_state})
 
         # Add the bootstrap value to our experience
         self.rewards_buffer.append(bootstrap_value)
@@ -123,12 +128,12 @@ class Agent:
                          self.network.state_out], feed_dict=feed_dict)
 
                     # Choose an action according to the policy
-                    action = np.random.choice(action_size, p=policy)
+                    action = np.random.choice(self.action_size, p=policy)
                     s_, r, done, _ = self.env.act(action)
 
                     # Store the experience
                     self.states_buffer.append(s)
-                    self.actions_buffer.append(a)
+                    self.actions_buffer.append(action)
                     self.rewards_buffer.append(r)
                     self.values_buffer.append(value)
                     reward += r
@@ -138,15 +143,17 @@ class Agent:
                     total_steps += 1
 
                     # If we have more than MAX_LEN_BUFFER experiences, we apply
-                    # the gradients and update the global network, then we empty
-                    # the episode buffers
+                    # the gradients and update the global network, then we
+                    # empty the episode buffers
                     if len(self.states_buffer) == parameters.MAX_LEN_BUFFER \
                             and not done:
                         lstm_state = self.update_global_network(sess,
+                                                                s,
                                                                 lstm_state)
 
                 self.rewards.append(reward)
-                self.mean_values.append(np.mean(values_buffer))
+                self.mean_values.append(np.mean(self.values_buffer))
 
-                if len(states_buffer) != 0:
-                    lstm_state = self.update_global_network(sess, lstm_state)
+                if len(self.states_buffer) != 0:
+                    lstm_state = self.update_global_network(
+                        sess, s, lstm_state)

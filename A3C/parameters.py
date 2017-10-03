@@ -1,5 +1,5 @@
 
-ENV = "Pong-v0"
+ENV = "SpaceInvaders-v0"
 
 
 VALUE_REG = 0.5
@@ -12,3 +12,5 @@ MAX_LEN_BUFFER = 30
 MAX_EPISODE_STEP = 30
 
 DISCOUNT = 0.99
+
+THREADS = 8

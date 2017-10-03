@@ -1,8 +1,9 @@
 
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
+from tensorflow.contrib.layers import flatten
 import numpy as np
-import Agent
+import parameters
 
 
 # Used to initialize weights for policy and value output layers
@@ -17,8 +18,8 @@ def normalized_columns_initializer(std=1.0):
 class Network:
 
     def __init__(self, state_size, action_size, scope):
-    	if scope == 'global':
-    		print("Initialization of the global network")
+        if scope == 'global':
+            print("Initialization of the global network")
 
         with tf.variable_scope(scope):
             self.state_size = state_size
@@ -26,7 +27,7 @@ class Network:
 
             self.inputs = tf.placeholder(tf.float32, [None, *state_size],
                                          name='Input_state')
-            batch_size = tf.shape(self.inputs)[0]
+            print(tf.shape(self.inputs))
 
             with tf.variable_scope('Convolutional_Layers'):
                 self.conv1 = slim.conv2d(activation_fn=tf.nn.elu,
@@ -53,7 +54,10 @@ class Network:
                                          kernel_size=[7, 7],
                                          stride=[1, 1],
                                          padding='VALID')
-            hidden = slim.fully_connected(slim.flatten(self.conv4), 256,
+
+            # Flatten the output
+            flat_conv4 = flatten(self.conv4)
+            hidden = slim.fully_connected(flat_conv4, 256,
                                           activation_fn=tf.nn.elu)
 
             with tf.variable_scope('LSTM'):
@@ -74,14 +78,15 @@ class Network:
 
                 # tf.nn.dynamic_rnn expects inputs of shape
                 # [batch_size, time, features], but the shape of hidden is
-                # [batch_size, features]. We want the batch_size dimension to be
-                # treated as the time dimension, so the input is redundantly
+                # [batch_size, features]. We want the batch_size dimension to
+                # be treated as the time dimension, so the input is redundantly
                 # expanded to [1, batch_size, features].
                 # The LSTM layer will assume it has 1 batch with a time
                 # dimension of length batch_size.
                 lstm_input = tf.expand_dims(hidden, [0])
                 # [:1] is a trick to correctly get the dynamic shape.
-                step_size = tf.shape(self.inputs)[:1]
+                print(tf.shape(self.inputs))
+                step_size = tf.shape(self.inputs)[1:]
                 state_in = tf.nn.rnn_cell.LSTMStateTuple(c_in, h_in)
 
                 # LSTM Output
@@ -120,28 +125,29 @@ class Network:
 
             # Estimate the policy loss and regularize it by adding uncertainty
             # (subtracting entropy)
-        	self.policy_loss = -tf.reduce_sum(tf.log(self.responsible_outputs) *
-        									  self.advantage)
-        	self.entropy = -tf.reduce_sum(self.policy * tf.log(self.policy))
+            self.policy_loss = -tf.reduce_sum(
+                    tf.log(self.responsible_outputs) * self.advantage)
+            self.entropy = -tf.reduce_sum(self.policy * tf.log(self.policy))
 
-	        # Estimate the value loss using the sum of squared errors.
-	        self.value_loss = tf.nn.l2_loss(self.value - self.discounted_reward)
+            # Estimate the value loss using the sum of squared errors.
+            self.value_loss = tf.nn.l2_loss(
+                self.value - self.discounted_reward)
 
-        	# Estimate the final loss.
-        	self.loss = policy_loss + \
-        				parameters.VALUE_REG * value_loss - \
-        				parameters.ENTROPY_REG * entropy
+            # Estimate the final loss.
+            self.loss = self.policy_loss + \
+                parameters.VALUE_REG * self.value_loss - \
+                parameters.ENTROPY_REG * self.entropy
 
-        	# Fetch and clip the gradients of the local network.
-        	local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
-        								   scope)
-        	gradients = tf.gradients(self.loss, local_vars)
-	        clipped_gradients, self.grad_norm = tf.clip_by_global_norm(
-	        	gradients, parameters.MAX_GRADIENT_NORM)
+            # Fetch and clip the gradients of the local network.
+            local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
+                                           scope)
+            gradients = tf.gradients(self.loss, local_vars)
+            clipped_gradients, self.grad_norm = tf.clip_by_global_norm(
+                gradients, parameters.MAX_GRADIENT_NORM)
 
-	        # Apply gradients to global network
-	        global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
-	        								'global')
-	        optimizer = tf.train.AdamOptimizer(parameters.LEARNING_RATE)
-	        grads_and_vars = zip(gradients, global_vars)
-	        self.apply_grads = optimizer.apply_gradients(grads_and_vars)
+            # Apply gradients to global network
+            global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
+                                            'global')
+            optimizer = tf.train.AdamOptimizer(parameters.LEARNING_RATE)
+            grads_and_vars = zip(gradients, global_vars)
+            self.apply_grads = optimizer.apply_gradients(grads_and_vars)

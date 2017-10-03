@@ -16,7 +16,9 @@ def normalized_columns_initializer(std=1.0):
 
 class Network:
 
-    def __init__(self, state_size, action_size, scope, env):
+    def __init__(self, state_size, action_size, scope):
+    	if scope == 'global':
+    		print("Initialization of the global network")
 
         with tf.variable_scope(scope):
             self.state_size = state_size
@@ -63,7 +65,7 @@ class Network:
                 # Initial state
                 c_init = np.zeros((1, c_size), np.float32)
                 h_init = np.zeros((1, h_size), np.float32)
-                self.state_init = [c_init, h_init]
+                self.lstm_state_init = [c_init, h_init]
 
                 # Input state
                 c_in = tf.placeholder(tf.float32, [1, c_size])

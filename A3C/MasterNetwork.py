@@ -136,7 +136,7 @@ class Network:
         	local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
         								   scope)
         	gradients = tf.gradients(self.loss, local_vars)
-	        clipped_gradients, _ = tf.clip_by_global_norm(
+	        clipped_gradients, self.grad_norm = tf.clip_by_global_norm(
 	        	gradients, parameters.MAX_GRADIENT_NORM)
 
 	        # Apply gradients to global network

@@ -12,10 +12,16 @@ class Environment:
         self.render = False
 
     def get_state_size(self):
-        return list(self.env.observation_space.shape)
+        try:
+            return (self.env.observation_space.n, )
+        except AttributeError:
+            return list(self.env.observation_space.shape)
 
     def get_action_size(self):
-        return self.env.action_space.n
+        try:
+            return (self.env.action_space.n, )
+        except AttributeError:
+            return list(self.env.action_space.shape)
 
     def set_render(self, render):
         self.render = render

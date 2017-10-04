@@ -30,7 +30,7 @@ def update_target_graph(from_scope, to_scope):
 
 class Agent:
 
-    def __init__(self, worker_index, render=False, master=False):
+    def __init__(self, worker_index, sess, render=False, master=False):
         print("Initialization of the agent", str(worker_index))
 
         self.worker_index = worker_index
@@ -54,6 +54,9 @@ class Agent:
 
         self.rewards = []
         self.mean_values = []
+
+        self.summary_writer = tf.summary.FileWriter("results/" + self.name,
+                                                    sess.graph)
 
     def update_global_network(self, sess, s, lstm_state):
         bootstrap_value = sess.run(
@@ -90,6 +93,25 @@ class Agent:
         value_loss, policy_loss, entropy = losses[:3]
         grad_norm, lstm_state, _ = losses[3:]
 
+        # Save summary statistics
+        summary = tf.Summary()
+        summary.value.add(tag='Perf/Reward',
+                          simple_value=np.mean(self.rewards_plus))
+        summary.value.add(tag='Perf/Value',
+                          simple_value=np.mean(self.values_plus))
+        summary.value.add(tag='Perf/Advantage',
+                          simple_value=np.mean(advantage))
+        summary.value.add(tag='Losses/Value',
+                          simple_value=value_loss)
+        summary.value.add(tag='Losses/Policy',
+                          simple_value=policy_loss)
+        summary.value.add(tag='Losses/Entropy',
+                          simple_value=entropy)
+        summary.value.add(tag='Losses/Grad Norm',
+                          simple_value=grad_norm)
+        self.summary_writer.add_summary(summary, self.total_steps)
+        self.summary_writer.flush()
+
         # Reinitialize buffers and variables
         self.states_buffer = []
         self.actions_buffer = []
@@ -101,7 +123,7 @@ class Agent:
 
     def work(self, sess, coord):
         print("Running", self.name, end='\n\n')
-        total_steps = 0
+        self.total_steps = 0
 
         with sess.as_default(), sess.graph.as_default():
 
@@ -148,7 +170,7 @@ class Agent:
                         s = s_
 
                         episode_step += 1
-                        total_steps += 1
+                        self.total_steps += 1
 
                         # If we have more than MAX_LEN_BUFFER experiences, we
                         # apply the gradients and update the global network,

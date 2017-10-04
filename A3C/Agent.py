@@ -58,11 +58,11 @@ class Agent:
         self.summary_writer = tf.summary.FileWriter("results/" + self.name,
                                                     sess.graph)
 
-    def update_global_network(self, sess, s, lstm_state):
+    def update_global_network(self, sess, s):
         bootstrap_value = sess.run(
             self.network.value,
             feed_dict={self.network.inputs: [s],
-                       self.network.state_in: lstm_state})
+                       self.network.state_in: self.lstm_state})
 
         # Add the bootstrap value to our experience
         self.rewards_plus = np.asarray(self.rewards_buffer + [bootstrap_value])
@@ -80,7 +80,7 @@ class Agent:
             self.network.inputs: self.states_buffer,
             self.network.actions: self.actions_buffer,
             self.network.advantage: advantage,
-            self.network.state_in: lstm_state}
+            self.network.state_in: self.lstm_state}
         losses = sess.run([self.network.value_loss,
                            self.network.policy_loss,
                            self.network.entropy,
@@ -89,9 +89,9 @@ class Agent:
                            self.network.apply_grads],
                           feed_dict=feed_dict)
 
-        # Get the losses for tensorboard (TO DO)
+        # Get the losses for tensorboard
         value_loss, policy_loss, entropy = losses[:3]
-        grad_norm, lstm_state, _ = losses[3:]
+        grad_norm, self.lstm_state, _ = losses[3:]
 
         # Save summary statistics
         summary = tf.Summary()
@@ -119,8 +119,6 @@ class Agent:
         self.values_buffer = []
         sess.run(self.update_local_vars)
 
-        return lstm_state
-
     def work(self, sess, coord):
         print("Running", self.name, end='\n\n')
         self.total_steps = 0
@@ -142,14 +140,14 @@ class Agent:
 
                     s = self.env.reset()
                     done = False
-                    lstm_state = self.network.lstm_state_init
+                    self.lstm_state = self.network.lstm_state_init
 
                     while not coord.should_stop() and not done and \
                             episode_step < parameters.MAX_EPISODE_STEP:
                         # Prediction of the policy and the value
                         feed_dict = {self.network.inputs: [s],
-                                     self.network.state_in: lstm_state}
-                        policy, value, lstm_state = sess.run(
+                                     self.network.state_in: self.lstm_state}
+                        policy, value, self.lstm_state = sess.run(
                             [self.network.policy,
                              self.network.value,
                              self.network.state_out], feed_dict=feed_dict)
@@ -177,9 +175,7 @@ class Agent:
                         # then we empty the episode buffers
                         if len(self.states_buffer) == parameters.MAX_LEN_BUFFER \
                                 and not done:
-                            lstm_state = self.update_global_network(sess,
-                                                                    s,
-                                                                    lstm_state)
+                            self.update_global_network(sess, s)
 
                     # print("Episode reward of {} : {}".format(self.name, reward))
                     self.rewards.append(reward)
@@ -188,9 +184,7 @@ class Agent:
                     self.mean_values.append(np.mean(self.mean_values_buffer))
 
                     if len(self.states_buffer) != 0:
-                        lstm_state = self.update_global_network(sess,
-                                                                s,
-                                                                lstm_state)
+                        self.update_global_network(sess, s)
             self.env.close()
 
     def play(self, sess, number_run):
@@ -208,13 +202,13 @@ class Agent:
                     reward = 0
 
                     done = False
-                    lstm_state = self.network.lstm_state_init
+                    self.lstm_state = self.network.lstm_state_init
 
                     while not done:
                         # Prediction of the policy and the value
                         feed_dict = {self.network.inputs: [s],
-                                     self.network.state_in: lstm_state}
-                        policy, value, lstm_state = sess.run(
+                                     self.network.state_in: self.lstm_state}
+                        policy, value, self.lstm_state = sess.run(
                             [self.network.policy,
                              self.network.value,
                              self.network.state_out], feed_dict=feed_dict)

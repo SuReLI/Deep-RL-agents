@@ -1,4 +1,11 @@
 
+# *********************************  TO DO  ********************************* #
+#                                                                             #
+# LSTM = False doesn't work (because of Agent which has LSTM everywhere)      #
+#                                                                             #
+# *************************************************************************** #
+
+
 import tensorflow as tf
 import parameters
 import threading
@@ -31,11 +38,15 @@ if __name__ == '__main__':
             t.start()
             sleep(0.5)
             worker_threads.append(t)
+
         try:
             coord.join(worker_threads)
-        except (Exception, KeyboardInterrupt) as e:
+        except Exception as e:
+            coord.request_stop(e)
+        except KeyboardInterrupt as e:
             coord.request_stop()
+        finally:
+            sleep(1)
             print("End of the training")
 
-        sleep(1)
         master_agent.play(sess, 10)

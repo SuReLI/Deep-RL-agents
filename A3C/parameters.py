@@ -1,5 +1,5 @@
 
-ENV = "SpaceInvaders-v0"
+ENV = "SpaceInvaders-ram-v0"
 
 
 THREADS = 2
@@ -11,6 +11,9 @@ MAX_GRADIENT_NORM = 40
 LEARNING_RATE = 1e-4
 
 MAX_LEN_BUFFER = 30
-MAX_EPISODE_STEP = 30
+MAX_EPISODE_STEP = 500
 
 DISCOUNT = 0.99
+
+CONV = False
+LSTM = True

@@ -1,8 +1,8 @@
 
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
-from tensorflow.contrib.layers import flatten
 import numpy as np
+from NetworkArchitecture import NetworkArchitecture
 import parameters
 
 
@@ -25,87 +25,34 @@ class Network:
             self.state_size = state_size
             self.action_size = action_size
 
-            self.inputs = tf.placeholder(tf.float32, [None, *state_size],
-                                         name='Input_state')
+            self.model = NetworkArchitecture(self.state_size)
 
-            with tf.variable_scope('Convolutional_Layers'):
-                self.conv1 = slim.conv2d(activation_fn=tf.nn.elu,
-                                         inputs=self.inputs,
-                                         num_outputs=32,
-                                         kernel_size=[8, 8],
-                                         stride=[4, 4],
-                                         padding='VALID')
-                self.conv2 = slim.conv2d(activation_fn=tf.nn.elu,
-                                         inputs=self.conv1,
-                                         num_outputs=64,
-                                         kernel_size=[4, 4],
-                                         stride=[2, 2],
-                                         padding='VALID')
-                self.conv3 = slim.conv2d(activation_fn=tf.nn.elu,
-                                         inputs=self.conv2,
-                                         num_outputs=64,
-                                         kernel_size=[3, 3],
-                                         stride=[1, 1],
-                                         padding='VALID')
-                self.conv4 = slim.conv2d(activation_fn=tf.nn.elu,
-                                         inputs=self.conv3,
-                                         num_outputs=32,
-                                         kernel_size=[7, 7],
-                                         stride=[1, 1],
-                                         padding='VALID')
+            if parameters.CONV:
+                self.inputs = self.model.build_conv()
 
-            # Flatten the output
-            flat_conv4 = flatten(self.conv4)
-            hidden = slim.fully_connected(flat_conv4, 256,
-                                          activation_fn=tf.nn.elu)
+            else:
+                self.inputs = self.model.build_regular_layers([32])
 
-            with tf.variable_scope('LSTM'):
-                # New LSTM Network with 256 cells
-                lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(256)
-                c_size = lstm_cell.state_size.c
-                h_size = lstm_cell.state_size.h
+            if parameters.LSTM:
+                # Input placeholder
+                self.state_in = self.model.build_lstm()
 
-                # Initial state
-                c_init = np.zeros((1, c_size), np.float32)
-                h_init = np.zeros((1, h_size), np.float32)
-                self.lstm_state_init = [c_init, h_init]
+                self.lstm_state_init = self.model.lstm_state_init
+                self.state_out, model_output = self.model.return_output(True)
 
-                # Input state
-                c_in = tf.placeholder(tf.float32, [1, c_size])
-                h_in = tf.placeholder(tf.float32, [1, h_size])
-                self.state_in = (c_in, h_in)
-
-                # tf.nn.dynamic_rnn expects inputs of shape
-                # [batch_size, time, features], but the shape of hidden is
-                # [batch_size, features]. We want the batch_size dimension to
-                # be treated as the time dimension, so the input is redundantly
-                # expanded to [1, batch_size, features].
-                # The LSTM layer will assume it has 1 batch with a time
-                # dimension of length batch_size.
-                lstm_input = tf.expand_dims(hidden, [0])
-                # [:1] is a trick to correctly get the dynamic shape.
-                step_size = tf.shape(self.inputs)[:1]
-                state_in = tf.nn.rnn_cell.LSTMStateTuple(c_in, h_in)
-
-                # LSTM Output
-                lstm_output, lstm_state = tf.nn.dynamic_rnn(lstm_cell,
-                                                            lstm_input,
-                                                            step_size,
-                                                            state_in)
-                lstm_c, lstm_h = lstm_state
-                self.state_out = (lstm_c[:1, :], lstm_h[:1, :])
-                lstm_output = tf.reshape(lstm_output, [-1, 256])
+            else:
+                model_output = self.model.return_output(False)
 
             # Policy estimation
             self.policy = slim.fully_connected(
-                lstm_output, action_size,
+                model_output, action_size,
                 activation_fn=tf.nn.softmax,
                 weights_initializer=normalized_columns_initializer(0.01),
                 biases_initializer=None)
 
             # Value estimation
             self.value = slim.fully_connected(
-                lstm_output, 1,
+                model_output, 1,
                 activation_fn=None,
                 weights_initializer=normalized_columns_initializer(1.0),
                 biases_initializer=None)

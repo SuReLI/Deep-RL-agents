@@ -93,6 +93,7 @@ class Agent:
         self.states_buffer = []
         self.actions_buffer = []
         self.rewards_buffer = []
+        self.values_buffer = []
         sess.run(self.update_local_vars)
 
         return lstm_state
@@ -109,6 +110,7 @@ class Agent:
                     self.actions_buffer = []
                     self.rewards_buffer = []
                     self.values_buffer = []
+                    self.mean_values_buffer = []
                     reward = 0
                     episode_step = 0
 
@@ -140,6 +142,7 @@ class Agent:
                         self.actions_buffer.append(action)
                         self.rewards_buffer.append(r)
                         self.values_buffer.append(value)
+                        self.mean_values_buffer.append(value)
                         reward += r
                         s = s_
 
@@ -157,7 +160,7 @@ class Agent:
 
                     print("Episode reward of {} : {}".format(self.name, reward))
                     self.rewards.append(reward)
-                    self.mean_values.append(np.mean(self.values_buffer))
+                    self.mean_values.append(np.mean(self.mean_values_buffer))
 
                     if len(self.states_buffer) != 0:
                         lstm_state = self.update_global_network(sess,

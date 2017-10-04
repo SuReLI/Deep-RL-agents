@@ -27,12 +27,15 @@ class Network:
 
             self.model = NetworkArchitecture(self.state_size)
 
+            # Convolution network - or not
             if parameters.CONV:
                 self.inputs = self.model.build_conv()
 
             else:
-                self.inputs = self.model.build_regular_layers([32])
+                layers_config = parameters.LAYERS_SIZE
+                self.inputs = self.model.build_regular_layers(layers_config)
 
+            # LSTM Network - or not
             if parameters.LSTM:
                 # Input placeholder
                 self.state_in = self.model.build_lstm()
@@ -75,8 +78,8 @@ class Network:
             self.entropy = -tf.reduce_sum(self.policy * tf.log(self.policy))
 
             # Estimate the value loss using the sum of squared errors.
-            self.value_loss = tf.nn.l2_loss(
-                self.value - self.discounted_reward)
+            self.value_loss = tf.reduce_sum(tf.square(
+                tf.reshape(self.value, [-1]) - self.discounted_reward))
 
             # Estimate the final loss.
             self.loss = self.policy_loss + \

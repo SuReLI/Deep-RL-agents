@@ -215,6 +215,12 @@ class Worker:
                             sess.run(self.update_local_ops)
 
                     self.episode_rewards.append(episode_reward)
+                    DISP.append(episode_reward)
+                    if len(DISP) % 200 == 0:
+                        plt.plot(DISP)
+                        x = [np.mean(DISP[max(i-50, 1):i]) for i in range(2, len(DISP))]
+                        plt.plot(x)
+                        plt.show(block=False)
                     # print("Episode reward for worker {} : {}".format(self.number, episode_reward))
                     self.episode_lengths.append(episode_step_count)
                     self.episode_mean_values.append(np.mean(episode_values))
@@ -301,6 +307,7 @@ a_size = 2  # Agent can move Left, Right
 load_model = False
 env = 'CartPole-v0'
 model_path = './results/A3C-CartPole_results/'
+DISP = []
 
 
 tf.reset_default_graph()

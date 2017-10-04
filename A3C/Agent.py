@@ -4,6 +4,7 @@ import numpy as np
 from Environment import Environment
 from MasterNetwork import Network
 import parameters
+import Saver
 import scipy.signal
 
 
@@ -158,8 +159,10 @@ class Agent:
                                                                     s,
                                                                     lstm_state)
 
-                    print("Episode reward of {} : {}".format(self.name, reward))
+                    # print("Episode reward of {} : {}".format(self.name, reward))
                     self.rewards.append(reward)
+                    Saver.add_results(reward)
+
                     self.mean_values.append(np.mean(self.mean_values_buffer))
 
                     if len(self.states_buffer) != 0:

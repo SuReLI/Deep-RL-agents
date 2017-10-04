@@ -33,15 +33,9 @@ if __name__ == '__main__':
             worker_threads.append(t)
         try:
             coord.join(worker_threads)
-        except KeyboardInterrupt as e:
-            print(e)
+        except (Exception, KeyboardInterrupt) as e:
+            coord.request_stop()
+            print("End of the training")
 
+        sleep(1)
         master_agent.play(sess, 10)
-
-
-"""PROBLEM :
-
-coord doesn't end the threads
-
-
-"""

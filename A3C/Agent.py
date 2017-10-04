@@ -103,7 +103,7 @@ class Agent:
 
         with sess.as_default(), sess.graph.as_default():
 
-            try:
+            with coord.stop_on_exception():
                 while not coord.should_stop():
                     self.states_buffer = []
                     self.actions_buffer = []
@@ -155,19 +155,15 @@ class Agent:
                                                                     s,
                                                                     lstm_state)
 
-                    print("Episode reward of {} : {}".format(reward,
-                        self.name))
+                    print("Episode reward of {} : {}".format(self.name, reward))
                     self.rewards.append(reward)
                     self.mean_values.append(np.mean(self.values_buffer))
 
                     if len(self.states_buffer) != 0:
-                        lstm_state = self.update_global_network(
-                            sess, s, lstm_state)
-                self.env.close()
-
-            except Exception as e:
-                coord.request_stop(e)
-                self.env.close()
+                        lstm_state = self.update_global_network(sess,
+                                                                s,
+                                                                lstm_state)
+            self.env.close()
 
     def play(self, sess, number_run):
         print("Playing", self.name, "for", number_run, "runs")
@@ -208,4 +204,5 @@ class Agent:
                 pass
 
             finally:
+                print("End of the demo")
                 self.env.close()

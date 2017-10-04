@@ -2,6 +2,8 @@
 ENV = "SpaceInvaders-v0"
 
 
+THREADS = 2
+
 VALUE_REG = 0.5
 ENTROPY_REG = 0.01
 
@@ -12,5 +14,3 @@ MAX_LEN_BUFFER = 30
 MAX_EPISODE_STEP = 30
 
 DISCOUNT = 0.99
-
-THREADS = 8

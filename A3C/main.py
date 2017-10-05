@@ -12,7 +12,6 @@ import threading
 from time import sleep
 
 from Agent import Agent
-from MasterNetwork import Network
 from Saver import disp
 
 if __name__ == '__main__':

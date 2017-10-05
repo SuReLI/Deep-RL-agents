@@ -1,11 +1,14 @@
 
 import tensorflow as tf
 import numpy as np
+import scipy.signal
+import random
+
 from Environment import Environment
 from MasterNetwork import Network
-import parameters
 import Saver
-import scipy.signal
+
+import parameters
 
 
 # Discounting function used to calculate discounted returns.
@@ -29,6 +32,10 @@ def update_target_graph(from_scope, to_scope):
 
 
 class Agent:
+
+    epsilon = parameters.EPSILON_START
+    epsilon_decay = (parameters.EPSILON_START - parameters.EPSILON_STOP) \
+        / parameters.EPSILON_STEPS
 
     def __init__(self, worker_index, sess, render=False, master=False):
         print("Initialization of the agent", str(worker_index))
@@ -154,8 +161,16 @@ class Agent:
 
                         policy, value = policy[0], value[0][0]
 
-                        # Choose an action according to the policy
-                        action = np.random.choice(self.action_size, p=policy)
+                        if Agent.epsilon > parameters.EPSILON_STOP:
+                            Agent.epsilon -= Agent.epsilon_decay
+
+                        if random.random() < Agent.epsilon:
+                            action = random.randint(0, self.action_size - 1)
+
+                        else:
+                            # Choose an action according to the policy
+                            action = np.random.choice(self.action_size,
+                                                      p=policy)
                         s_, r, done, _ = self.env.act(action)
 
                         # Store the experience

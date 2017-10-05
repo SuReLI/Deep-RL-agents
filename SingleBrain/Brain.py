@@ -138,6 +138,12 @@ class Brain:
             pi, value = self.model.predict(s)
             return pi, value
 
+    def save(self):
+        self.model.save_weights("Model.h5")
+
+    def load(self):
+        self.model.load_weights("Model.h5")
+
 
 class Optimizer(threading.Thread):
     stop_signal = False

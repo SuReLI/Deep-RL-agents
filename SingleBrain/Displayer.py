@@ -8,7 +8,7 @@ def save(path, data):
     if parameters.DISPLAY:
         plt.plot(data)
     else:
-        data = " ".join(data)
+        data = " ".join(map(str, data))
         with open(path, "w") as file:
             file.write(data)
 

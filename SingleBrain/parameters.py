@@ -3,7 +3,7 @@
 ENV = 'SpaceInvaders-v0'
 
 DISPLAY = True
-
+LOAD = False
 
 LIMIT_RUN_TIME = 60
 

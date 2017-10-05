@@ -97,5 +97,5 @@ class Network:
             global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
                                             'global')
             optimizer = tf.train.AdamOptimizer(parameters.LEARNING_RATE)
-            grads_and_vars = zip(gradients, global_vars)
+            grads_and_vars = zip(clipped_gradients, global_vars)
             self.apply_grads = optimizer.apply_gradients(grads_and_vars)

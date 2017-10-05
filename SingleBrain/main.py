@@ -41,7 +41,7 @@ if __name__ == '__main__':
     print("Training finished")
     try:
         main_agent.run(10)
-    except KeyboardInterrupt:
+    except:
         print("End of the session")
 
     DISPLAYER.disp_all()

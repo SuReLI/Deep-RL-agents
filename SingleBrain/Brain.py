@@ -2,7 +2,7 @@
 
 import tensorflow as tf
 from keras.models import Model
-from keras.layers import Input, Dense
+from keras.layers import Input, Conv2D, Dense, LSTM, Reshape
 from keras import backend as K
 
 import threading
@@ -39,8 +39,20 @@ class Brain:
         l_input = Input(batch_shape=(None, *self.state_size))
         l_dense = Dense(16, activation='relu')(l_input)
 
-        out_actions = Dense(self.action_size, activation='softmax')(l_dense)
-        out_value = Dense(1, activation='linear')(l_dense)
+        conv1 = Conv2D(filters=32, kernel_size=(6, 6),
+                       strides=(2, 2), activation='relu')(l_input)
+        conv2 = Conv2D(filters=64, kernel_size=(6, 6),
+                       strides=(2, 2), activation='relu')(conv1)
+        conv3 = Conv2D(filters=64, kernel_size=(6, 6),
+                       strides=(2, 2), activation='relu')(conv2)
+        conv4 = Conv2D(filters=64, kernel_size=(6, 6),
+                       strides=(2, 2), activation='relu')(conv3)
+
+        l_reshape = Reshape((-1, np.prod(conv4.shape.as_list()[1:])))(conv4)
+        l_lstm = LSTM(256, input_shape=l_reshape.shape[1:])(l_reshape)
+
+        out_actions = Dense(self.action_size, activation='softmax')(l_lstm)
+        out_value = Dense(1, activation='linear')(l_lstm)
 
         model = Model(inputs=[l_input], outputs=[out_actions, out_value])
         model._make_predict_function()  # have to initialize before threading
@@ -90,10 +102,10 @@ class Brain:
             s, a, r, s_, s_mask = self.train_queue
             self.train_queue = [[], [], [], [], []]
 
-        s = np.vstack(s)
+        s = np.array(s)
         a = np.vstack(a)
         r = np.vstack(r)
-        s_ = np.vstack(s_)
+        s_ = np.array(s_)
         s_mask = np.vstack(s_mask)
 
         if len(s) > 5 * MIN_BATCH:

@@ -102,7 +102,8 @@ class Agent(threading.Thread):
                 s = s_
                 R += r
 
-            DISPLAYER.add_reward(R, self.n_agent)
+            if not self.stop_signal:
+                DISPLAYER.add_reward(R, self.n_agent)
             step += 1
             if step % 20 == 0 and self.n_agent == 1:
                 print("Reward :", R)

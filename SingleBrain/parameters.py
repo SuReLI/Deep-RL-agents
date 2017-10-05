@@ -1,6 +1,9 @@
 
 
-ENV = 'CartPole-v0'
+ENV = 'SpaceInvaders-v0'
+
+DISPLAY = True
+
 
 LIMIT_RUN_TIME = 60
 

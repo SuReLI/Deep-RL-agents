@@ -17,6 +17,8 @@ class Environment:
             return list(self.env.observation_space.shape)
 
     def get_action_size(self):
+        if parameters.ENV == "SpaceInvaders-v0":
+            return 4
         return self.env.action_space.n
 
     def reset(self):

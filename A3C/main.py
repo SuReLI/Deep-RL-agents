@@ -3,6 +3,10 @@
 #                                                                             #
 # LSTM = False doesn't work (because of Agent which has LSTM everywhere)      #
 #                                                                             #
+#                                                                             #
+#             !!!  Test with epsilon greedy and without  !!!                  #
+#                                                                             #
+#                                                                             #
 # *************************************************************************** #
 
 
@@ -12,7 +16,7 @@ import threading
 from time import sleep
 
 from Agent import Agent
-from Saver import disp
+from Displayer import DISPLAYER
 
 if __name__ == '__main__':
 
@@ -51,5 +55,7 @@ if __name__ == '__main__':
             sleep(1)
             print("End of the training")
 
-        disp()
+        DISPLAYER.disp_all()
+        DISPLAYER.disp_one()
+        DISPLAYER.disp_seq()
         master_agent.play(sess, 10)

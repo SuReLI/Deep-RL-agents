@@ -23,7 +23,7 @@ if __name__ == '__main__':
     main_agent.brain = brain
 
     agents = [Agent(i+1, brain) for i in range(parameters.THREADS)]
-    optimizers = [Optimizer(brain) for i in range(parameters.OPTIMIZERS)]
+    optimizers = [Optimizer(i+1, brain) for i in range(parameters.OPTIMIZERS)]
 
     for optimizer in optimizers:
         optimizer.start()

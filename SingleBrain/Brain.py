@@ -148,13 +148,16 @@ class Brain:
 class Optimizer(threading.Thread):
     stop_signal = False
 
-    def __init__(self, brain):
+    def __init__(self, n_opt, brain):
         threading.Thread.__init__(self)
+        self.n_opt = n_opt
         self.brain = brain
 
     def run(self):
         while not self.stop_signal:
             self.brain.optimize()
+        print("Ok for", self.n_opt)
 
     def stop(self):
+        print("We try to stop", self.n_opt)
         self.stop_signal = True

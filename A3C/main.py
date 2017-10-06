@@ -7,6 +7,9 @@
 #             !!!  Test with epsilon greedy and without  !!!                  #
 #                                                                             #
 #                                                                             #
+#                      Prioritized experience replay                          #
+#                                                                             #
+#                                                                             #
 # *************************************************************************** #
 
 

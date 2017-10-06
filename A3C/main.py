@@ -17,6 +17,8 @@ from time import sleep
 
 from Agent import Agent
 from Displayer import DISPLAYER
+from Saver import SAVER
+
 
 if __name__ == '__main__':
 
@@ -26,16 +28,21 @@ if __name__ == '__main__':
 
         with tf.device("/cpu:0"):
 
+            # Create the global network
             render = parameters.DISPLAY
             master_agent = Agent(0, sess, render=render, master=True)
 
+            # Create all the workers
             workers = []
             for i in range(parameters.THREADS):
                 workers.append(Agent(i + 1, sess, render=False))
 
         coord = tf.train.Coordinator()
-        sess.run(tf.global_variables_initializer())
+        SAVER.set_sess(sess)
 
+        SAVER.load()
+
+        # Run threads that each contains one worker
         worker_threads = []
         for i, worker in enumerate(workers):
             print("Threading worker", i + 1)
@@ -46,6 +53,7 @@ if __name__ == '__main__':
             worker_threads.append(t)
 
         try:
+            # Wait till all the workers are done
             coord.join(worker_threads)
         except Exception as e:
             coord.request_stop(e)

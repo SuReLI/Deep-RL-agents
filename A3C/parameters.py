@@ -2,9 +2,11 @@
 ENV = "CartPole-v0"
 
 DISPLAY = True
+LOAD = True
 
 
 THREADS = 4
+LIMIT_RUN_TIME = 20
 
 EPSILON_START = 0.8
 EPSILON_STOP = 0.1

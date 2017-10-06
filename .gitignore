@@ -2,3 +2,4 @@
 __pycache__
 results/
 *.h5
+model

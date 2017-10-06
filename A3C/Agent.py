@@ -1,4 +1,6 @@
 
+from time import time
+
 import tensorflow as tf
 import numpy as np
 import scipy.signal
@@ -7,6 +9,7 @@ import random
 from Environment import Environment
 from MasterNetwork import Network
 from Displayer import DISPLAYER
+from Saver import SAVER
 
 import parameters
 
@@ -54,6 +57,8 @@ class Agent:
         self.network = Network(self.state_size, self.action_size, self.name)
         self.update_local_vars = update_target_graph('global', self.name)
 
+        self.starting_time = 0
+
         self.states_buffer = []
         self.actions_buffer = []
         self.rewards_buffer = []
@@ -62,6 +67,27 @@ class Agent:
         if self.name != 'global':
             self.summary_writer = tf.summary.FileWriter("results/" + self.name,
                                                         sess.graph)
+
+    def save(self, episode_step):
+        # Save model
+        SAVER.save(episode_step)
+
+        # Save summary statistics
+        summary = tf.Summary()
+        summary.value.add(tag='Perf/Reward',
+                          simple_value=np.mean(self.rewards_plus))
+        summary.value.add(tag='Perf/Value',
+                          simple_value=np.mean(self.next_values))
+        summary.value.add(tag='Losses/Value',
+                          simple_value=self.value_loss)
+        summary.value.add(tag='Losses/Policy',
+                          simple_value=self.policy_loss)
+        summary.value.add(tag='Losses/Entropy',
+                          simple_value=self.entropy)
+        summary.value.add(tag='Losses/Grad Norm',
+                          simple_value=self.grad_norm)
+        self.summary_writer.add_summary(summary, self.total_steps)
+        self.summary_writer.flush()
 
     def update_global_network(self, sess, bootstrap_value):
 
@@ -92,27 +118,8 @@ class Agent:
                           feed_dict=feed_dict)
 
         # Get the losses for tensorboard
-        value_loss, policy_loss, entropy = losses[:3]
-        grad_norm, self.lstm_state, _ = losses[3:]
-
-        # Save summary statistics
-        summary = tf.Summary()
-        summary.value.add(tag='Perf/Reward',
-                          simple_value=np.mean(self.rewards_plus))
-        summary.value.add(tag='Perf/Value',
-                          simple_value=np.mean(self.next_values))
-        summary.value.add(tag='Perf/Advantage',
-                          simple_value=np.mean(advantages))
-        summary.value.add(tag='Losses/Value',
-                          simple_value=value_loss)
-        summary.value.add(tag='Losses/Policy',
-                          simple_value=policy_loss)
-        summary.value.add(tag='Losses/Entropy',
-                          simple_value=entropy)
-        summary.value.add(tag='Losses/Grad Norm',
-                          simple_value=grad_norm)
-        self.summary_writer.add_summary(summary, self.total_steps)
-        self.summary_writer.flush()
+        self.value_loss, self.policy_loss, self.entropy = losses[:3]
+        self.grad_norm, self.lstm_state, _ = losses[3:]
 
         # Reinitialize buffers and variables
         self.states_buffer = []
@@ -122,6 +129,7 @@ class Agent:
 
     def work(self, sess, coord):
         print("Running", self.name, end='\n\n')
+        self.starting_time = time()
         self.total_steps = 0
 
         with sess.as_default(), sess.graph.as_default():
@@ -192,12 +200,16 @@ class Agent:
                             self.update_global_network(sess, bootstrap_value)
                             sess.run(self.update_local_vars)
 
-                    # print("Episode reward of {} : {}".format(self.name,
-                    #                                          reward))
-                    DISPLAYER.add_reward(reward, self.worker_index)
-
                     if len(self.states_buffer) != 0:
                         self.update_global_network(sess, 0)
+
+                    DISPLAYER.add_reward(reward, self.worker_index)
+                    if self.worker_index == 1 and self.total_steps % 2000 == 0:
+                        self.save(self.total_steps)
+
+                    if time() - self.starting_time > parameters.LIMIT_RUN_TIME:
+                        coord.request_stop()
+
             self.summary_writer.close()
             self.env.close()
 

@@ -48,22 +48,10 @@ class NetworkArchitecture:
                                      kernel_size=[4, 4],
                                      stride=[2, 2],
                                      padding='VALID')
-            self.conv3 = slim.conv2d(activation_fn=tf.nn.elu,
-                                     inputs=self.conv2,
-                                     num_outputs=64,
-                                     kernel_size=[3, 3],
-                                     stride=[1, 1],
-                                     padding='VALID')
-            self.conv4 = slim.conv2d(activation_fn=tf.nn.elu,
-                                     inputs=self.conv3,
-                                     num_outputs=32,
-                                     kernel_size=[7, 7],
-                                     stride=[1, 1],
-                                     padding='VALID')
 
         # Flatten the output
-        flat_conv4 = flatten(self.conv4)
-        self.hidden = slim.fully_connected(flat_conv4, 256,
+        flat_conv2 = flatten(self.conv2)
+        self.hidden = slim.fully_connected(flat_conv2, 256,
                                            activation_fn=tf.nn.elu)
         return self.inputs
 

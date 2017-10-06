@@ -59,8 +59,9 @@ class Agent:
         self.rewards_buffer = []
         self.values_buffer = []
 
-        self.summary_writer = tf.summary.FileWriter("results/" + self.name,
-                                                    sess.graph)
+        if self.name != 'global':
+            self.summary_writer = tf.summary.FileWriter("results/" + self.name,
+                                                        sess.graph)
 
     def update_global_network(self, sess, bootstrap_value):
 
@@ -197,6 +198,7 @@ class Agent:
 
                     if len(self.states_buffer) != 0:
                         self.update_global_network(sess, 0)
+            self.summary_writer.close()
             self.env.close()
 
     def play(self, sess, number_run):

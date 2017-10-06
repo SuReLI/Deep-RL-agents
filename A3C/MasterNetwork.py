@@ -32,8 +32,7 @@ class Network:
                 self.inputs = self.model.build_conv()
 
             else:
-                layers_config = parameters.LAYERS_SIZE
-                self.inputs = self.model.build_regular_layers(layers_config)
+                self.inputs = self.model.build_regular_layers()
 
             # LSTM Network - or not
             if parameters.LSTM:

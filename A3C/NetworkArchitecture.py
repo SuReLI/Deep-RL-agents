@@ -5,18 +5,22 @@ from tensorflow.contrib.layers import flatten
 
 import numpy as np
 
+import parameters
+
 
 class NetworkArchitecture:
 
     def __init__(self, state_size):
         self.state_size = state_size
 
-    def build_regular_layers(self, size, activation_fn=tf.nn.elu):
+    def build_regular_layers(self, activation_fn=tf.nn.elu):
 
         self.inputs = tf.placeholder(tf.float32, [None, *self.state_size],
                                      name='Input_state')
 
         layers = [self.inputs]
+
+        size = parameters.LAYERS_SIZE
         for n in range(len(size)):
             layer = slim.fully_connected(inputs=layers[n],
                                          num_outputs=size[n],
@@ -67,7 +71,7 @@ class NetworkArchitecture:
 
         with tf.variable_scope('LSTM'):
             # New LSTM Network with 256 cells
-            lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(256)
+            lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(parameters.LSTM_CELLS)
             c_size = lstm_cell.state_size.c
             h_size = lstm_cell.state_size.h
 
@@ -99,7 +103,7 @@ class NetworkArchitecture:
                                                         state_in)
             lstm_c, lstm_h = lstm_state
             self.state_out = (lstm_c[:1, :], lstm_h[:1, :])
-            self.output = tf.reshape(lstm_output, [-1, 256])
+            self.output = tf.reshape(lstm_output, [-1, parameters.LSTM_CELLS])
             return (c_in, h_in)
 
     def return_output(self, lstm):

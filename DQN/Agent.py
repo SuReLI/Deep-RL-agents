@@ -48,7 +48,7 @@ class Agent:
         self.epsilon = parameters.EPSILON_START
         self.epsilon_decay = (parameters.EPSILON_START -
                               parameters.EPSILON_STOP) \
-                            / parameters.EPSILON_STEPS
+            / parameters.EPSILON_STEPS
 
         trainables = tf.trainable_variables()
         self.update_target_ops = updateTargetGraph(trainables)
@@ -61,16 +61,17 @@ class Agent:
             done = False
             episode_reward = 0
             step = 0
-            total_steps = 0
+            self.total_steps = 0
 
             while step < parameters.MAX_EPISODE_STEPS and not done:
 
                 if random.random() < self.epsilon or \
-                        total_steps < parameters.PRE_TRAIN_STEPS:
+                        self.total_steps < parameters.PRE_TRAIN_STEPS:
                     a = random.randint(0, self.action_size - 1)
                 else:
                     a = self.sess.run(self.mainQNetwork.predict,
-                                      feed_dict={self.inputs: [s]})
+                                      feed_dict={self.mainQNetwork.inputs: [s]})
+                    a = a[0]
 
                 if self.epsilon > parameters.EPSILON_STOP:
                     self.epsilon -= self.epsilon_decay
@@ -84,10 +85,10 @@ class Agent:
                 s = s_
 
                 step += 1
-                total_steps += 1
+                self.total_steps += 1
 
-                if total_steps > parameters.PRE_TRAIN_STEPS and \
-                        total_steps % parameters.TRAINING_FREQ == 0:
+                if self.total_steps > parameters.PRE_TRAIN_STEPS and \
+                        self.total_steps % parameters.TRAINING_FREQ == 0:
                     train_batch = self.buffer.sample(parameters.BATCH_SIZE)
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[:, 3]}
@@ -118,32 +119,40 @@ class Agent:
             self.buffer.add(episodeBuffer.buffer)
 
             # Save the model
-            if (i+1) % 1000 == 0:
+            if (i + 1) % 1000 == 0:
                 print(episode_reward)
                 SAVER.save(i)
 
             DISPLAYER.add_reward(episode_reward)
 
-        SAVER.save(parameters.MAX_EPISODE_STEPS)
+    def play(self, number_run):
+        print("Playing for", number_run, "runs")
 
-    def play(self, n):
         self.env.set_render(True)
-        for i in range(n):
-            episode_reward = 0
-            s = self.env.reset()
-            done = False
-            step = 0
+        try:
+            for _ in range(number_run):
 
-            while not done:
-                a = self.sess.run(mainQNetwork.predict,
-                                      feed_dict={self.inputs: [s]})
-                s, r, done, info = self.act(a)
+                s = self.env.reset()
+                episode_reward = 0
+                done = False
 
-                episode_reward += r
+                while not done:
+                    a = self.sess.run(self.mainQNetwork.predict,
+                                      feed_dict={self.mainQNetwork.inputs: [s]})
+                    a = a[0]
+                    s, r, done, info = self.env.act(a)
 
-                step += 1
-            print("Episode reward :", episode_reward)
-        self.env.set_render(False)
+                    episode_reward += r
+
+                print("Episode reward :", episode_reward)
+
+        except KeyboardInterrupt as e:
+            pass
+
+        finally:
+            self.env.set_render(False)
+            print("End of the demo")
+            self.env.close()
 
     def stop(self):
         self.env.close()

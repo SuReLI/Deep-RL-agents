@@ -1,12 +1,10 @@
 
-import os
 import tensorflow as tf
 
 from Agent import Agent
 
 from Displayer import DISPLAYER
 from Saver import SAVER
-import parameters
 
 
 if __name__ == '__main__':
@@ -23,8 +21,13 @@ if __name__ == '__main__':
         SAVER.load()
 
         print("Beginning of the run")
-        agent.run()
+        try:
+            agent.run()
+        except KeyboardInterrupt:
+            pass
+        print("End of the run")
+        # SAVER.save(agent.total_steps)
         DISPLAYER.disp()
 
-        agent.play()
+        agent.play(10)
         agent.stop()

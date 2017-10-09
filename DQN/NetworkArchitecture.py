@@ -3,10 +3,6 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 from tensorflow.contrib.layers import flatten
 
-import numpy as np
-
-import parameters
-
 
 class NetworkArchitecture:
 
@@ -49,8 +45,8 @@ class NetworkArchitecture:
                                                      512,
                                                      activation_fn=tf.nn.elu)
         self.value_stream = slim.fully_connected(self.flat_conv,
-                                                     512,
-                                                     activation_fn=tf.nn.elu)
+                                                 512,
+                                                 activation_fn=tf.nn.elu)
 
         self.advantage = slim.fully_connected(self.advantage_stream,
                                               self.action_size,

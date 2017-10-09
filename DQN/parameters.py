@@ -1,5 +1,5 @@
 
-ENV = "SpaceInvaders-ram-v0"
+ENV = "SpaceInvaders-v0"
 
 LOAD = False
 DISPLAY = True

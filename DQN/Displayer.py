@@ -41,6 +41,6 @@ class Displayer:
                        for i in range(2, len(self.rewards))]
         saver = [("results/Reward", self.rewards),
                  ("results/Mean_reward", mean_reward)]
-        save(saver, "results/Reward.png")
+        save(saver, "results/Reward_{}.png".format(parameters.ENV))
 
 DISPLAYER = Displayer()

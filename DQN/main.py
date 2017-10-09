@@ -26,7 +26,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         print("End of the run")
-        # SAVER.save(agent.total_steps)
+        SAVER.save(agent.total_steps)
         DISPLAYER.disp()
 
         agent.play(10)

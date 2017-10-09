@@ -3,9 +3,8 @@ import random
 import numpy as np
 import tensorflow as tf
 
-from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
-
 from Environment import Environment
+from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
 from QNetwork import QNetwork
 
 from Displayer import DISPLAYER
@@ -52,6 +51,7 @@ class Agent:
                               parameters.EPSILON_STOP) \
             / parameters.EPSILON_STEPS
 
+
         self.beta = parameters.PRIOR_BETA_START
         self.beta_incr = (parameters.PRIOR_BETA_STOP -
                               parameters.PRIOR_BETA_START) \
@@ -97,9 +97,6 @@ class Agent:
                     train_batch = self.buffer.sample(parameters.BATCH_SIZE,
                                                      self.beta)
 
-                    if self.beta < parameters.PRIOR_BETA_STOP:
-                        self.beta += self.beta_incr
-
                     feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
                     mainQaction = self.sess.run(self.mainQNetwork.predict,
                                                 feed_dict=feed_dict)
@@ -126,11 +123,12 @@ class Agent:
                     update_target(self.update_target_ops, self.sess)
 
             # Save the model
-            if (i + 1) % 1000 == 0:
+            if (i + 1) % 10000 == 0:
                 print(episode_reward)
                 SAVER.save(i)
 
-            DISPLAYER.add_reward(episode_reward)
+            if self.total_steps > parameters.PRE_TRAIN_STEPS:
+                DISPLAYER.add_reward(episode_reward)
 
     def play(self, number_run):
         print("Playing for", number_run, "runs")

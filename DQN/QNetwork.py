@@ -3,28 +3,41 @@ import tensorflow as tf
 
 from NetworkArchitecture import NetworkArchitecture
 
+import parameters
+
 
 class QNetwork:
 
-	def __init__(self, state_size, action_size):
+    def __init__(self, state_size, action_size, scope):
 
-		with tf.variable_scope("QNetwork"):
-	        self.state_size = state_size
-    	    self.action_size = action_size
+        with tf.variable_scope(scope):
+            self.state_size = state_size
+            self.action_size = action_size
 
-        	# Define the model
-            self.model = NetworkArchitecture(self.state_size)
+            # Define the model
+            self.model = NetworkArchitecture(self.state_size, self.action_size)
 
             # Convolution network - or not
-            self.inputs = self.model.build_layers()
+            self.inputs = self.model.build_model()
 
-            # LSTM Network - or not
-            if parameters.LSTM:
-                # Input placeholder
-                self.state_in = self.model.build_lstm()
+            self.value, self.advantage = self.model.dueling()
+            adv_mean = tf.reduce_mean(self.advantage, axis=1, keep_dims=True)
+            self.Qvalues = self.value + tf.subtract(self.advantage, adv_mean)
 
-                self.lstm_state_init = self.model.lstm_state_init
-                self.state_out, model_output = self.model.return_output(True)
+            self.predict = tf.argmax(self.Qvalues, 1)
 
-            else:
-                model_output = self.model.return_output(False)
+            # Loss
+            self.Qtarget = tf.placeholder(shape=[None], dtype=tf.float32)
+            self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
+            self.actions_onehot = tf.one_hot(self.actions,
+                                             self.action_size,
+                                             dtype=tf.float32)
+
+            self.Qaction = tf.reduce_sum(
+                tf.multiply(self.Qvalues, self.actions_onehot), axis=1)
+
+            self.td_error = tf.square(self.Qtarget - self.Qaction)
+            self.loss = tf.reduce_mean(self.td_error)
+            self.trainer = tf.train.AdamOptimizer(
+                learning_rate=parameters.LEARNING_RATE)
+            self.train = self.trainer.minimize(self.loss)

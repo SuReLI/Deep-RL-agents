@@ -62,12 +62,12 @@ class Agent:
 
     def run(self):
 
-        self.total_steps = 0
         for i in range(parameters.TRAINING_STEPS):
             s = self.env.reset()
             done = False
             episode_reward = 0
             step = 0
+            self.total_steps = 0
 
             while step < parameters.MAX_EPISODE_STEPS and not done:
 
@@ -78,6 +78,7 @@ class Agent:
                     a = self.sess.run(self.mainQNetwork.predict,
                                       feed_dict={self.mainQNetwork.inputs: [s]})
                     a = a[0]
+                    print("Action : ", a)
 
                 if self.epsilon > parameters.EPSILON_STOP:
                     self.epsilon -= self.epsilon_decay
@@ -100,26 +101,26 @@ class Agent:
                     if self.beta < parameters.PRIOR_BETA_STOP:
                         self.beta += self.beta_incr
 
-                    feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
+                    feed_dict = {self.mainQNetwork.inputs: train_batch[:, 3]}
                     mainQaction = self.sess.run(self.mainQNetwork.predict,
                                                 feed_dict=feed_dict)
 
-                    feed_dict = {self.targetQNetwork.inputs: train_batch[3]}
+                    feed_dict = {self.targetQNetwork.inputs: train_batch[:, 3]}
                     targetQvalues = self.sess.run(self.targetQNetwork.Qvalues,
                                                   feed_dict=feed_dict)
 
                     # Done multiplier :
                     # equals 0 if the episode was done
                     # equals 1 else
-                    done_multiplier = -1 * (train_batch[4] - 1)
+                    done_multiplier = -1 * (train_batch[:, 4] - 1)
                     doubleQ = targetQvalues[
-                        range(parameters.BATCH_SIZE), mainQaction]
-                    targetQvalues = train_batch[2] + \
+                        range(self.batch_size), mainQaction]
+                    targetQvalues = train_batch[:, 2] + \
                         parameters.DISCOUNT * doubleQ * done_multiplier
 
-                    feed_dict = {self.mainQNetwork.inputs: train_batch[0],
+                    feed_dict = {self.mainQNetwork.inputs: train_batch[:, 0],
                                  self.mainQNetwork.Qtarget: targetQvalues,
-                                 self.mainQNetwork.actions: train_batch[1]}
+                                 self.mainQNetwork.actions: train_batch[:, 1]}
                     _ = self.sess.run(self.mainQNetwork.train,
                                       feed_dict=feed_dict)
 

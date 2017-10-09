@@ -23,7 +23,7 @@ BATCH_SIZE = 64
 
 # Number of episodes of game environment to train with
 TRAINING_STEPS = 10000
-PRE_TRAIN_STEPS = 400
+PRE_TRAIN_STEPS = 200
 
 # Maximal number of steps during one episode
 MAX_EPISODE_STEPS = 300

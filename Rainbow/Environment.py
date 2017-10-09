@@ -22,8 +22,8 @@ class Environment:
         if ENV == "SpaceInvaders-v0" or ENV == "SpaceInvaders-ram-v0":
             return 4
         elif ENV == "Pong-v0" or ENV == "Pong-ram-v0":
-            self.offset = 1
-            return 3
+            self.offset = 2
+            return 2
         else:
             return self.env.action_space.n
 

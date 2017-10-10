@@ -30,7 +30,10 @@ class Environment:
             self.offset = 2
             return 2
         else:
-            return self.env.action_space.n
+            try:
+                return self.env.action_space.n
+            except AttributeError:
+                return self.env.action_space.shape[0]
 
     def set_render(self, render):
         self.render = render

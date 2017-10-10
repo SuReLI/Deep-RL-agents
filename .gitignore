@@ -4,3 +4,5 @@ results/
 *.h5
 model
 tmp.png
+Modified_Code/Lirnli/*[^\.py]
+Modified_Code/Lirnli/tmp/

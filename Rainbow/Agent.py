@@ -108,6 +108,8 @@ class Agent:
 
                 if self.total_steps > parameters.PRE_TRAIN_STEPS and \
                         self.total_steps % parameters.TRAINING_FREQ == 0:
+
+                    self.beta += self.beta_incr
                     train_batch = self.buffer.sample(parameters.BATCH_SIZE,
                                                      self.beta)
 
@@ -175,6 +177,9 @@ class Agent:
         except KeyboardInterrupt as e:
             pass
 
+        except Exception as e:
+            print("Exception :", e)
+
         finally:
             self.env.set_render(False)
             print("End of the demo")
@@ -202,6 +207,9 @@ class Agent:
 
         except KeyboardInterrupt as e:
             pass
+
+        except Exception as e:
+            print("Exception :", e)
 
         finally:
             print("End of the demo")

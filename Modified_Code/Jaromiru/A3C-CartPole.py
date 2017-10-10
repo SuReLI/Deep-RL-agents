@@ -22,7 +22,7 @@ from keras import backend as K
 # -- constants
 ENV = 'CartPole-v0'
 
-RUN_TIME = 60
+RUN_TIME = 120
 THREADS = 8
 OPTIMIZERS = 4
 THREAD_DELAY = 0.001
@@ -37,7 +37,7 @@ EPSILON_STOP = .01
 EPSILON_STEPS = 100000
 
 MIN_BATCH = 32
-LEARNING_RATE = 5e-3
+LEARNING_RATE = 2e-3
 
 LOSS_V = .5         # v loss coefficient
 LOSS_ENTROPY = .01  # entropy coefficient
@@ -181,12 +181,6 @@ class Agent:
         self.R = 0.
         self.rewards = []
 
-    def save(self, R):
-        self.rewards.append(R)
-
-    def disp(self):
-        plt.plot(self.rewards)
-
     def getEpsilon(self):
         if(frames >= self.eps_steps):
             return self.eps_end
@@ -283,8 +277,8 @@ class Environment(threading.Thread):
                 break
 
         if not self.stop_signal:
-            # print("Total R:", R)
-            self.agent.save(R)
+            if self.n_agent == 1:
+                print("Total R:", R)
             brain.add_reward(R, self.n_agent)
 
     def run(self, render=False):
@@ -312,47 +306,66 @@ class Optimizer(threading.Thread):
         self.stop_signal = True
 
 
-# -------------------- MAIN ----------------------------
-def disp():
+# %% -------------------- DISPLAY ----------------------------
+def disp(name):
 
     plt.plot(brain.sequential_rewards)
-    x = [np.mean(brain.sequential_rewards[max(i-100, 1):i])
+    x = [np.mean(brain.sequential_rewards[max(i - 100, 1):i])
          for i in range(2, len(brain.sequential_rewards))]
     plt.plot(x)
-    env_test.agent.disp()
+    plt.savefig('results/Sequential_rewards_{}.png'.format(name))
 
 
-env_test = Environment(0, eps_start=0., eps_end=0.)
-NUM_STATE = env_test.env.observation_space.shape[0]
-NUM_ACTIONS = env_test.env.action_space.n
-NONE_STATE = np.zeros(NUM_STATE)
+def run(save):
+    try:
+        env_test.run(render=True)
+    except KeyboardInterrupt as e:
+        pass
+    finally:
+        print("End of the run")
+        env_test.env.render(close=True)
+        disp("last")
 
-brain = Brain()  # brain is global in A3C
 
-envs = [Environment(i+1) for i in range(THREADS)]
-opts = [Optimizer() for i in range(OPTIMIZERS)]
+# %% -------------------- MAIN ----------------------------
+if __name__ == '__main__':
 
-for o in opts:
-    o.start()
+    env_test = Environment(0, eps_start=0., eps_end=0.)
+    NUM_STATE = env_test.env.observation_space.shape[0]
+    NUM_ACTIONS = env_test.env.action_space.n
+    NONE_STATE = np.zeros(NUM_STATE)
 
-for e in envs:
-    e.start()
+    brain = Brain()  # brain is global in A3C
 
-time.sleep(RUN_TIME)
+    envs = [Environment(i + 1) for i in range(THREADS)]
+    opts = [Optimizer() for i in range(OPTIMIZERS)]
 
-for e in envs:
-    e.stop()
-for e in envs:
-    e.join()
+    print("Starting the optimizers")
+    for o in opts:
+        o.start()
 
-for o in opts:
-    o.stop()
-for o in opts:
-    o.join()
+    print("Starting the environments")
+    for e in envs:
+        e.start()
 
-print("Training finished")
-try:
-    env_test.run(render=True)
-except KeyboardInterrupt as e:
-    print("End of the session")
-    env_test.env.render(close=True)
+    print("Beginning the training")
+    try:
+        time.sleep(RUN_TIME)
+    except KeyboardInterrupt:
+        pass
+    print("End of the training")
+
+    print("Stopping the environments")
+    for e in envs:
+        e.stop()
+    for e in envs:
+        e.join()
+
+    print("Stopping the optimizers")
+    for o in opts:
+        o.stop()
+    for o in opts:
+        o.join()
+
+    print("Training finished")
+    run(save=True)

@@ -3,6 +3,7 @@ ENV = "LunarLander-v2"
 
 LOAD = True
 DISPLAY = True
+GIF = True
 
 CONV = False
 
@@ -16,7 +17,7 @@ FRAME_SKIP = 4
 
 EPSILON_START = 0.8
 EPSILON_STOP = 0.1
-EPSILON_STEPS = 500000
+EPSILON_STEPS = 100000
 
 LEARNING_RATE = 1e-4
 
@@ -33,7 +34,7 @@ TRAINING_STEPS = 50000
 PRE_TRAIN_STEPS = 1000
 
 # Maximal number of steps during one episode
-MAX_EPISODE_STEPS = 300
+MAX_EPISODE_STEPS = 600
 TRAINING_FREQ = 4
 
 # Rate to update target network toward primary network

@@ -18,16 +18,19 @@ if __name__ == '__main__':
         agent = Agent(sess)
         SAVER.set_sess(sess)
 
-        SAVER.load()
+        SAVER.load(agent)
+        agent.play(0)
 
-        print("Beginning of the run")
-        try:
-            agent.run()
-        except KeyboardInterrupt:
-            pass
-        print("End of the run")
-        SAVER.save(agent.total_steps)
+#        print("Beginning of the run")
+#        try:
+#            agent.run()
+#        except KeyboardInterrupt:
+#            pass
+#        print("End of the run")
+#        SAVER.save(agent.total_steps)
         DISPLAYER.disp()
 
-        agent.play(10)
+#        agent.play(10)
         agent.stop()
+        
+    agent.play_gif("results/gif/SpaceInvaders.gif")

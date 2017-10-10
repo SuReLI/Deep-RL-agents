@@ -2,7 +2,7 @@
 ENV = "SpaceInvaders-v0"
 
 LOAD = True
-DISPLAY = False
+DISPLAY = True
 
 
 DISCOUNT = 0.99

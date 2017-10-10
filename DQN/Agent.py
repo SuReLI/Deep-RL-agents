@@ -162,5 +162,35 @@ class Agent:
             print("End of the demo")
             self.env.close()
 
+    def play_gif(self, path):
+
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            self.sess = sess
+            SAVER.set_sess(sess)
+            SAVER.load(self)
+
+            try:
+                s = self.env.reset()
+                episode_reward = 0
+                done = False
+
+                while not done:
+                    a = self.sess.run(self.mainQNetwork.predict,
+                                      feed_dict={self.mainQNetwork.inputs: [s]})
+                    a = a[0]
+                    s, r, done, info = self.env.act_gif(a)
+
+                    episode_reward += r
+                print("Episode reward :", episode_reward)
+                self.env.save_gif(path)
+
+            except KeyboardInterrupt as e:
+                pass
+
+            finally:
+                print("End of the demo")
+                self.env.close()
+
     def stop(self):
         self.env.close()

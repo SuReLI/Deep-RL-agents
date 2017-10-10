@@ -1,6 +1,7 @@
 
 import tensorflow as tf
 import pickle
+import os
 
 import parameters
 
@@ -29,8 +30,11 @@ class Saver:
                 ckpt = tf.train.get_checkpoint_state("model/")
                 self.saver.restore(self.sess, ckpt.model_checkpoint_path)
                 print("Loading buffer...")
-                with open("model/buffer", "rb") as file:
-                    agent.buffer = pickle.load(file)
+                try:
+                    with open("model/buffer", "rb") as file:
+                        agent.buffer = pickle.load(file)
+                except FileNotFoundError:
+                    print("Buffer not found")
                 parameters.PRE_TRAIN_STEPS = 0
                 parameters.EPSILON_START = parameters.EPSILON_STOP
                 parameters.PRIOR_BETA_START = parameters.PRIOR_BETA_STOP

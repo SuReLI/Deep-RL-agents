@@ -122,6 +122,9 @@ class Agent:
 
                     update_target(self.update_target_ops, self.sess)
 
+            if (i + 1) % 500 == 0:
+                print("Episode", i)
+
             # Save the model
             if (i + 1) % 10000 == 0:
                 print(episode_reward)

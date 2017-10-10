@@ -18,7 +18,7 @@ if __name__ == '__main__':
         agent = Agent(sess)
         SAVER.set_sess(sess)
 
-        SAVER.load()
+        SAVER.load(agent)
 
         print("Beginning of the run")
         try:
@@ -26,7 +26,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         print("End of the run")
-        # SAVER.save(agent.total_steps)
+        SAVER.save(agent.total_steps, agent.buffer)
         DISPLAYER.disp()
 
         agent.play(10)

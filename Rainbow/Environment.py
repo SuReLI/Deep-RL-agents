@@ -1,6 +1,10 @@
 
+import os
 import gym
 from parameters import ENV
+
+from PIL import Image
+import imageio
 
 
 class Environment:
@@ -11,6 +15,7 @@ class Environment:
         print()
         self.render = False
         self.offset = 0
+        self.images = []
 
     def get_state_size(self):
         try:
@@ -39,6 +44,21 @@ class Environment:
         if self.render:
             self.env.render()
         return self.env.step(action)
+
+    def act_gif(self, action):
+        action += self.offset
+        assert self.env.action_space.contains(action)
+        if self.render:
+            self.env.render()
+        img = Image.fromarray(self.env.render(mode='rgb_array'))
+        img.save('tmp.png')
+        self.images.append(imageio.imread('tmp.png'))
+        return self.env.step(action)
+
+    def save_gif(self, path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        imageio.mimsave(path, self.images, duration=1)
+        self.images = []
 
     def close(self):
         self.env.render(close=True)

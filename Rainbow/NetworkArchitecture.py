@@ -3,6 +3,8 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 from tensorflow.contrib.layers import flatten
 
+import parameters
+
 
 class NetworkArchitecture:
 
@@ -15,37 +17,45 @@ class NetworkArchitecture:
         self.inputs = tf.placeholder(tf.float32, [None, *self.state_size],
                                      name='Input_state')
 
-        with tf.variable_scope('Convolutional_Layers'):
-            self.conv1 = slim.conv2d(activation_fn=tf.nn.elu,
-                                     inputs=self.inputs,
-                                     num_outputs=32,
-                                     kernel_size=[8, 8],
-                                     stride=[4, 4],
-                                     padding='VALID')
-            self.conv2 = slim.conv2d(activation_fn=tf.nn.elu,
-                                     inputs=self.conv1,
-                                     num_outputs=64,
-                                     kernel_size=[4, 4],
-                                     stride=[2, 2],
-                                     padding='VALID')
-            self.conv3 = slim.conv2d(activation_fn=tf.nn.elu,
-                                     inputs=self.conv2,
-                                     num_outputs=64,
-                                     kernel_size=[3, 3],
-                                     stride=[1, 1],
-                                     padding='VALID')
+        if parameters.CONV:
 
-        # Flatten the output
-        self.flat_conv = flatten(self.conv3)
+            with tf.variable_scope('Convolutional_Layers'):
+                self.conv1 = slim.conv2d(activation_fn=tf.nn.elu,
+                                         inputs=self.inputs,
+                                         num_outputs=32,
+                                         kernel_size=[8, 8],
+                                         stride=[4, 4],
+                                         padding='VALID')
+                self.conv2 = slim.conv2d(activation_fn=tf.nn.elu,
+                                         inputs=self.conv1,
+                                         num_outputs=64,
+                                         kernel_size=[4, 4],
+                                         stride=[2, 2],
+                                         padding='VALID')
+                self.conv3 = slim.conv2d(activation_fn=tf.nn.elu,
+                                         inputs=self.conv2,
+                                         num_outputs=64,
+                                         kernel_size=[3, 3],
+                                         stride=[1, 1],
+                                         padding='VALID')
+
+            # Flatten the output
+            self.hidden = flatten(self.conv3)
+
+        else:
+            self.hidden = slim.fully_connected(self.inputs,
+                                               64,
+                                               activation_fn=tf.nn.elu)
+
         return self.inputs
 
     def dueling(self):
 
-        self.advantage_stream = slim.fully_connected(self.flat_conv,
-                                                     512,
+        self.advantage_stream = slim.fully_connected(self.hidden,
+                                                     32,
                                                      activation_fn=tf.nn.elu)
-        self.value_stream = slim.fully_connected(self.flat_conv,
-                                                 512,
+        self.value_stream = slim.fully_connected(self.hidden,
+                                                 32,
                                                  activation_fn=tf.nn.elu)
 
         self.advantage = slim.fully_connected(self.advantage_stream,

@@ -1,8 +1,8 @@
 
 ENV = "SpaceInvaders-v0"
 
-LOAD = False
-DISPLAY = True
+LOAD = True
+DISPLAY = False
 
 
 DISCOUNT = 0.99
@@ -22,11 +22,11 @@ PRIOR_BETA_STEPS = 100000
 BATCH_SIZE = 32
 
 # Number of episodes of game environment to train with
-TRAINING_STEPS = 10000
+TRAINING_STEPS = 1000000
 PRE_TRAIN_STEPS = 5000
 
 # Maximal number of steps during one episode
-MAX_EPISODE_STEPS = 300
+MAX_EPISODE_STEPS = 600
 TRAINING_FREQ = 4
 
 # Rate to update target network toward primary network

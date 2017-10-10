@@ -32,9 +32,9 @@ if __name__ == '__main__':
 
         agent.play(10)
 
-    if parameters.GIF:
-        agent.play_gif("results/gif/{}_1.gif".format(parameters.ENV))
-        agent.play_gif("results/gif/{}_2.gif".format(parameters.ENV))
-        agent.play_gif("results/gif/{}_3.gif".format(parameters.ENV))
+        if parameters.GIF:
+            agent.play_gif("results/gif/{}_1.gif".format(parameters.ENV))
+            agent.play_gif("results/gif/{}_2.gif".format(parameters.ENV))
+            agent.play_gif("results/gif/{}_3.gif".format(parameters.ENV))
 
     agent.stop()

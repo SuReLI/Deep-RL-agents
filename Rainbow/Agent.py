@@ -54,7 +54,7 @@ class Agent:
 
         self.beta = parameters.PRIOR_BETA_START
         self.beta_incr = (parameters.PRIOR_BETA_STOP -
-                              parameters.PRIOR_BETA_START) \
+                          parameters.PRIOR_BETA_START) \
             / parameters.PRIOR_BETA_STEPS
 
         trainables = tf.trainable_variables()
@@ -63,6 +63,7 @@ class Agent:
     def run(self):
 
         self.total_steps = 0
+        pre_training = True
         for i in range(parameters.TRAINING_STEPS):
             s = self.env.reset()
             done = False
@@ -72,6 +73,11 @@ class Agent:
             discount_R = 0
 
             while step < parameters.MAX_EPISODE_STEPS and not done:
+
+                if self.total_steps >= parameters.PRE_TRAIN_STEPS and \
+                        pre_training:
+                    print("End of pre-training")
+                    pre_training = False
 
                 if random.random() < self.epsilon or \
                         self.total_steps < parameters.PRE_TRAIN_STEPS:
@@ -92,12 +98,12 @@ class Agent:
                 memory.append((s, a, r, s_, done))
 
                 if len(memory) <= parameters.N_STEP_RETURN:
-                    discount_R += parameters.DISCOUNT**(len(memory)-1)*r
+                    discount_R += parameters.DISCOUNT**(len(memory) - 1) * r
 
                 else:
                     s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
-                    discount_R = (discount_R - r_mem)/parameters.DISCOUNT +\
-                                parameters.DISCOUNT_N * r
+                    discount_R = (discount_R - r_mem) / parameters.DISCOUNT +\
+                        parameters.DISCOUNT_N * r
                     self.buffer.add(s_mem, a_mem, discount_R, ss_mem, done_mem)
 
                 episode_reward += r

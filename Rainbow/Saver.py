@@ -29,19 +29,21 @@ class Saver:
             try:
                 ckpt = tf.train.get_checkpoint_state("model/")
                 self.saver.restore(self.sess, ckpt.model_checkpoint_path)
-                print("Loading buffer...")
-                try:
-                    with open("model/buffer", "rb") as file:
-                        agent.buffer = pickle.load(file)
-                except FileNotFoundError:
-                    print("Buffer not found")
+            except (ValueError, AttributeError):
+                print("No model is saved !")
+                self.sess.run(tf.global_variables_initializer())
+
+            print("Loading buffer...")
+            try:
+                with open("model/buffer", "rb") as file:
+                    agent.buffer = pickle.load(file)
                 parameters.PRE_TRAIN_STEPS = 0
                 parameters.EPSILON_START = parameters.EPSILON_STOP
                 parameters.PRIOR_BETA_START = parameters.PRIOR_BETA_STOP
                 print("Model loaded !")
-            except (ValueError, AttributeError):
-                print("No model is saved !")
-                self.sess.run(tf.global_variables_initializer())
+            except (FileNotFoundError, EOFError):
+                print("Buffer not found")
+
         else:
             self.sess.run(tf.global_variables_initializer())
 

@@ -3,7 +3,8 @@ ENV = "Pong-v0"
 
 LOAD = False
 DISPLAY = True
-GIF = True
+
+BUFFER_SAVE = False
 
 CONV = True
 

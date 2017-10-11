@@ -20,10 +20,15 @@ class Saver:
         os.makedirs(os.path.dirname("model/"), exist_ok=True)
         self.saver.save(self.sess, "model/Model_" + str(n_episode) + ".cptk")
         print("Model saved !")
-        print("Saving buffer...")
-        with open("model/buffer", "wb") as file:
-            pickle.dump(agent_buffer, file)
-        print("Buffer saved !")
+
+        if parameters.BUFFER_SAVE:
+            try:
+                print("Saving buffer...")
+                with open("model/buffer", "wb") as file:
+                    pickle.dump(agent_buffer, file)
+                print("Buffer saved !")
+            except KeyboardInterrupt:
+                print("Aborted")
 
     def load(self, agent):
         if parameters.LOAD:

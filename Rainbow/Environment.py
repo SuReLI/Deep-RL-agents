@@ -1,7 +1,7 @@
 
 import os
 import gym
-from parameters import ENV
+from parameters import ENV, FRAME_SKIP
 
 from PIL import Image
 import imageio
@@ -12,6 +12,7 @@ class Environment:
     def __init__(self):
 
         self.env = gym.make(ENV)
+        self.env = gym.wrappers.SkipWrapper(FRAME_SKIP)(self.env)
         print()
         self.render = False
         self.offset = 0

@@ -91,10 +91,7 @@ class Agent:
                 if self.epsilon > parameters.EPSILON_STOP:
                     self.epsilon -= self.epsilon_decay
 
-                r = 0
-                for _ in range(parameters.FRAME_SKIP):
-                    s_, r_tmp, done, info = self.env.act(a)
-                    r += r_tmp
+                s_, r, done, info = self.env.act(a)
 
                 memory.append((s, a, r, s_, done))
 
@@ -180,11 +177,7 @@ class Agent:
                     a = self.sess.run(self.mainQNetwork.predict,
                                       feed_dict={self.mainQNetwork.inputs: [s]})
                     a = a[0]
-
-                    r = 0
-                    for _ in range(parameters.FRAME_SKIP):
-                        s, r_tmp, done, info = self.env.act(a)
-                        r += r_tmp
+                    s, r, done, info = self.env.act(a)
 
                     episode_reward += r
 
@@ -212,10 +205,7 @@ class Agent:
                 a = self.sess.run(self.mainQNetwork.predict,
                                   feed_dict={self.mainQNetwork.inputs: [s]})
                 a = a[0]
-                r = 0
-                for _ in range(parameters.FRAME_SKIP):
-                    s, r_tmp, done, info = self.env.act_gif(a)
-                    r += r_tmp
+                s, r, done, info = self.env.act_gif(a)
 
                 episode_reward += r
             print("Episode reward :", episode_reward)

@@ -11,7 +11,7 @@ class Environment:
 
     def __init__(self):
 
-        self.env = gym.make(ENV)
+        self.env_no_frame_skip = gym.make(ENV)
         self.env = gym.wrappers.SkipWrapper(FRAME_SKIP)(self.env)
         print()
         self.render = False
@@ -52,12 +52,21 @@ class Environment:
     def act_gif(self, action):
         action += self.offset
         assert self.env.action_space.contains(action)
-        if self.render:
-            self.env.render()
-        img = Image.fromarray(self.env.render(mode='rgb_array'))
-        img.save('tmp.png')
-        self.images.append(imageio.imread('tmp.png'))
-        return self.env.step(action)
+        r = 0
+        i, done = 0, False
+        while i < (parameters.FRAME_SKIP + 1) and not done:
+            if self.render:
+                self.env_no_frame_skip.render()
+
+            #Save image
+            img = Image.fromarray(self.env.render(mode='rgb_array'))
+            img.save('tmp.png')
+            self.images.append(imageio.imread('tmp.png'))
+
+            s_, r_tmp, done, info = self.env_no_frame_skip.step(action)
+            r += r_tmp
+            i += 1
+        return s_, r, done, info
 
     def save_gif(self, path):
         os.makedirs(os.path.dirname(path), exist_ok=True)

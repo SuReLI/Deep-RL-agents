@@ -60,6 +60,8 @@ class Agent:
         trainables = tf.trainable_variables()
         self.update_target_ops = updateTargetGraph(trainables)
 
+        self.best_run = -1e10
+
     def run(self):
 
         self.total_steps = 0
@@ -79,8 +81,7 @@ class Agent:
                     print("End of pre-training")
                     pre_training = False
 
-                if random.random() < self.epsilon or \
-                        self.total_steps < parameters.PRE_TRAIN_STEPS:
+                if random.random() < self.epsilon or pre_training:
                     a = random.randint(0, self.action_size - 1)
                 else:
                     a = self.sess.run(self.mainQNetwork.predict,
@@ -112,7 +113,7 @@ class Agent:
                 step += 1
                 self.total_steps += 1
 
-                if self.total_steps > parameters.PRE_TRAIN_STEPS and \
+                if not pre_training and \
                         self.total_steps % parameters.TRAINING_FREQ == 0:
 
                     self.beta += self.beta_incr
@@ -152,8 +153,10 @@ class Agent:
                 print(episode_reward)
                 SAVER.save(i, self.buffer)
 
-            if self.total_steps > parameters.PRE_TRAIN_STEPS:
+            if not pre_training:
                 DISPLAYER.add_reward(episode_reward)
+                if episode_reward > self.best_run:
+                    SAVER.save('best', self.buffer)
 
     def play(self, number_run):
         print("Playing for", number_run, "runs")

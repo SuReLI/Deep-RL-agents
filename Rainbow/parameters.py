@@ -1,11 +1,11 @@
 
-ENV = "LunarLander-v2"
+ENV = "Pong-v0"
 
 LOAD = False
 DISPLAY = True
 GIF = True
 
-CONV = False
+CONV = True
 
 
 DISCOUNT = 0.99
@@ -19,7 +19,7 @@ EPSILON_START = 0.8
 EPSILON_STOP = 0.01
 EPSILON_STEPS = 100000
 
-LEARNING_RATE = 2.5e-4
+LEARNING_RATE = 7.5e-4
 
 BUFFER_SIZE = 100000
 PRIOR_ALPHA = 0.5
@@ -31,7 +31,7 @@ BATCH_SIZE = 32
 
 # Number of episodes of game environment to train with
 TRAINING_STEPS = 50000
-PRE_TRAIN_STEPS = 1000
+PRE_TRAIN_STEPS = 50000
 
 # Maximal number of steps during one episode
 MAX_EPISODE_STEPS = 250

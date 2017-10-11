@@ -153,10 +153,17 @@ class Agent:
                 print(episode_reward)
                 SAVER.save(i, self.buffer)
 
+            if pre_training:
+                self.best_run = max(self.best_run, episode_reward)
+
             if not pre_training:
                 DISPLAYER.add_reward(episode_reward)
-                if episode_reward > self.best_run:
+                if episode_reward > self.best_run and \
+                        self.total_steps > 1000 + parameters.PRE_TRAIN_STEPS:
+                    self.best_run = episode_reward
+                    print("Save best", episode_reward)
                     SAVER.save('best', self.buffer)
+                    self.play_gif('results/gif/best.gif')
 
     def play(self, number_run):
         print("Playing for", number_run, "runs")

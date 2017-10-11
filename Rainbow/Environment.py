@@ -54,7 +54,7 @@ class Environment:
         assert self.env.action_space.contains(action)
         r = 0
         i, done = 0, False
-        while i < (parameters.FRAME_SKIP + 1) and not done:
+        while i < (FRAME_SKIP + 1) and not done:
             if self.render:
                 self.env_no_frame_skip.render()
 

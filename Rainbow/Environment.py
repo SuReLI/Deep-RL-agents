@@ -12,7 +12,7 @@ class Environment:
     def __init__(self):
 
         self.env_no_frame_skip = gym.make(ENV)
-        self.env = gym.wrappers.SkipWrapper(FRAME_SKIP)(self.env)
+        self.env = gym.wrappers.SkipWrapper(FRAME_SKIP)(self.env_no_frame_skip)
         print()
         self.render = False
         self.offset = 0

@@ -27,17 +27,11 @@ class Environment:
     def get_action_size(self):
         if ENV == "SpaceInvaders-v0" or ENV == "SpaceInvaders-ram-v0":
             return 4
-        elif ENV == "Pong-v0" or ENV == "Pong-ram-v0":
-            self.offset = 2
-            return 2
         else:
             try:
                 return self.env.action_space.n
             except AttributeError:
                 return self.env.action_space.shape[0]
-
-    def get_bound(self):
-        return self.env.action_space.high
 
     def set_render(self, render):
         self.render = render

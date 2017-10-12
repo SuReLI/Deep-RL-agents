@@ -12,6 +12,7 @@ def save(saver, fig_name):
         for path, data in saver:
             plt.plot(data)
         fig = plt.gcf()
+        os.makedirs(os.path.dirname(fig_name), exist_ok=True)
         fig.savefig(fig_name)
         plt.show(block=False)
     else:

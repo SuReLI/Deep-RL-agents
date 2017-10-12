@@ -17,7 +17,7 @@ class NetworkArchitecture:
                                            [None, *self.state_size],
                                            name='Input_state')
         self.inputs_action = tf.placeholder(tf.float32,
-                                            [None, *self.action_size],
+                                            [None, self.action_size],
                                             name='Input_action')
         return self.inputs_state, self.inputs_action
 

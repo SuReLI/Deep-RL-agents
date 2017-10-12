@@ -10,10 +10,8 @@ CONV = False
 
 
 DISCOUNT = 0.99
-N_STEP_RETURN = 3
-DISCOUNT_N = DISCOUNT**(N_STEP_RETURN-1)
 
-FRAME_SKIP = 0
+FRAME_SKIP = 4
 
 
 EPSILON_START = 0.8
@@ -31,7 +29,7 @@ PRIOR_BETA_STEPS = 25000
 BATCH_SIZE = 32
 
 # Number of episodes of game environment to train with
-TRAINING_STEPS = 10000
+TRAINING_STEPS = 25000
 PRE_TRAIN_STEPS = 1000
 
 # Maximal number of steps during one episode

@@ -5,6 +5,9 @@ DISPLAY = True
 LOAD = True
 
 
+
+FRAME_SKIP = 4
+
 THREADS = 4
 LIMIT_RUN_TIME = 20
 

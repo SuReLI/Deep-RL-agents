@@ -1,12 +1,12 @@
 
-ENV = "Pong-v0"
+ENV = "Pendulum-v0"
 
 LOAD = False
 DISPLAY = True
 
 BUFFER_SAVE = False
 
-CONV = True
+CONV = False
 
 
 DISCOUNT = 0.99

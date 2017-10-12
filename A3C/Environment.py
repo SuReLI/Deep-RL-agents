@@ -1,15 +1,21 @@
 
+import os
 import gym
-from parameters import ENV
+from parameters import ENV, FRAME_SKIP
 
+from PIL import Image
+import imageio
 
 class Environment:
 
     def __init__(self):
 
-        self.env = gym.make(ENV)
+        self.env_no_frame_skip = gym.make(ENV)
+        self.env = gym.wrappers.SkipWrapper(FRAME_SKIP)(self.env_no_frame_skip)
         print()
         self.render = False
+        self.offset = 0
+        self.images = []
 
     def get_state_size(self):
         try:
@@ -27,10 +33,35 @@ class Environment:
         return self.env.reset()
 
     def act(self, action):
+        action += self.offset
         assert self.env.action_space.contains(action)
         if self.render:
             self.env.render()
         return self.env.step(action)
+
+    def act_gif(self, action):
+        action += self.offset
+        assert self.env.action_space.contains(action)
+        r = 0
+        i, done = 0, False
+        while i < (FRAME_SKIP + 1) and not done:
+            if self.render:
+                self.env_no_frame_skip.render()
+
+            #Save image
+            img = Image.fromarray(self.env.render(mode='rgb_array'))
+            img.save('tmp.png')
+            self.images.append(imageio.imread('tmp.png'))
+
+            s_, r_tmp, done, info = self.env_no_frame_skip.step(action)
+            r += r_tmp
+            i += 1
+        return s_, r, done, info
+
+    def save_gif(self, path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        imageio.mimsave(path, self.images, duration=1)
+        self.images = []
 
     def close(self):
         self.env.render(close=True)

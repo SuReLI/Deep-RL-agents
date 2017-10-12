@@ -31,7 +31,7 @@ PRIOR_BETA_STEPS = 25000
 BATCH_SIZE = 32
 
 # Number of episodes of game environment to train with
-TRAINING_STEPS = 10000
+TRAINING_STEPS = 25000
 PRE_TRAIN_STEPS = 1000
 
 # Maximal number of steps during one episode

@@ -1,18 +1,4 @@
 
-# *********************************  TO DO  ********************************* #
-#                                                                             #
-# LSTM = False doesn't work (because of Agent which has LSTM everywhere)      #
-#                                                                             #
-#                                                                             #
-#             !!!  Test with epsilon greedy and without  !!!                  #
-#                                                                             #
-#                                                                             #
-#                      Prioritized experience replay                          #
-#                                                                             #
-#                                                                             #
-# *************************************************************************** #
-
-
 import tensorflow as tf
 import parameters
 import threading

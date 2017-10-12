@@ -6,15 +6,6 @@ from NetworkArchitecture import NetworkArchitecture
 import parameters
 
 
-# Used to initialize weights for policy and value output layers
-def normalized_columns_initializer(std=1.0):
-    def _initializer(shape, dtype=None, partition_info=None):
-        out = np.random.randn(*shape).astype(np.float32)
-        out *= std / np.sqrt(np.square(out).sum(axis=0, keepdims=True))
-        return tf.constant(out)
-    return _initializer
-
-
 class Network:
 
     def __init__(self, state_size, action_size, scope):
@@ -48,16 +39,12 @@ class Network:
             # Policy estimation
             self.policy = slim.fully_connected(
                 model_output, action_size,
-                activation_fn=tf.nn.softmax,
-                weights_initializer=normalized_columns_initializer(0.01),
-                biases_initializer=None)
+                activation_fn=tf.nn.softmax)
 
             # Value estimation
             self.value = slim.fully_connected(
                 model_output, 1,
-                activation_fn=None,
-                weights_initializer=normalized_columns_initializer(1.0),
-                biases_initializer=None)
+                activation_fn=None)
 
         if scope != 'global':
             self.actions = tf.placeholder(tf.int32, [None], 'Action')

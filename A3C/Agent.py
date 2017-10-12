@@ -254,3 +254,46 @@ class Agent:
             finally:
                 print("End of the demo")
                 self.env.close()
+
+    def play_gif(self, sess, path):
+        print("Playing", self.name, "for", number_run, "runs")
+
+        with sess.as_default(), sess.graph.as_default():
+
+            try:
+                # Reset the local network to the global
+                sess.run(self.update_local_vars)
+
+                for _ in range(number_run):
+
+                    s = self.env.reset()
+                    reward = 0
+
+                    done = False
+                    self.lstm_state = self.network.lstm_state_init
+
+                    while not done:
+                        # Prediction of the policy and the value
+                        feed_dict = {self.network.inputs: [s],
+                                     self.network.state_in: self.lstm_state}
+                        policy, value, self.lstm_state = sess.run(
+                            [self.network.policy,
+                             self.network.value,
+                             self.network.state_out], feed_dict=feed_dict)
+
+                        policy, value = policy[0], value[0][0]
+
+                        # Choose an action according to the policy
+                        action = np.random.choice(self.action_size, p=policy)
+                        s, r, done, _ = self.env.act_gif(action)
+                        reward += r
+
+                    print("Episode reward :", reward)
+                    self.env.save_gif(path)
+
+            except KeyboardInterrupt as e:
+                pass
+
+            finally:
+                print("End of the demo")
+                self.env.close()

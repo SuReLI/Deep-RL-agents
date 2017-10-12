@@ -56,3 +56,5 @@ if __name__ == '__main__':
         DISPLAYER.disp_one()
         DISPLAYER.disp_seq()
         master_agent.play(sess, 10)
+        master_agent.play_gif(sess,
+                              "results/gif/{}_1.gif".format(parameters.ENV))

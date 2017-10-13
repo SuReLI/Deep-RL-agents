@@ -6,7 +6,7 @@ from collections import deque
 
 from Environment import Environment
 from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
-from QNetwork import QNetwork
+from QNetwork import Actor, Critic
 
 from Displayer import DISPLAYER
 from Saver import SAVER
@@ -37,14 +37,25 @@ class Agent:
         self.env = Environment()
         self.state_size = self.env.get_state_size()
         self.action_size = self.env.get_action_size()
-        self.bound = self.env.get_bound()
+        self.low_bound, self.high_bound = self.env.get_bounds()
 
-        print("Creation of the main QNetwork")
-        self.mainQNetwork = QNetwork(self.state_size, self.action_size,
-                                     self.bound, 'main')
-        print("Creation of the target QNetwork")
-        self.targetQNetwork = QNetwork(self.state_size, self.action_size,
-                                       self.bound, 'target')
+        print("Creation of the main Actor")
+        self.mainActor = Actor(self.state_size, self.action_size,
+                               self.low_bound, self.high_bound,
+                               scope='mainActor')
+
+        print("Creation of the target Actor")
+        self.targetActor = Actor(self.state_size, self.action_size,
+                                 self.low_bound, self.high_bound,
+                                 scope='targetActor')
+
+        print("Creation of the main Critic")
+        self.mainCritic = Critic(self.state_size, self.action_size,
+                                 scope='mainCritic')
+
+        print("Creation of the target Critic")
+        self.targetCritic = Critic(self.state_size, self.action_size,
+                                   scope='targetCritic')
 
         self.buffer = PrioritizedReplayBuffer(parameters.BUFFER_SIZE,
                                               parameters.PRIOR_ALPHA)
@@ -59,7 +70,6 @@ class Agent:
                           parameters.PRIOR_BETA_START) \
             / parameters.PRIOR_BETA_STEPS
 
-        trainables = tf.trainable_variables()
         self.update_target_ops = updateTargetGraph(trainables)
 
         self.best_run = -1e10
@@ -67,14 +77,13 @@ class Agent:
     def run(self):
 
         self.total_steps = 0
-        
+
         while self.total_steps < (parameters.PRE_TRAIN_STEPS +
                                   parameters.TRAINING_STEPS):
 
             pre_training = (self.total_steps <= parameters.PRE_TRAIN_STEPS)
             if self.total_steps == parameters.PRE_TRAIN_STEPS:
                 print("End of the pre training")
-
 
             s = self.env.reset()
             done = False
@@ -144,7 +153,7 @@ class Agent:
                                  self.mainQNetwork.inputs_action: train_batch[1],
                                  self.mainQNetwork.Qtarget: targetQvalues}
                     _, _ = self.sess.run([self.mainQNetwork.train_critic,
-                                         self.mainQNetwork.train_actor],
+                                          self.mainQNetwork.train_actor],
                                          feed_dict=feed_dict)
 
                     update_target(self.update_target_ops, self.sess)

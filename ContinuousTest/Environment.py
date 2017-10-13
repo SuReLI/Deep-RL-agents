@@ -37,7 +37,7 @@ class Environment:
                 return self.env.action_space.shape[0]
 
     def get_bound(self):
-        return self.env.action_space.high
+        return self.env.action_space.low, self.env.action_space.high
 
     def set_render(self, render):
         self.render = render

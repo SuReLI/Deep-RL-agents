@@ -27,16 +27,20 @@ class NetworkArchitecture:
 
             self.hidden_actor_1 = slim.fully_connected(self.inputs_state,
                                                        8,
-                                                       activation_fn=tf.nn.relu)
+                                                       activation_fn=tf.nn.relu,
+                                                       name='Hidden_actor_1')
             self.hidden_actor_2 = slim.fully_connected(self.hidden_actor_1,
                                                        8,
-                                                       activation_fn=tf.nn.relu)
+                                                       activation_fn=tf.nn.relu,
+                                                       name='Hidden_actor_2')
             self.hidden_actor_3 = slim.fully_connected(self.hidden_actor_2,
                                                        8,
-                                                       activation_fn=tf.nn.relu)
+                                                       activation_fn=tf.nn.relu,
+                                                       name='Hidden_actor_3')
             self.actor = slim.fully_connected(self.hidden_actor_3,
                                               self.action_size,
-                                              activation_fn=tf.tanh)
+                                              activation_fn=tf.nn.sigmoid,
+                                              name='Actor_output')
         return self.actor
 
     def build_critic(self):

@@ -1,7 +1,7 @@
 
 ENV = "Pong-v0"
 
-LOAD = True
+LOAD = False
 DISPLAY = True
 
 BUFFER_SAVE = False
@@ -12,7 +12,7 @@ CONV = True
 DISCOUNT = 0.99
 
 FRAME_SKIP = 4
-FRAME_BUFFER_SIZE = 3
+FRAME_BUFFER_SIZE = 4
 
 EPSILON_START = 0.8
 EPSILON_STOP = 0.1
@@ -33,7 +33,7 @@ TRAINING_STEPS = 500000
 PRE_TRAIN_STEPS = 1500
 
 # Maximal number of steps during one episode
-MAX_EPISODE_STEPS = 90
+MAX_EPISODE_STEPS = 100
 TRAINING_FREQ = 4
 
 # Rate to update target network toward primary network

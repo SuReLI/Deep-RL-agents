@@ -75,7 +75,6 @@ class Agent:
                 print("End of the pre training")
 
             s = self.env.reset()
-            print(s)
             episode_reward = 0
             done = False
 
@@ -97,9 +96,6 @@ class Agent:
                 else:
                     self.nb_same_action = 0
                     self.action_mem = a
-
-                if self.nb_same_action >= 20:
-                    print("Same action :", a)
 
                 # Decay epsilon
                 if self.epsilon > parameters.EPSILON_STOP:
@@ -165,7 +161,7 @@ class Agent:
 
             self.total_steps += 1
 
-            if self.total_steps % 100 == 0:
+            if self.total_steps % 500 == 0:
                 print("Episode", self.total_steps, ", reward", episode_reward)
 
             # Save the model

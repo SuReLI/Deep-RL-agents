@@ -1,7 +1,7 @@
 
 ENV = "Pong-v0"
 
-LOAD = False
+LOAD = True
 DISPLAY = True
 
 BUFFER_SAVE = False
@@ -10,14 +10,12 @@ CONV = True
 
 
 DISCOUNT = 0.99
-N_STEP_RETURN = 3
-DISCOUNT_N = DISCOUNT**(N_STEP_RETURN-1)
 
 FRAME_SKIP = 4
-
+FRAME_BUFFER_SIZE = 3
 
 EPSILON_START = 0.8
-EPSILON_STOP = 0.05
+EPSILON_STOP = 0.1
 EPSILON_STEPS = 100000
 
 LEARNING_RATE = 7.5e-4
@@ -31,11 +29,11 @@ PRIOR_BETA_STEPS = 25000
 BATCH_SIZE = 32
 
 # Number of episodes of game environment to train with
-TRAINING_STEPS = 100000
+TRAINING_STEPS = 500000
 PRE_TRAIN_STEPS = 1500
 
 # Maximal number of steps during one episode
-MAX_EPISODE_STEPS = 225
+MAX_EPISODE_STEPS = 90
 TRAINING_FREQ = 4
 
 # Rate to update target network toward primary network

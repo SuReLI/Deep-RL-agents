@@ -44,7 +44,7 @@ class NetworkArchitecture:
 
         else:
             self.hidden = slim.fully_connected(self.inputs,
-                                               64,
+                                               256,
                                                activation_fn=tf.nn.elu)
 
         return self.inputs
@@ -52,10 +52,10 @@ class NetworkArchitecture:
     def dueling(self):
 
         self.advantage_stream = slim.fully_connected(self.hidden,
-                                                     32,
+                                                     256,
                                                      activation_fn=tf.nn.elu)
         self.value_stream = slim.fully_connected(self.hidden,
-                                                 32,
+                                                 128,
                                                  activation_fn=tf.nn.elu)
 
         self.advantage = slim.fully_connected(self.advantage_stream,

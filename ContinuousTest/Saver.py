@@ -14,14 +14,12 @@ class Saver:
     def set_sess(self, sess):
         self.saver = tf.train.Saver()
         self.sess = sess
-        self.n_save = 0
 
     def save(self, n_episode, agent_buffer):
         print("Saving model", n_episode, "...")
         os.makedirs(os.path.dirname("model/"), exist_ok=True)
-        self.saver.save(self.sess, "model/Model_" + str(self.n_save) + ".cptk")
-        print("Model saved in {} !".format(self.n_save))
-        self.n_save = (self.n_save + 1) % 5
+        self.saver.save(self.sess, "model/Model_" + str(n_episode) + ".cptk")
+        print("Model saved !")
 
         if parameters.BUFFER_SAVE:
             try:

@@ -9,7 +9,7 @@ from Saver import SAVER
 import parameters
 
 if __name__ == '__main__':
-
+    
     tf.reset_default_graph()
 
     with tf.Session() as sess:
@@ -32,8 +32,8 @@ if __name__ == '__main__':
 
         agent.play(10)
 
-        for i in range(20):
-            agent.play_gif("results/gif/{}_{}.gif".format(parameters.ENV,
-                                                          str(i)))
+        agent.play_gif("results/gif/{}_1.gif".format(parameters.ENV))
+        agent.play_gif("results/gif/{}_2.gif".format(parameters.ENV))
+        agent.play_gif("results/gif/{}_3.gif".format(parameters.ENV))
 
     agent.stop()

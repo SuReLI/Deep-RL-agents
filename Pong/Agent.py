@@ -2,7 +2,6 @@
 import random
 import numpy as np
 import tensorflow as tf
-from collections import deque
 
 from Environment import Environment
 from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
@@ -65,6 +64,9 @@ class Agent:
     def run(self):
 
         self.total_steps = 0
+        self.action_mem = 0
+        self.nb_same_action = 0
+        self.n_gif = 0
         while self.total_steps < (parameters.PRE_TRAIN_STEPS +
                                   parameters.TRAINING_STEPS):
 
@@ -73,13 +75,13 @@ class Agent:
                 print("End of the pre training")
 
             s = self.env.reset()
+            print(s)
             episode_reward = 0
             done = False
 
-            memory = deque()
-            discount_R = 0
-
             episode_step = 0
+            gif = (self.total_steps % 200 == 0)
+            self.env.set_render(gif)
 
             while episode_step < parameters.MAX_EPISODE_STEPS and not done:
 
@@ -90,21 +92,22 @@ class Agent:
                                       feed_dict={self.mainQNetwork.inputs: [s]})
                     a = a[0]
 
+                if a == self.action_mem:
+                    self.nb_same_action += 1
+                else:
+                    self.nb_same_action = 0
+                    self.action_mem = a
+
+                if self.nb_same_action >= 20:
+                    print("Same action :", a)
+
                 # Decay epsilon
                 if self.epsilon > parameters.EPSILON_STOP:
                     self.epsilon -= self.epsilon_decay
 
-                s_, r, done, info = self.env.act(a)
-                memory.append((s, a, r, s_, done))
+                s_, r, done, info = self.env.act(a, gif=gif)
 
-                if len(memory) <= parameters.N_STEP_RETURN:
-                    discount_R += parameters.DISCOUNT**(len(memory) - 1) * r
-
-                else:
-                    s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
-                    discount_R = (discount_R - r_mem) / parameters.DISCOUNT +\
-                        parameters.DISCOUNT_N * r
-                    self.buffer.add(s_mem, a_mem, discount_R, ss_mem, done_mem)
+                self.buffer.add(s, a, r, s_, done)
 
                 episode_reward += r
                 s = s_
@@ -116,7 +119,8 @@ class Agent:
                     train_batch = self.buffer.sample(parameters.BATCH_SIZE,
                                                      self.beta)
                     # Decay beta
-                    self.beta += self.beta_incr
+                    if self.beta < parameters.PRIOR_BETA_STOP:
+                        self.beta += self.beta_incr
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
                     mainQaction = self.sess.run(self.mainQNetwork.predict,
@@ -129,7 +133,7 @@ class Agent:
                     # Done multiplier :
                     # equals 0 if the episode was done
                     # equals 1 else
-                    done_multiplier = -1 * (train_batch[4] - 1)
+                    done_multiplier = (1 - train_batch[4])
                     doubleQ = targetQvalues[
                         range(parameters.BATCH_SIZE), mainQaction]
                     targetQvalues = train_batch[2] + \
@@ -143,13 +147,17 @@ class Agent:
 
                     update_target(self.update_target_ops, self.sess)
 
+            if gif:
+                self.env.save_gif("results/gif/save_{}.gif".format(self.n_gif))
+                self.n_gif = (self.n_gif + 1) % 10
+
             if pre_training:
                 self.best_run = max(self.best_run, episode_reward)
 
             else:
                 DISPLAYER.add_reward(episode_reward)
                 if episode_reward > self.best_run and \
-                        self.total_steps > 1000 + parameters.PRE_TRAIN_STEPS:
+                        self.total_steps > 500 + parameters.PRE_TRAIN_STEPS:
                     self.best_run = episode_reward
                     print("Save best", episode_reward)
                     SAVER.save('best', self.buffer)
@@ -157,11 +165,11 @@ class Agent:
 
             self.total_steps += 1
 
-            if self.total_steps % 1000 == 0:
-                print("Episode", self.total_steps)
+            if self.total_steps % 100 == 0:
+                print("Episode", self.total_steps, ", reward", episode_reward)
 
             # Save the model
-            if self.total_steps % 5000 == 0:
+            if not pre_training and self.total_steps % 1000 == 0:
                 SAVER.save(self.total_steps, self.buffer)
 
     def play(self, number_run):
@@ -207,7 +215,7 @@ class Agent:
                 a = self.sess.run(self.mainQNetwork.predict,
                                   feed_dict={self.mainQNetwork.inputs: [s]})
                 a = a[0]
-                s, r, done, info = self.env.act_gif(a)
+                s, r, done, info = self.env.act(a, gif=True)
 
                 episode_reward += r
             print("Episode reward :", episode_reward)

@@ -14,8 +14,6 @@ if __name__ == '__main__':
 
     with tf.Session() as sess:
 
-        sess.run(tf.global_variables_initializer())
-
         agent = Agent(sess)
         SAVER.set_sess(sess)
 
@@ -30,10 +28,8 @@ if __name__ == '__main__':
         SAVER.save(agent.total_steps, agent.buffer)
         DISPLAYER.disp()
 
-        agent.play(10)
+        # agent.play(10)
 
-        agent.play_gif("results/gif/{}_1.gif".format(parameters.ENV))
-        agent.play_gif("results/gif/{}_2.gif".format(parameters.ENV))
-        agent.play_gif("results/gif/{}_3.gif".format(parameters.ENV))
+        # agent.play(3, "results/gif/".format(parameters.ENV))
 
-    agent.stop()
+    agent.close()

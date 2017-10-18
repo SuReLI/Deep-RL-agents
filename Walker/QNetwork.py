@@ -24,13 +24,13 @@ class Network:
 
         # Actor definition :
         def generate_actor_network(states, trainable, reuse):
-            hidden = tf.layers.dense(states, 8,
+            hidden = tf.layers.dense(states, 64,
                                      trainable=trainable, reuse=reuse,
                                      activation=tf.nn.relu, name='dense')
-            hidden_2 = tf.layers.dense(hidden, 8,
+            hidden_2 = tf.layers.dense(hidden, 64,
                                        trainable=trainable, reuse=reuse,
                                        activation=tf.nn.relu, name='dense_1')
-            hidden_3 = tf.layers.dense(hidden_2, 8,
+            hidden_3 = tf.layers.dense(hidden_2, 64,
                                        trainable=trainable, reuse=reuse,
                                        activation=tf.nn.relu, name='dense_2')
             actions_unscaled = tf.layers.dense(hidden_3, self.action_size,
@@ -55,13 +55,13 @@ class Network:
         # Critic definition :
         def generate_critic_network(states, actions, trainable, reuse):
             state_action = tf.concat([states, actions], axis=1)
-            hidden = tf.layers.dense(state_action, 8,
+            hidden = tf.layers.dense(state_action, 64,
                                      trainable=trainable, reuse=reuse,
                                      activation=tf.nn.relu, name='dense')
-            hidden_2 = tf.layers.dense(hidden, 8,
+            hidden_2 = tf.layers.dense(hidden, 64,
                                        trainable=trainable, reuse=reuse,
                                        activation=tf.nn.relu, name='dense_1')
-            hidden_3 = tf.layers.dense(hidden_2, 8,
+            hidden_3 = tf.layers.dense(hidden_2, 64,
                                        trainable=trainable, reuse=reuse,
                                        activation=tf.nn.relu, name='dense_2')
             q_values = tf.layers.dense(hidden_3, 1,

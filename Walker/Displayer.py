@@ -30,11 +30,6 @@ class Displayer:
 
     def add_reward(self, reward):
         self.rewards.append(reward)
-        if len(self.rewards) % 500 == 0:
-            if parameters.DISPLAY:
-                self.disp()
-            else:
-                print(self.rewards[-50:])
 
     def disp(self):
         mean_reward = [np.mean(self.rewards[max(1, i - 50):i])

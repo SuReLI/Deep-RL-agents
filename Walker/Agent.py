@@ -32,6 +32,11 @@ class Agent:
         self.network = Network(self.state_size, self.action_size,
                                self.low_bound, self.high_bound)
 
+        self.epsilon = parameters.EPSILON_START
+        self.epsilon_decay = (parameters.EPSILON_START -
+                              parameters.EPSILON_STOP) \
+            / parameters.EPSILON_STEPS
+
         self.best_run = -1e10
         self.n_gif = 0
 
@@ -41,36 +46,27 @@ class Agent:
 
         self.total_steps = 0
 
-        for ep in range(1, parameters.TRAINING_STEPS+1):
+        for ep in range(1, parameters.TRAINING_STEPS + 1):
 
             episode_reward = 0
             episode_step = 0
             done = False
 
-            # Initialize exploration noise process
-            noise_process = np.zeros(self.action_size)
-            noise_scale = (parameters.NOISE_SCALE_INIT *
-                           parameters.NOISE_DECAY**(ep//75)) * \
-                (self.high_bound - self.low_bound)
-
             # Initial state
             s = self.env.reset()
-            self.env.set_render(ep % 2500 == 0)
+            self.env.set_render(ep % 1000 == 0)
             gif = (ep % 1500 == 0)
+            step_allonge = ep // 1000
 
-            while episode_step < parameters.MAX_EPISODE_STEPS and not done:
+            while episode_step < parameters.MAX_EPISODE_STEPS + step_allonge \
+                    and not done:
 
-                # choose action based on deterministic policy
-                a, = self.sess.run(self.network.actions,
-                                   feed_dict={self.network.state_ph: s[None]})
-
-                # add temporally-correlated exploration noise to action
-                # (using an Ornstein-Uhlenbeck process)
-                noise_process = parameters.EXPLO_THETA * \
-                    (parameters.EXPLO_MU - noise_process) + \
-                    parameters.EXPLO_SIGMA * np.random.randn(self.action_size)
-
-                a += noise_scale * noise_process
+                if random.random() < self.epsilon:
+                    a = self.env.random()
+                else:
+                    # choose action based on deterministic policy
+                    a, = self.sess.run(self.network.actions,
+                                       feed_dict={self.network.state_ph: [s]})
 
                 s_, r, done, info = self.env.act(a, gif)
                 episode_reward += r
@@ -98,15 +94,23 @@ class Agent:
                 episode_step += 1
                 self.total_steps += 1
 
+            # Decay epsilon
+            if self.epsilon > parameters.EPSILON_STOP:
+                self.epsilon -= self.epsilon_decay
+
             if gif:
                 self.env.save_gif('results/gif/', self.n_gif)
                 self.n_gif = (self.n_gif + 1) % 5
 
-            if ep % 200 == 0:
-                print('Episode %2i, Reward: %7.3f, Steps: %i, Final noise scale: %7.3f' %
-                      (ep, episode_reward, episode_step, noise_scale[0]))
             DISPLAYER.add_reward(episode_reward)
-
+            if ep % 50 == 0:
+                print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %7.3f'
+                      ' (max step: %i)' % (ep, episode_reward, episode_step,
+                                           self.epsilon,
+                                           parameters.MAX_EPISODE_STEPS +
+                                           step_allonge))
+            if ep % 500 == 0:
+                DISPLAYER.disp()
 
     def play(self, number_run, path=''):
         print("Playing for", number_run, "runs")
@@ -126,7 +130,7 @@ class Agent:
 
                     s_, r, done, info = self.env.act(a, path != '')
                     episode_reward += r
-                
+
                 print("Episode reward :", episode_reward)
 
                 if path != '':

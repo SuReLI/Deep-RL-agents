@@ -37,6 +37,9 @@ class Environment:
     def reset(self):
         return self.env.reset()
 
+    def random(self):
+        return self.env.action_space.sample()
+
     def act(self, action, gif=False):
         if gif:
             return self._act_gif(action)

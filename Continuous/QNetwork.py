@@ -10,6 +10,8 @@ class Network:
 
         self.state_size = state_size
         self.action_size = action_size
+        self.low_bound = low_bound
+        self.high_bound = high_bound
 
         # placeholders
         self.state_ph = tf.placeholder(
@@ -22,69 +24,36 @@ class Network:
         self.is_not_terminal_ph = tf.placeholder(
             dtype=tf.float32, shape=[None])
 
-        # Actor definition :
-        def generate_actor_network(states, trainable, reuse):
-            hidden = tf.layers.dense(states, 8,
-                                     trainable=trainable, reuse=reuse,
-                                     activation=tf.nn.relu, name='dense')
-            hidden_2 = tf.layers.dense(hidden, 8,
-                                       trainable=trainable, reuse=reuse,
-                                       activation=tf.nn.relu, name='dense_1')
-            hidden_3 = tf.layers.dense(hidden_2, 8,
-                                       trainable=trainable, reuse=reuse,
-                                       activation=tf.nn.relu, name='dense_2')
-            actions_unscaled = tf.layers.dense(hidden_3, self.action_size,
-                                               trainable=trainable, reuse=reuse,
-                                               name='dense_3')
-            # bound the actions to the valid range
-            valid_range = high_bound - low_bound
-            actions = low_bound + tf.nn.sigmoid(actions_unscaled) * valid_range
-            return actions
-
         # Main actor network
         with tf.variable_scope('actor'):
-            self.actions = generate_actor_network(self.state_ph,
-                                                  trainable=True, reuse=False)
+            self.actions = self.generate_actor_network(self.state_ph,
+                                                       trainable=True,
+                                                       reuse=False)
 
         # Target actor network
         with tf.variable_scope('slow_target_actor', reuse=False):
             self.slow_target_next_actions = tf.stop_gradient(
-                generate_actor_network(self.next_state_ph,
-                                       trainable=False, reuse=False))
-
-        # Critic definition :
-        def generate_critic_network(states, actions, trainable, reuse):
-            state_action = tf.concat([states, actions], axis=1)
-            hidden = tf.layers.dense(state_action, 8,
-                                     trainable=trainable, reuse=reuse,
-                                     activation=tf.nn.relu, name='dense')
-            hidden_2 = tf.layers.dense(hidden, 8,
-                                       trainable=trainable, reuse=reuse,
-                                       activation=tf.nn.relu, name='dense_1')
-            hidden_3 = tf.layers.dense(hidden_2, 8,
-                                       trainable=trainable, reuse=reuse,
-                                       activation=tf.nn.relu, name='dense_2')
-            q_values = tf.layers.dense(hidden_3, 1,
-                                       trainable=trainable, reuse=reuse,
-                                       name='dense_3')
-            return q_values
+                self.generate_actor_network(self.next_state_ph,
+                                            trainable=False,
+                                            reuse=False))
 
         with tf.variable_scope('critic') as scope:
             # Critic applied to state_ph and a given action (to train critic)
-            self.q_values_of_given_actions = generate_critic_network(
+            self.q_values_of_given_actions = self.generate_critic_network(
                 self.state_ph, self.action_ph, trainable=True, reuse=False)
             # Critic applied to state_ph and the current policy's outputted
             # actions for state_ph (to train actor)
-            self.q_values_of_suggested_actions = generate_critic_network(
+            self.q_values_of_suggested_actions = self.generate_critic_network(
                 self.state_ph, self.actions, trainable=True, reuse=True)
 
         # slow target critic network
         with tf.variable_scope('slow_target_critic', reuse=False):
             # Slow target critic applied to slow target actor's outputted
             # actions for next_state_ph (to train critic)
-            self.slow_q_values_next = tf.stop_gradient(generate_critic_network(
-                self.next_state_ph, self.slow_target_next_actions,
-                trainable=False, reuse=False))
+            self.slow_q_values_next = tf.stop_gradient(
+                self.generate_critic_network(self.next_state_ph,
+                                             self.slow_target_next_actions,
+                                             trainable=False, reuse=False))
 
         # isolate vars for each network
         self.actor_vars = tf.get_collection(
@@ -144,3 +113,40 @@ class Network:
 
         self.actor_train_op = actor_trainer.minimize(actor_loss,
                                                      var_list=self.actor_vars)
+
+    # Actor definition :
+    def generate_actor_network(self, states, trainable, reuse):
+        hidden = tf.layers.dense(states, 8,
+                                 trainable=trainable, reuse=reuse,
+                                 activation=tf.nn.relu, name='dense')
+        hidden_2 = tf.layers.dense(hidden, 8,
+                                   trainable=trainable, reuse=reuse,
+                                   activation=tf.nn.relu, name='dense_1')
+        hidden_3 = tf.layers.dense(hidden_2, 8,
+                                   trainable=trainable, reuse=reuse,
+                                   activation=tf.nn.relu, name='dense_2')
+        actions_unscaled = tf.layers.dense(hidden_3, self.action_size,
+                                           trainable=trainable, reuse=reuse,
+                                           name='dense_3')
+        # bound the actions to the valid range
+        valid_range = self.high_bound - self.low_bound
+        actions = self.low_bound + \
+            tf.nn.sigmoid(actions_unscaled) * valid_range
+        return actions
+
+    # Critic definition :
+    def generate_critic_network(self, states, actions, trainable, reuse):
+        state_action = tf.concat([states, actions], axis=1)
+        hidden = tf.layers.dense(state_action, 8,
+                                 trainable=trainable, reuse=reuse,
+                                 activation=tf.nn.relu, name='dense')
+        hidden_2 = tf.layers.dense(hidden, 8,
+                                   trainable=trainable, reuse=reuse,
+                                   activation=tf.nn.relu, name='dense_1')
+        hidden_3 = tf.layers.dense(hidden_2, 8,
+                                   trainable=trainable, reuse=reuse,
+                                   activation=tf.nn.relu, name='dense_2')
+        q_values = tf.layers.dense(hidden_3, 1,
+                                   trainable=trainable, reuse=reuse,
+                                   name='dense_3')
+        return q_values

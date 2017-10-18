@@ -97,6 +97,12 @@ class Agent:
                 s_, r, done, info = self.env.act(a)
                 memory.append((s, a, r, s_, done))
 
+
+################################################################################
+#                          !!!!!!!!! WARNING !!!!!!!
+#           Use the last next_state s_ and not the one right after it
+#                           You dumb ass
+################################################################################
                 if len(memory) <= parameters.N_STEP_RETURN:
                     discount_R += parameters.DISCOUNT**(len(memory) - 1) * r
 
@@ -115,8 +121,17 @@ class Agent:
 
                     train_batch = self.buffer.sample(parameters.BATCH_SIZE,
                                                      self.beta)
+                    print("Weights : ", train_batch[5])
+                    print("Indexes : ", train_batch[6])
                     # Decay beta
                     self.beta += self.beta_incr
+
+                    feed_dict = {self.mainQNetwork.inputs: train_batch[0]}
+                    oldQvalues = self.sess.run(self.mainQNetwork.Qvalues,
+                                               feed_dict=feed_dict)
+                    for i, oldQvalue in enumerate(oldQvalues):
+                        oldQvalues[i] = oldQvalue[train_batch[i][1]]
+                    print("Old Q values : ", oldQvalues)
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
                     mainQaction = self.sess.run(self.mainQNetwork.predict,
@@ -129,11 +144,16 @@ class Agent:
                     # Done multiplier :
                     # equals 0 if the episode was done
                     # equals 1 else
-                    done_multiplier = -1 * (train_batch[4] - 1)
-                    doubleQ = targetQvalues[
-                        range(parameters.BATCH_SIZE), mainQaction]
+                    done_multiplier = (1 - train_batch[4])
+                    doubleQ = targetQvalues[range(parameters.BATCH_SIZE),
+                                            mainQaction]
                     targetQvalues = train_batch[2] + \
                         parameters.DISCOUNT * doubleQ * done_multiplier
+
+                    print("Target Q values : ", targetQvalues)
+                    errors = tf.abs(targetQvalues - oldQvalues)
+                    print("Errors : ", errors)
+                    self.buffer.update_priorities(train_batch[6], errors)
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[0],
                                  self.mainQNetwork.Qtarget: targetQvalues,

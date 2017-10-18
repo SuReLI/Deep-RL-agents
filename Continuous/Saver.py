@@ -1,7 +1,6 @@
 
-import tensorflow as tf
-import pickle
 import os
+import tensorflow as tf
 
 import parameters
 
@@ -15,18 +14,19 @@ class Saver:
         self.saver = tf.train.Saver()
         self.sess = sess
 
-    def save(self, n_episode, agent_buffer):
+    def save(self, n_episode):
         print("Saving model", n_episode, "...")
         os.makedirs(os.path.dirname("model/"), exist_ok=True)
         self.saver.save(self.sess, "model/Model_" + str(n_episode) + ".cptk")
         print("Model saved !")
 
-    def load(self, agent):
+    def load(self):
         if parameters.LOAD:
             print("Loading model...")
             try:
                 ckpt = tf.train.get_checkpoint_state("model/")
                 self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+                print("Model loaded !")
             except (ValueError, AttributeError):
                 print("No model is saved !")
                 self.sess.run(tf.global_variables_initializer())

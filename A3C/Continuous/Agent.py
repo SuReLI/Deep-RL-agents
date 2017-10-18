@@ -9,7 +9,6 @@ import random
 from Environment import Environment
 from MasterNetwork import Network
 from Displayer import DISPLAYER
-from Saver import SAVER
 
 import parameters
 

@@ -55,5 +55,6 @@ class NetworkArchitecture:
                                            activation_fn=tf.nn.elu)
         return self.inputs
 
+
     def return_output(self):
         return self.hidden

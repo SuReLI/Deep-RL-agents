@@ -34,6 +34,7 @@ class CriticNetwork:
 
         self.sess.run(tf.global_variables_initializer())
 
+        # WARNING : this update must be done with tau = 1 (target = main first)
         self.update_target()
 
         if parameters.LOAD:

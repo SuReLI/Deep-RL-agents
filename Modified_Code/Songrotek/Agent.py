@@ -1,4 +1,5 @@
 
+import random
 import tensorflow as tf
 import numpy as np
 
@@ -64,7 +65,14 @@ class Agent:
 
             while episode_step < max_steps and not done:
 
-                a = self.actor_network.action(s)
+                    if random.random() < self.epsilon:
+                        a = np.random.uniform(self.low_bound,
+                                              self.high_bound,
+                                              self.action_size)
+
+                    else:
+                        a = self.network.action(s)
+
                 s_, r, done, info = self.env.act(a, gif)
 
                 self.buffer.add((s, a, r, s_, done))

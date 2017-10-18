@@ -1,4 +1,16 @@
 
+###############################################################################
+# To try :
+#   - Update global vars <= tau * glob_var + (1-tau) * loc_var
+#   - Bootstrap after
+#   - Clip the gradient
+#
+#
+###############################################################################
+
+
+
+
 import tensorflow as tf
 import parameters
 import threading
@@ -6,7 +18,6 @@ from time import sleep
 
 from Agent import Agent
 from Displayer import DISPLAYER
-from Saver import SAVER
 
 
 if __name__ == '__main__':
@@ -27,9 +38,8 @@ if __name__ == '__main__':
                 workers.append(Agent(i + 1, sess, render=False))
 
         coord = tf.train.Coordinator()
-        SAVER.set_sess(sess)
 
-        SAVER.load()
+        sess.run(tf.global_variables_initializer())
 
         # Run threads that each contains one worker
         worker_threads = []
@@ -55,6 +65,4 @@ if __name__ == '__main__':
         DISPLAYER.disp_all()
         DISPLAYER.disp_one()
         DISPLAYER.disp_seq()
-        master_agent.play(sess, 10)
-        master_agent.play_gif(sess,
-                              "results/gif/{}_1.gif".format(parameters.ENV))
+        master_agent.test(sess, 10)

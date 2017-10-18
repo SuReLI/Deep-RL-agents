@@ -15,15 +15,13 @@ import parameters
 
 # Discounting function used to calculate discounted returns.
 def discount(x):
-    return scipy.signal.lfilter([1],
-                                [1, -parameters.DISCOUNT],
-                                x[::-1],
+    return scipy.signal.lfilter([1], [1, -parameters.DISCOUNT], x[::-1],
                                 axis=0)[::-1]
 
 
 # Copies one set of variables to another.
 # Used to set worker network parameters to those of global network.
-def update_target_graph(from_scope, to_scope):
+def update_target_graph(from_scope, to_scope, tau):
     from_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, from_scope)
     to_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, to_scope)
 
@@ -52,24 +50,23 @@ class Agent:
         self.env.set_render(render)
         self.state_size = self.env.get_state_size()
         self.action_size = self.env.get_action_size()
+        self.low_bound, self.high_bound = self.env.get_bounds()
 
-        self.network = Network(self.state_size, self.action_size, self.name)
-        self.update_local_vars = update_target_graph('global', self.name)
+        self.network = Network(sess, self.state_size, self.action_size,
+                               self.low_bound, self.high_bound,
+                               self.name)
 
         self.starting_time = 0
 
-        self.states_buffer = []
-        self.actions_buffer = []
-        self.rewards_buffer = []
-        self.values_buffer = []
-
         if self.name != 'global':
+            self.update_local_vars = update_target_graph(
+                'global', self.name, 1)
             self.summary_writer = tf.summary.FileWriter("results/" + self.name,
                                                         sess.graph)
 
-    def save(self, episode_step):
+    def save(self):
         # Save model
-        SAVER.save(episode_step)
+        self.network.save_network(self.total_steps)
 
         # Save summary statistics
         summary = tf.Summary()
@@ -88,211 +85,131 @@ class Agent:
         self.summary_writer.add_summary(summary, self.total_steps)
         self.summary_writer.flush()
 
-    def update_global_network(self, sess, bootstrap_value):
+    def epsilon_decay(self):
 
-        # Add the bootstrap value to our experience
-        self.rewards_plus = np.asarray(self.rewards_buffer + [bootstrap_value])
-        discounted_reward = discount(self.rewards_plus)[:-1]
-
-        self.next_values = np.asarray(self.values_buffer[1:] +
-                                      [bootstrap_value])
-        advantages = self.rewards_buffer + \
-            parameters.DISCOUNT * self.next_values - \
-            self.values_buffer
-        advantages = discount(advantages)
-
-        # Update the global network
-        feed_dict = {
-            self.network.discounted_reward: discounted_reward,
-            self.network.inputs: self.states_buffer,
-            self.network.actions: self.actions_buffer,
-            self.network.advantages: advantages,
-            self.network.state_in: self.lstm_state}
-        losses = sess.run([self.network.value_loss,
-                           self.network.policy_loss,
-                           self.network.entropy,
-                           self.network.grad_norm,
-                           self.network.state_out,
-                           self.network.apply_grads],
-                          feed_dict=feed_dict)
-
-        # Get the losses for tensorboard
-        self.value_loss, self.policy_loss, self.entropy = losses[:3]
-        self.grad_norm, self.lstm_state, _ = losses[3:]
-
-        # Reinitialize buffers and variables
-        self.states_buffer = []
-        self.actions_buffer = []
-        self.rewards_buffer = []
-        self.values_buffer = []
+        if Agent.epsilon > parameters.EPSILON_STOP:
+            Agent.epsilon -= parameters.EPSILON_DECAY
 
     def work(self, sess, coord):
         print("Running", self.name, end='\n\n')
         self.starting_time = time()
         self.total_steps = 0
+        self.ep = 0
 
-        with sess.as_default(), sess.graph.as_default():
+        with (sess.as_default(), sess.graph.as_default(),
+                coord.stop_on_exception()):
 
-            with coord.stop_on_exception():
-                while not coord.should_stop():
-                    self.states_buffer = []
-                    self.actions_buffer = []
-                    self.rewards_buffer = []
-                    self.values_buffer = []
-                    self.mean_values_buffer = []
-                    reward = 0
-                    episode_step = 0
+            while not coord.should_stop():
 
-                    # Reset the local network to the global
-                    sess.run(self.update_local_vars)
+                states_buffer = []
+                actions_buffer = []
+                rewards_buffer = []
+                next_state_buffer = []
+                done_buffer = []
+                episode_reward = 0
+                episode_step = 0
 
-                    s = self.env.reset()
-                    done = False
-                    self.lstm_state = self.network.lstm_state_init
+                # Reset the local network to the global
+                sess.run(self.update_local_vars)
 
-                    while not coord.should_stop() and not done and \
-                            episode_step < parameters.MAX_EPISODE_STEP:
-                        # Prediction of the policy and the value
-                        feed_dict = {self.network.inputs: [s],
-                                     self.network.state_in: self.lstm_state}
-                        policy, value, self.lstm_state = sess.run(
-                            [self.network.policy,
-                             self.network.value,
-                             self.network.state_out], feed_dict=feed_dict)
+                # Initialize the episode
+                s = self.env.reset()
+                done = False
+                max_steps = parameters.MAX_EPISODE_STEP + self.ep // 500
 
-                        policy, value = policy[0], value[0][0]
+                while (not coord.should_stop() and
+                       not done and episode_step < max_steps):
 
-                        if Agent.epsilon > parameters.EPSILON_STOP:
-                            Agent.epsilon -= Agent.epsilon_decay
+                    if random.random() < Agent.epsilon:
+                        a = np.random.uniform(self.low_bound,
+                                              self.high_bound,
+                                              self.action_size)
 
-                        if random.random() < Agent.epsilon:
-                            action = random.randint(0, self.action_size - 1)
+                    else:
+                        a = self.network.get_action([s])[0]
 
-                        else:
-                            # Choose an action according to the policy
-                            action = np.random.choice(self.action_size,
-                                                      p=policy)
-                        s_, r, done, _ = self.env.act(action)
+                    print(a)
 
-                        # Store the experience
-                        self.states_buffer.append(s)
-                        self.actions_buffer.append(action)
-                        self.rewards_buffer.append(r)
-                        self.values_buffer.append(value)
-                        self.mean_values_buffer.append(value)
-                        reward += r
-                        s = s_
+                    s_, r, done, _ = self.env.act(a)
 
-                        episode_step += 1
-                        self.total_steps += 1
+                    # Store the experience
+                    states_buffer.append(s)
+                    actions_buffer.append(a)
+                    rewards_buffer.append(r)
+                    next_state_buffer.append(s_)
+                    done_buffer.append(done)
 
-                        # If we have more than MAX_LEN_BUFFER experiences, we
-                        # apply the gradients and update the global network,
-                        # then we empty the episode buffers
-                        if len(self.states_buffer) == parameters.MAX_LEN_BUFFER \
-                                and not done:
-                            feed_dict = {self.network.inputs: [s],
-                                         self.network.state_in: self.lstm_state}
-                            bootstrap_value = sess.run(
-                                self.network.value,
-                                feed_dict=feed_dict)
-                            self.update_global_network(sess, bootstrap_value)
-                            sess.run(self.update_local_vars)
+                    if (len(self.states_buffer) >= parameters.MAX_LEN_BUFFER or
+                            (len(self.states_buffer) != 0 and done)):
 
-                    if len(self.states_buffer) != 0:
-                        self.update_global_network(sess, 0)
+                        self.network.train(states_buffer,
+                                           actions_buffer,
+                                           discount(rewards_buffer),
+                                           next_state_buffer,
+                                           done_buffer)
 
-                    DISPLAYER.add_reward(reward, self.worker_index)
-                    if self.worker_index == 1 and self.total_steps % 2000 == 0:
-                        self.save(self.total_steps)
+                        states_buffer = []
+                        actions_buffer = []
+                        rewards_buffer = []
+                        next_state_buffer = []
+                        done_buffer = []
 
-                    if time() - self.starting_time > parameters.LIMIT_RUN_TIME:
-                        coord.request_stop()
+                        sess.run(self.update_local_vars)
+
+                    episode_reward += r
+                    s = s_
+
+                    episode_step += 1
+                    self.total_steps += 1
+
+                self.epsilon_decay()
+
+                ep += 1
+
+                DISPLAYER.add_reward(episode_reward, self.worker_index)
+                if worker_index == 1 and ep % 50 == 0:
+                    print('Episode %2i, Reward: %7.3f, Steps: %i, '
+                          'Epsilon: %7.3f, Max step: %i' %
+                          (ep, episode_reward, episode_step,
+                           Agent.epsilon, max_steps))
+
+                if self.worker_index == 1 and ep % 2000 == 0:
+                    self.save(ep)
+
+                if time() - self.starting_time > parameters.LIMIT_RUN_TIME:
+                    coord.request_stop()
 
             self.summary_writer.close()
-            self.env.close()
+            self.close()
 
-    def play(self, sess, number_run):
-        print("Playing", self.name, "for", number_run, "runs")
+    def test(self, sess, number_run):
+        print("Test session for %i runs" % number_run)
 
         with sess.as_default(), sess.graph.as_default():
-
             try:
-                # Reset the local network to the global
-                sess.run(self.update_local_vars)
+                if self.name != 'global':
+                    sess.run(self.update_local_vars)
 
                 for _ in range(number_run):
 
                     s = self.env.reset()
-                    reward = 0
-
+                    episode_reward = 0
                     done = False
-                    self.lstm_state = self.network.lstm_state_init
 
                     while not done:
-                        # Prediction of the policy and the value
-                        feed_dict = {self.network.inputs: [s],
-                                     self.network.state_in: self.lstm_state}
-                        policy, value, self.lstm_state = sess.run(
-                            [self.network.policy,
-                             self.network.value,
-                             self.network.state_out], feed_dict=feed_dict)
+                        a = self.network.get_action([s])[0]
+                        s, r, done, _ = self.env.act(a)
 
-                        policy, value = policy[0], value[0][0]
+                        episode_reward += r
 
-                        # Choose an action according to the policy
-                        action = np.random.choice(self.action_size, p=policy)
-                        s, r, done, _ = self.env.act(action)
-                        reward += r
-
-                    print("Episode reward :", reward)
+                    print("Episode reward :", episode_reward)
 
             except KeyboardInterrupt as e:
                 pass
 
             finally:
-                print("End of the demo")
-                self.env.close()
+                print("End of test session")
+                self.close()
 
-    def play_gif(self, sess, path):
-        print("Playing", self.name, "for", number_run, "runs")
-
-        with sess.as_default(), sess.graph.as_default():
-
-            try:
-                # Reset the local network to the global
-                sess.run(self.update_local_vars)
-
-                for _ in range(number_run):
-
-                    s = self.env.reset()
-                    reward = 0
-
-                    done = False
-                    self.lstm_state = self.network.lstm_state_init
-
-                    while not done:
-                        # Prediction of the policy and the value
-                        feed_dict = {self.network.inputs: [s],
-                                     self.network.state_in: self.lstm_state}
-                        policy, value, self.lstm_state = sess.run(
-                            [self.network.policy,
-                             self.network.value,
-                             self.network.state_out], feed_dict=feed_dict)
-
-                        policy, value = policy[0], value[0][0]
-
-                        # Choose an action according to the policy
-                        action = np.random.choice(self.action_size, p=policy)
-                        s, r, done, _ = self.env.act_gif(action)
-                        reward += r
-
-                    print("Episode reward :", reward)
-                    self.env.save_gif(path)
-
-            except KeyboardInterrupt as e:
-                pass
-
-            finally:
-                print("End of the demo")
-                self.env.close()
+    def close(self):
+        self.env.close()

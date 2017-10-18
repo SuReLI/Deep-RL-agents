@@ -24,7 +24,13 @@ class Environment:
             return list(self.env.observation_space.shape)
 
     def get_action_size(self):
-        return self.env.action_space.n
+        try:
+            return (self.env.observation_space.n, )
+        except AttributeError:
+            return self.env.observation_space.shape[0]
+
+    def get_bounds(self):
+        return self.env.action_space.low, self.env.action_space.high
 
     def set_render(self, render):
         self.render = render

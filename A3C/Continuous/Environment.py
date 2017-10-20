@@ -25,9 +25,9 @@ class Environment:
 
     def get_action_size(self):
         try:
-            return (self.env.observation_space.n, )
+            return (self.env.action_space.n, )
         except AttributeError:
-            return self.env.observation_space.shape[0]
+            return self.env.action_space.shape[0]
 
     def get_bounds(self):
         return self.env.action_space.low, self.env.action_space.high

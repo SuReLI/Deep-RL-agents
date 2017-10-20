@@ -3,7 +3,7 @@
 # To try :
 #   - Update global vars <= tau * glob_var + (1-tau) * loc_var
 #   - Bootstrap after
-#   - Clip the gradient
+#   - Clip the gradient if relu
 #
 #
 ###############################################################################
@@ -45,11 +45,12 @@ if __name__ == '__main__':
         worker_threads = []
         for i, worker in enumerate(workers):
             print("Threading worker", i + 1)
+            sleep(0.1)
             work = lambda: worker.work(sess, coord)
             t = threading.Thread(target=(work))
             t.start()
-            sleep(0.5)
             worker_threads.append(t)
+            sleep(0.1)
 
         try:
             # Wait till all the workers are done

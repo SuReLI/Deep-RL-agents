@@ -44,6 +44,8 @@ class Network:
                 tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope + '/actor')
             self.critic_vars = tf.get_collection(
                 tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope + '/critic')
+            self.local_vars = tf.get_collection(
+                tf.GraphKeys.TRAINABLE_VARIABLES)
 
         if scope != 'global':
 
@@ -57,6 +59,15 @@ class Network:
             self.loss = tf.reduce_mean(
                 tf.square(self.target_input - self.q_value)) + weight_decay
 
+            # self.critic_grad = trainer.compute_gradients(self.loss,
+            #                                              self.critic_vars)
+
+            # self.critic_grad = list(zip(tf.gradients(self.loss,
+            #                                          self.critic_vars),
+            #                             self.global_critic_vars))
+
+            # self.train_critic = trainer.apply_gradients(self.critic_grad)
+
             trainer = tf.train.AdamOptimizer(parameters.CRITIC_LEARNING_RATE)
             self.train_critic = trainer.minimize(self.loss)
 
@@ -66,16 +77,26 @@ class Network:
                                                  [None, self.action_size],
                                                  'Grad_input')
 
+            self.global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
+                                                 'global')
+
             # Actor training
             self.actor_gradient = tf.gradients(self.action, self.actor_vars,
                                                -1 * self.gradient_input)
 
-            self.global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
-                                                 'global')
-
             trainer = tf.train.AdamOptimizer(parameters.ACTOR_LEARNING_RATE)
             self.train_actor = trainer.apply_gradients(zip(self.actor_gradient,
-                                                           self.global_vars))
+                                                           self.actor_vars))
+
+            self.global_update = []
+            tau = 0.6
+            for from_var, to_var in zip(self.local_vars, self.global_vars):
+                self.global_update.append(to_var.assign(
+                    tau * from_var + (1 - tau) * to_var))
+            self.global_update = tf.group(*self.global_update)
+
+        if parameters.LOAD:
+            self.load_network()
 
     def build_actor_network(self, scope):
 
@@ -130,7 +151,7 @@ class Network:
                                  self.action_input: action,
                                  self.target_input: target})
 
-    def q_value(self, state, action):
+    def compute_value(self, state, action):
         return self.sess.run(self.q_value,
                              feed_dict={self.state_input: state,
                                         self.action_input: action})
@@ -138,20 +159,24 @@ class Network:
     def action_gradient(self, state, action):
         return self.sess.run(self.q_gradient,
                              feed_dict={self.state_input: state,
-                                        self.action_input: action})
+                                        self.action_input: action})[0]
 
     def actor_train(self, state, gradient):
         self.sess.run(self.train_actor,
                       feed_dict={self.state_input: state,
                                  self.gradient_input: gradient})
 
+    def update_global_network(self):
+        self.sess.run(self.global_update)
+
     def train(self, state, action, reward, next_state, done):
 
         next_action = self.get_action(next_state)
 
-        next_q_value = self.q_value(next_state, next_action)
+        next_q_value = self.compute_value(next_state, next_action)
 
-        target = reward + parameters.DISCOUNT * next_q_value * done
+        target = reward[:, np.newaxis] + parameters.DISCOUNT * \
+            next_q_value * np.asarray(done)[:, np.newaxis]
 
         self.critic_train(state, action, target)
 
@@ -160,6 +185,8 @@ class Network:
         actor_gradient = self.action_gradient(state, planned_action)
 
         self.actor_train(state, actor_gradient)
+
+        self.update_global_network()
 
     def load_network(self):
         self.saver = tf.train.Saver()

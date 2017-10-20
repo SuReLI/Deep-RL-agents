@@ -94,93 +94,95 @@ class Agent:
         print("Running", self.name, end='\n\n')
         self.starting_time = time()
         self.total_steps = 0
-        self.ep = 0
+        ep = 0
 
-        with (sess.as_default(), sess.graph.as_default(),
-                coord.stop_on_exception()):
+        with sess.as_default(), sess.graph.as_default():
+            with coord.stop_on_exception():
 
-            while not coord.should_stop():
+                while not coord.should_stop():
 
-                states_buffer = []
-                actions_buffer = []
-                rewards_buffer = []
-                next_state_buffer = []
-                done_buffer = []
-                episode_reward = 0
-                episode_step = 0
+                    states_buffer = []
+                    actions_buffer = []
+                    rewards_buffer = []
+                    next_state_buffer = []
+                    done_buffer = []
+                    episode_reward = 0
+                    episode_step = 0
 
-                # Reset the local network to the global
-                sess.run(self.update_local_vars)
+                    # Reset the local network to the global
+                    sess.run(self.update_local_vars)
 
-                # Initialize the episode
-                s = self.env.reset()
-                done = False
-                max_steps = parameters.MAX_EPISODE_STEP + self.ep // 500
+                    # Initialize the episode
+                    s = self.env.reset()
+                    done = False
+                    max_steps = (parameters.MAX_EPISODE_STEP +
+                                 ep // parameters.EP_ELONGATION)
 
-                while (not coord.should_stop() and
-                       not done and episode_step < max_steps):
+                    while (not coord.should_stop() and
+                           not done and episode_step < max_steps):
 
-                    if random.random() < Agent.epsilon:
-                        a = np.random.uniform(self.low_bound,
-                                              self.high_bound,
-                                              self.action_size)
+                        if random.random() < Agent.epsilon:
+                            a = np.random.uniform(self.low_bound,
+                                                  self.high_bound,
+                                                  self.action_size)
 
-                    else:
-                        a = self.network.get_action([s])[0]
+                        else:
+                            a = self.network.get_action([s])[0]
 
-                    print(a)
+                        s_, r, done, _ = self.env.act(a)
 
-                    s_, r, done, _ = self.env.act(a)
+                        # Store the experience
+                        states_buffer.append(s)
+                        actions_buffer.append(a)
+                        rewards_buffer.append(r)
+                        next_state_buffer.append(s_)
+                        done_buffer.append(done)
 
-                    # Store the experience
-                    states_buffer.append(s)
-                    actions_buffer.append(a)
-                    rewards_buffer.append(r)
-                    next_state_buffer.append(s_)
-                    done_buffer.append(done)
+                        if (len(states_buffer) >= parameters.MAX_LEN_BUFFER or
+                                (len(states_buffer) != 0 and done)):
 
-                    if (len(self.states_buffer) >= parameters.MAX_LEN_BUFFER or
-                            (len(self.states_buffer) != 0 and done)):
+                            self.network.train(states_buffer,
+                                               actions_buffer,
+                                               discount(rewards_buffer),
+                                               next_state_buffer,
+                                               done_buffer)
 
-                        self.network.train(states_buffer,
-                                           actions_buffer,
-                                           discount(rewards_buffer),
-                                           next_state_buffer,
-                                           done_buffer)
+                            states_buffer = []
+                            actions_buffer = []
+                            rewards_buffer = []
+                            next_state_buffer = []
+                            done_buffer = []
 
-                        states_buffer = []
-                        actions_buffer = []
-                        rewards_buffer = []
-                        next_state_buffer = []
-                        done_buffer = []
+                            sess.run(self.update_local_vars)
 
-                        sess.run(self.update_local_vars)
+                        episode_reward += r
+                        s = s_
 
-                    episode_reward += r
-                    s = s_
+                        episode_step += 1
+                        self.total_steps += 1
 
-                    episode_step += 1
-                    self.total_steps += 1
+                    self.epsilon_decay()
 
-                self.epsilon_decay()
+                    ep += 1
 
-                ep += 1
+                    if not coord.should_stop():
+                        DISPLAYER.add_reward(episode_reward, self.worker_index)
+                    if (self.worker_index == 1 and
+                            ep % parameters.DISP_EP_REWARD_FREQ == 0):
+                        print('Episode %2i, Reward: %7.3f, Steps: %i, '
+                              'Epsilon: %7.3f, Max step: %i' %
+                              (ep, episode_reward, episode_step,
+                               Agent.epsilon, max_steps))
 
-                DISPLAYER.add_reward(episode_reward, self.worker_index)
-                if worker_index == 1 and ep % 50 == 0:
-                    print('Episode %2i, Reward: %7.3f, Steps: %i, '
-                          'Epsilon: %7.3f, Max step: %i' %
-                          (ep, episode_reward, episode_step,
-                           Agent.epsilon, max_steps))
+                    if (self.worker_index == 1 and
+                            ep % parameters.SAVE_FREQ == 0):
+                        self.save(ep)
 
-                if self.worker_index == 1 and ep % 2000 == 0:
-                    self.save(ep)
+                    if time() - self.starting_time > parameters.LIMIT_RUN_TIME:
+                        coord.request_stop()
 
-                if time() - self.starting_time > parameters.LIMIT_RUN_TIME:
-                    coord.request_stop()
-
-            self.summary_writer.close()
-            self.close()
+                self.summary_writer.close()
+                self.close()
 
     def test(self, sess, number_run):
         print("Test session for %i runs" % number_run)

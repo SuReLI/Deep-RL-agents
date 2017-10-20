@@ -10,7 +10,7 @@ class Environment:
     def __init__(self):
 
         print("Setting env...")
-        self.env = RunEnv(visualize=True)
+        self.env = RunEnv(visualize=False)
         print("Env set !")
 
     def get_state_size(self):
@@ -21,6 +21,9 @@ class Environment:
 
     def get_bounds(self):
         return self.env.action_space.low, self.env.action_space.high
+
+    def set_render(self, render):
+        self.env = RunEnv(visualize=render)
 
     def reset(self):
         return self.env.reset(difficulty=0)

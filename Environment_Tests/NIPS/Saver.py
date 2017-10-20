@@ -17,7 +17,10 @@ class Saver:
 
     def save(self, n_episode):
         print("Saving model", n_episode, "...")
-        os.makedirs(os.path.dirname("model/"), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname("model/"))
+        except OSError:
+            pass
         self.saver.save(self.sess, "model/Model_" + str(n_episode) + ".cptk")
         print("Model saved !")
 
@@ -30,6 +33,10 @@ class Saver:
             except (ValueError, AttributeError):
                 print("No model is saved !")
                 self.sess.run(tf.global_variables_initializer())
+            except tf.errors.InvalidArgumentError:
+                print("The model save has not the same architecture !")
+                self.sess.run(tf.global_variables_initializer())
+
 
         else:
             print("Initializing variables...")

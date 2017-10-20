@@ -54,8 +54,9 @@ class Agent:
 
             # Initial state
             s = self.env.reset()
+            max_steps = parameters.MAX_EPISODE_STEPS + ep // parameters.EP_ELONGATION
 
-            while episode_step < parameters.MAX_EPISODE_STEPS and not done:
+            while episode_step < max_steps and not done:
 
                 if random.random() < self.epsilon:
                     a = self.env.random()
@@ -94,9 +95,19 @@ class Agent:
                 episode_step += 1
                 self.total_steps += 1
 
-            print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon : %7.3f' %
-                  (ep, episode_reward, episode_step, self.epsilon))
+            if ep % parameters.DISP_EP_REWARD_FREQ == 0:
+                print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon : %7.3f, Max steps : %i' %
+                      (ep, episode_reward, episode_step, self.epsilon, max_steps))
+            
             DISPLAYER.add_reward(episode_reward)
+
+            if episode_reward > self.best_run and ep > 100:
+                self.best_run = episode_reward
+                print("Best agent ! ", episode_reward)
+                SAVER.save('best')
+
+            if ep % parameters.SAVE_FREQ == 0:
+                SAVER.save(ep)
 
     def play(self, number_run):
         print("Playing for", number_run, "runs")
@@ -111,13 +122,12 @@ class Agent:
                 while not done:
 
                     a, = self.sess.run(self.network.actions,
-                                       feed_dict={self.network.state_ph: s[None]})
+                                       feed_dict={self.network.state_ph: [s]})
 
                     s_, r, done, info = self.env.act(a)
                     episode_reward += r
 
                 print("Episode reward :", episode_reward)
-
 
         except KeyboardInterrupt as e:
             pass

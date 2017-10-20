@@ -33,7 +33,7 @@ class Displayer:
         self.rewards[n_agent].append(reward)
         if n_agent != 0:
             self.sequential_rewards.append(reward)
-        if n_agent == 1 and len(self.rewards[1]) % 100 == 0:
+        if n_agent == 1 and len(self.rewards[1]) % parameters.PLOT_FREQ == 0:
             if parameters.DISPLAY:
                 self.disp_one()
             else:

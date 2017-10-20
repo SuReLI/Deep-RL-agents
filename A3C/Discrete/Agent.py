@@ -15,9 +15,9 @@ import parameters
 
 
 # Discounting function used to calculate discounted returns.
-def discount(x):
+def discount(x, gamma):
     return scipy.signal.lfilter([1],
-                                [1, -parameters.DISCOUNT],
+                                [1, -gamma],
                                 x[::-1],
                                 axis=0)[::-1]
 
@@ -93,14 +93,15 @@ class Agent:
 
         # Add the bootstrap value to our experience
         self.rewards_plus = np.asarray(self.rewards_buffer + [bootstrap_value])
-        discounted_reward = discount(self.rewards_plus)[:-1]
+        discounted_reward = discount(
+            self.rewards_plus, parameters.DISCOUNT)[:-1]
 
         self.next_values = np.asarray(self.values_buffer[1:] +
                                       [bootstrap_value])
         advantages = self.rewards_buffer + \
             parameters.DISCOUNT * self.next_values - \
             self.values_buffer
-        advantages = discount(advantages)
+        advantages = discount(advantages, 0.96 * parameters.DISCOUNT)
 
         # Update the global network
         feed_dict = {
@@ -130,18 +131,21 @@ class Agent:
     def work(self, sess, coord):
         print("Running", self.name, end='\n\n')
         self.starting_time = time()
-        self.total_steps = 0
+        self.nb_ep = 0
 
         with sess.as_default(), sess.graph.as_default():
 
             with coord.stop_on_exception():
                 while not coord.should_stop():
+
                     self.states_buffer = []
                     self.actions_buffer = []
                     self.rewards_buffer = []
                     self.values_buffer = []
                     self.mean_values_buffer = []
-                    reward = 0
+
+                    self.total_steps = 0
+                    episode_reward = 0
                     episode_step = 0
 
                     # Reset the local network to the global
@@ -149,6 +153,10 @@ class Agent:
 
                     s = self.env.reset()
                     done = False
+                    render = (self.nb_ep % 500 == 0)
+                    if self.worker_index == 1 and render:
+                        self.env.set_render(True)
+
                     self.lstm_state = self.network.lstm_state_init
 
                     while not coord.should_stop() and not done and \
@@ -173,6 +181,7 @@ class Agent:
                             # Choose an action according to the policy
                             action = np.random.choice(self.action_size,
                                                       p=policy)
+
                         s_, r, done, _ = self.env.act(action)
 
                         # Store the experience
@@ -181,7 +190,7 @@ class Agent:
                         self.rewards_buffer.append(r)
                         self.values_buffer.append(value)
                         self.mean_values_buffer.append(value)
-                        reward += r
+                        episode_reward += r
                         s = s_
 
                         episode_step += 1
@@ -192,6 +201,7 @@ class Agent:
                         # then we empty the episode buffers
                         if len(self.states_buffer) == parameters.MAX_LEN_BUFFER \
                                 and not done:
+
                             feed_dict = {self.network.inputs: [s],
                                          self.network.state_in: self.lstm_state}
                             bootstrap_value = sess.run(
@@ -200,32 +210,55 @@ class Agent:
                             self.update_global_network(sess, bootstrap_value)
                             sess.run(self.update_local_vars)
 
-                    if len(self.states_buffer) != 0:
-                        self.update_global_network(sess, 0)
+                    if len(self.states_buffer) >= 28:
+                        if done:
+                            bootstrap_value = 0
+                        else:
+                            feed_dict = {self.network.inputs: [s],
+                                         self.network.state_in: self.lstm_state}
+                            bootstrap_value = sess.run(
+                                self.network.value,
+                                feed_dict=feed_dict)
+                        self.update_global_network(sess, bootstrap_value)
 
-                    DISPLAYER.add_reward(reward, self.worker_index)
-                    if self.worker_index == 1 and self.total_steps % 2000 == 0:
+                    self.nb_ep += 1
+
+                    if not coord.should_stop():
+                        DISPLAYER.add_reward(episode_reward, self.worker_index)
+
+                    if (self.worker_index == 1 and
+                            self.nb_ep % parameters.DISP_EP_REWARD_FREQ == 0):
+                        print('Episode %2i, Reward: %i, Steps: %i, '
+                              'Epsilon: %7.3f' %
+                              (self.nb_ep, episode_reward, episode_step,
+                               Agent.epsilon))
+
+                    if (self.worker_index == 1 and
+                            self.nb_ep % parameters.SAVE_FREQ == 0):
                         self.save(self.total_steps)
 
                     if time() - self.starting_time > parameters.LIMIT_RUN_TIME:
                         coord.request_stop()
 
+                    self.env.set_render(False)
+
             self.summary_writer.close()
             self.env.close()
 
-    def play(self, sess, number_run):
+    def play(self, sess, number_run, path=''):
         print("Playing", self.name, "for", number_run, "runs")
 
         with sess.as_default(), sess.graph.as_default():
 
             try:
                 # Reset the local network to the global
-                sess.run(self.update_local_vars)
+                if self.name != 'global':
+                    sess.run(self.update_local_vars)
 
-                for _ in range(number_run):
+                for i in range(number_run):
 
                     s = self.env.reset()
-                    reward = 0
+                    episode_reward = 0
 
                     done = False
                     self.lstm_state = self.network.lstm_state_init
@@ -243,53 +276,13 @@ class Agent:
 
                         # Choose an action according to the policy
                         action = np.random.choice(self.action_size, p=policy)
-                        s, r, done, _ = self.env.act(action)
-                        reward += r
+                        s_, r, done, info = self.env.act(action, path != '')
+                        episode_reward += r
 
-                    print("Episode reward :", reward)
+                    print("Episode reward :", episode_reward)
 
-            except KeyboardInterrupt as e:
-                pass
-
-            finally:
-                print("End of the demo")
-                self.env.close()
-
-    def play_gif(self, sess, path):
-        print("Playing", self.name, "for", number_run, "runs")
-
-        with sess.as_default(), sess.graph.as_default():
-
-            try:
-                # Reset the local network to the global
-                sess.run(self.update_local_vars)
-
-                for _ in range(number_run):
-
-                    s = self.env.reset()
-                    reward = 0
-
-                    done = False
-                    self.lstm_state = self.network.lstm_state_init
-
-                    while not done:
-                        # Prediction of the policy and the value
-                        feed_dict = {self.network.inputs: [s],
-                                     self.network.state_in: self.lstm_state}
-                        policy, value, self.lstm_state = sess.run(
-                            [self.network.policy,
-                             self.network.value,
-                             self.network.state_out], feed_dict=feed_dict)
-
-                        policy, value = policy[0], value[0][0]
-
-                        # Choose an action according to the policy
-                        action = np.random.choice(self.action_size, p=policy)
-                        s, r, done, _ = self.env.act_gif(action)
-                        reward += r
-
-                    print("Episode reward :", reward)
-                    self.env.save_gif(path)
+                    if path != '':
+                        self.env.save_gif(path)
 
             except KeyboardInterrupt as e:
                 pass
@@ -297,3 +290,6 @@ class Agent:
             finally:
                 print("End of the demo")
                 self.env.close()
+
+    def close(self):
+        self.env.close()

@@ -35,11 +35,12 @@ if __name__ == '__main__':
         worker_threads = []
         for i, worker in enumerate(workers):
             print("Threading worker", i + 1)
+            sleep(0.05)
             work = lambda: worker.work(sess, coord)
             t = threading.Thread(target=(work))
             t.start()
-            sleep(0.5)
             worker_threads.append(t)
+            sleep(0.1)
 
         try:
             # Wait till all the workers are done
@@ -56,5 +57,4 @@ if __name__ == '__main__':
         DISPLAYER.disp_one()
         DISPLAYER.disp_seq()
         master_agent.play(sess, 10)
-        master_agent.play_gif(sess,
-                              "results/gif/{}_1.gif".format(parameters.ENV))
+        master_agent.play(sess, 1, "results/gif/{}_1.gif".format(parameters.ENV))

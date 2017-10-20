@@ -32,23 +32,25 @@ class Environment:
     def reset(self):
         return self.env.reset()
 
-    def act(self, action):
-        action += self.offset
-        assert self.env.action_space.contains(action)
+    def act(self, action, gif=False):
+        if gif:
+            return self._act_gif(action)
+        else:
+            return self._act(action)
+
+    def _act(self, action):
         if self.render:
             self.env.render()
         return self.env.step(action)
 
-    def act_gif(self, action):
-        action += self.offset
-        assert self.env.action_space.contains(action)
+    def _act_gif(self, action):
         r = 0
         i, done = 0, False
         while i < (FRAME_SKIP + 1) and not done:
             if self.render:
                 self.env_no_frame_skip.render()
 
-            #Save image
+            # Save image
             img = Image.fromarray(self.env.render(mode='rgb_array'))
             img.save('tmp.png')
             self.images.append(imageio.imread('tmp.png'))

@@ -5,7 +5,7 @@ import tensorflow as tf
 from collections import deque
 
 from Environment import Environment
-from ExperienceBuffer import ExperienceBuffer
+from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
 from QNetwork import QNetwork
 
 from Displayer import DISPLAYER
@@ -44,12 +44,18 @@ class Agent:
         self.targetQNetwork = QNetwork(self.state_size, self.action_size,
                                        'target')
 
-        self.buffer = ExperienceBuffer()
+        self.buffer = PrioritizedReplayBuffer(parameters.BUFFER_SIZE,
+                                              parameters.PRIOR_ALPHA)
 
         self.epsilon = parameters.EPSILON_START
         self.epsilon_decay = (parameters.EPSILON_START -
                               parameters.EPSILON_STOP) \
             / parameters.EPSILON_STEPS
+
+        self.beta = parameters.PRIOR_BETA_START
+        self.beta_incr = (parameters.PRIOR_BETA_STOP -
+                          parameters.PRIOR_BETA_START) \
+            / parameters.PRIOR_BETA_STEPS
 
         trainables = tf.trainable_variables()
         self.update_target_ops = updateTargetGraph(trainables)
@@ -98,9 +104,7 @@ class Agent:
                     s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
                     discount_R = (discount_R - r_mem) / parameters.DISCOUNT +\
                         parameters.DISCOUNT_N * r
-                    exp = [s_mem, a_mem, discount_R, ss_mem, done_mem]
-                    experience = np.reshape(np.array(exp), [1, 5])
-                    self.buffer.add(experience)
+                    self.buffer.add(s_mem, a_mem, discount_R, s_, done)
 
                 episode_reward += r
                 s = s_
@@ -109,28 +113,31 @@ class Agent:
                 if not pre_training and \
                         episode_step % parameters.TRAINING_FREQ == 0:
 
-                    train_batch = self.buffer.sample(parameters.BATCH_SIZE)
+                    train_batch = self.buffer.sample(parameters.BATCH_SIZE,
+                                                     self.beta)
+                    # Decay beta
+                    self.beta += self.beta_incr
 
-                    feed_dict = {self.mainQNetwork.inputs: train_batch[:, 3].tolist()}
+                    feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
                     mainQaction = self.sess.run(self.mainQNetwork.predict,
                                                 feed_dict=feed_dict)
 
-                    feed_dict = {self.targetQNetwork.inputs: train_batch[:, 3].tolist()}
+                    feed_dict = {self.targetQNetwork.inputs: train_batch[3]}
                     targetQvalues = self.sess.run(self.targetQNetwork.Qvalues,
                                                   feed_dict=feed_dict)
 
                     # Done multiplier :
                     # equals 0 if the episode was done
                     # equals 1 else
-                    done_multiplier = -1 * (train_batch[:, 4] - 1)
+                    done_multiplier = -1 * (train_batch[4] - 1)
                     doubleQ = targetQvalues[
                         range(parameters.BATCH_SIZE), mainQaction]
-                    targetQvalues = train_batch[:, 2] + \
+                    targetQvalues = train_batch[2] + \
                         parameters.DISCOUNT * doubleQ * done_multiplier
 
-                    feed_dict = {self.mainQNetwork.inputs: train_batch[:, 0].tolist(),
+                    feed_dict = {self.mainQNetwork.inputs: train_batch[0],
                                  self.mainQNetwork.Qtarget: targetQvalues,
-                                 self.mainQNetwork.actions: train_batch[:, 1].tolist()}
+                                 self.mainQNetwork.actions: train_batch[1]}
                     _ = self.sess.run(self.mainQNetwork.train,
                                       feed_dict=feed_dict)
 

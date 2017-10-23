@@ -36,10 +36,6 @@ def update_target_graph(from_scope, to_scope):
 
 class Agent:
 
-    epsilon = parameters.EPSILON_START
-    epsilon_decay = (parameters.EPSILON_START - parameters.EPSILON_STOP) \
-        / parameters.EPSILON_STEPS
-
     def __init__(self, worker_index, sess, render=False, master=False):
         print("Initialization of the agent", str(worker_index))
 
@@ -58,6 +54,7 @@ class Agent:
         self.update_local_vars = update_target_graph('global', self.name)
 
         self.starting_time = 0
+        self.epsilon = parameters.EPSILON_START
 
         self.states_buffer = []
         self.actions_buffer = []
@@ -172,7 +169,7 @@ class Agent:
 
                         policy, value = policy[0], value[0][0]
 
-                        if random.random() < Agent.epsilon:
+                        if random.random() < self.epsilon:
                             action = random.randint(0, self.action_size - 1)
 
                         else:
@@ -219,8 +216,8 @@ class Agent:
                                 feed_dict=feed_dict)
                         self.update_global_network(sess, bootstrap_value)
 
-                    if Agent.epsilon > parameters.EPSILON_STOP:
-                        Agent.epsilon -= Agent.epsilon_decay
+                    if self.epsilon > parameters.EPSILON_STOP:
+                        self.epsilon -= parameters.EPSILON_DECAY
 
                     self.nb_ep += 1
 
@@ -232,7 +229,7 @@ class Agent:
                         print('Episode %2i, Reward: %i, Steps: %i, '
                               'Epsilon: %7.3f' %
                               (self.nb_ep, episode_reward, episode_step,
-                               Agent.epsilon))
+                               self.epsilon))
 
                     if (self.worker_index == 1 and
                             self.nb_ep % parameters.SAVE_FREQ == 0):

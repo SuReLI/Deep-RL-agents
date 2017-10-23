@@ -45,17 +45,10 @@ class Agent:
                                        'target')
 
         self.buffer = PrioritizedReplayBuffer(parameters.BUFFER_SIZE,
-                                              parameters.PRIOR_ALPHA)
+                                              parameters.ALPHA)
 
         self.epsilon = parameters.EPSILON_START
-        self.epsilon_decay = (parameters.EPSILON_START -
-                              parameters.EPSILON_STOP) \
-            / parameters.EPSILON_STEPS
-
-        self.beta = parameters.PRIOR_BETA_START
-        self.beta_incr = (parameters.PRIOR_BETA_STOP -
-                          parameters.PRIOR_BETA_START) \
-            / parameters.PRIOR_BETA_STEPS
+        self.beta = parameters.BETA_START
 
         trainables = tf.trainable_variables()
         self.update_target_ops = updateTargetGraph(trainables)
@@ -90,19 +83,9 @@ class Agent:
                                       feed_dict={self.mainQNetwork.inputs: [s]})
                     a = a[0]
 
-                # Decay epsilon
-                if self.epsilon > parameters.EPSILON_STOP:
-                    self.epsilon -= self.epsilon_decay
-
                 s_, r, done, info = self.env.act(a)
                 memory.append((s, a, r, s_, done))
 
-
-################################################################################
-#                          !!!!!!!!! WARNING !!!!!!!
-#           Use the last next_state s_ and not the one right after it
-#                           You dumb ass
-################################################################################
                 if len(memory) <= parameters.N_STEP_RETURN:
                     discount_R += parameters.DISCOUNT**(len(memory) - 1) * r
 
@@ -110,7 +93,7 @@ class Agent:
                     s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
                     discount_R = (discount_R - r_mem) / parameters.DISCOUNT +\
                         parameters.DISCOUNT_N * r
-                    self.buffer.add(s_mem, a_mem, discount_R, ss_mem, done_mem)
+                    self.buffer.add(s_mem, a_mem, discount_R, s_, done)
 
                 episode_reward += r
                 s = s_
@@ -121,17 +104,17 @@ class Agent:
 
                     train_batch = self.buffer.sample(parameters.BATCH_SIZE,
                                                      self.beta)
-                    print("Weights : ", train_batch[5])
-                    print("Indexes : ", train_batch[6])
-                    # Decay beta
-                    self.beta += self.beta_incr
+                    # Incr beta
+                    if self.beta <= parameters.BETA_STOP:
+                        self.beta += parameters.BETA_INCR
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[0]}
                     oldQvalues = self.sess.run(self.mainQNetwork.Qvalues,
                                                feed_dict=feed_dict)
+                    tmp = [0] * len(oldQvalues)
                     for i, oldQvalue in enumerate(oldQvalues):
-                        oldQvalues[i] = oldQvalue[train_batch[i][1]]
-                    print("Old Q values : ", oldQvalues)
+                        tmp[i] = oldQvalue[train_batch[1][i]]
+                    oldQvalues = tmp
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
                     mainQaction = self.sess.run(self.mainQNetwork.predict,
@@ -150,9 +133,7 @@ class Agent:
                     targetQvalues = train_batch[2] + \
                         parameters.DISCOUNT * doubleQ * done_multiplier
 
-                    print("Target Q values : ", targetQvalues)
-                    errors = tf.abs(targetQvalues - oldQvalues)
-                    print("Errors : ", errors)
+                    errors = np.abs(targetQvalues - oldQvalues)
                     self.buffer.update_priorities(train_batch[6], errors)
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[0],
@@ -162,6 +143,10 @@ class Agent:
                                       feed_dict=feed_dict)
 
                     update_target(self.update_target_ops, self.sess)
+
+            # Decay epsilon
+            if self.epsilon > parameters.EPSILON_STOP:
+                self.epsilon -= parameters.EPSILON_DECAY
 
             if pre_training:
                 self.best_run = max(self.best_run, episode_reward)

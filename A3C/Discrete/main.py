@@ -50,7 +50,6 @@ if __name__ == '__main__':
         except KeyboardInterrupt as e:
             coord.request_stop()
         finally:
-            sleep(1)
             print("End of the training")
 
         DISPLAYER.disp_all()

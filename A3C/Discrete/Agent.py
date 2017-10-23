@@ -86,7 +86,7 @@ class Agent:
                           simple_value=self.entropy)
         summary.value.add(tag='Losses/Grad Norm',
                           simple_value=self.grad_norm)
-        self.summary_writer.add_summary(summary, self.total_steps)
+        self.summary_writer.add_summary(summary, self.nb_ep)
         self.summary_writer.flush()
 
     def update_global_network(self, sess, bootstrap_value):
@@ -122,6 +122,7 @@ class Agent:
         self.value_loss, self.policy_loss, self.entropy = losses[:3]
         self.grad_norm, self.lstm_state, _ = losses[3:]
 
+
         # Reinitialize buffers and variables
         self.states_buffer = []
         self.actions_buffer = []
@@ -131,7 +132,7 @@ class Agent:
     def work(self, sess, coord):
         print("Running", self.name, end='\n\n')
         self.starting_time = time()
-        self.nb_ep = 0
+        self.nb_ep = 1
 
         with sess.as_default(), sess.graph.as_default():
 
@@ -171,9 +172,6 @@ class Agent:
 
                         policy, value = policy[0], value[0][0]
 
-                        if Agent.epsilon > parameters.EPSILON_STOP:
-                            Agent.epsilon -= Agent.epsilon_decay
-
                         if random.random() < Agent.epsilon:
                             action = random.randint(0, self.action_size - 1)
 
@@ -210,7 +208,7 @@ class Agent:
                             self.update_global_network(sess, bootstrap_value)
                             sess.run(self.update_local_vars)
 
-                    if len(self.states_buffer) >= 28:
+                    if len(self.states_buffer) != 0:
                         if done:
                             bootstrap_value = 0
                         else:
@@ -220,6 +218,9 @@ class Agent:
                                 self.network.value,
                                 feed_dict=feed_dict)
                         self.update_global_network(sess, bootstrap_value)
+
+                    if Agent.epsilon > parameters.EPSILON_STOP:
+                        Agent.epsilon -= Agent.epsilon_decay
 
                     self.nb_ep += 1
 

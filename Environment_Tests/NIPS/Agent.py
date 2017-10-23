@@ -4,11 +4,12 @@ import numpy as np
 
 import gym
 import random
+from collections import deque
 
 from QNetwork import Network
 
 from Environment import Environment
-from ExperienceBuffer import ExperienceBuffer
+from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
 
 from Displayer import DISPLAYER
 from Saver import SAVER
@@ -26,7 +27,8 @@ class Agent:
         self.action_size = self.env.get_action_size()
         self.low_bound, self.high_bound = self.env.get_bounds()
 
-        self.buffer = ExperienceBuffer()
+        self.buffer = PrioritizedReplayBuffer(parameters.BUFFER_SIZE,
+                                              parameters.ALPHA)
 
         print("Creation of the actor-critic network...")
         self.network = Network(self.state_size, self.action_size,
@@ -34,9 +36,7 @@ class Agent:
         print("Network created !\n")
 
         self.epsilon = parameters.EPSILON_START
-        self.epsilon_decay = (parameters.EPSILON_START -
-                              parameters.EPSILON_STOP) \
-            / parameters.EPSILON_STEPS
+        self.beta = parameters.BETA_START
 
         self.best_run = -1e10
 
@@ -51,6 +51,8 @@ class Agent:
             episode_reward = 0
             episode_step = 0
             done = False
+            discount_R = 0
+            memory = deque()
 
             # Initial state
             s = self.env.reset()
@@ -67,30 +69,46 @@ class Agent:
 
                 # Decay epsilon
                 if self.epsilon > parameters.EPSILON_STOP:
-                    self.epsilon -= self.epsilon_decay
+                    self.epsilon -= parameters.EPSILON_DECAY
 
                 s_, r, done, info = self.env.act(a)
-                episode_reward += r
+                memory.append((s, a, r, s_, 0.0 if done else 1.0))
 
-                self.buffer.add((s, a, r, s_, 0.0 if done else 1.0))
+                if len(memory) <= parameters.N_STEP_RETURN:
+                    discount_R += parameters.DISCOUNT**(len(memory) - 1) * r
+
+                else:
+                    s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
+                    discount_R = (discount_R - r_mem) / parameters.DISCOUNT +\
+                        parameters.DISCOUNT_N * r
+                    self.buffer.add(s_mem, a_mem, discount_R, s_, done)
 
                 # update network weights to fit a minibatch of experience
                 if self.total_steps % parameters.TRAINING_FREQ == 0 and \
                         len(self.buffer) >= parameters.BATCH_SIZE:
 
-                    minibatch = self.buffer.sample()
+                    minibatch = self.buffer.sample(parameters.BATCH_SIZE,
+                                                   self.beta)
 
-                    _, _ = self.sess.run([self.network.critic_train_op, self.network.actor_train_op],
-                                         feed_dict={
-                        self.network.state_ph: np.asarray([elem[0] for elem in minibatch]),
-                        self.network.action_ph: np.asarray([elem[1] for elem in minibatch]),
-                        self.network.reward_ph: np.asarray([elem[2] for elem in minibatch]),
-                        self.network.next_state_ph: np.asarray([elem[3] for elem in minibatch]),
-                        self.network.is_not_terminal_ph: np.asarray([elem[4] for elem in minibatch])})
+                    if self.beta <= parameters.BETA_STOP:
+                        self.beta += parameters.BETA_INCR
 
+                    td_errors, _, _ = self.sess.run(
+                        [self.network.td_errors, self.network.critic_train_op,
+                            self.network.actor_train_op],
+                        feed_dict={
+                            self.network.state_ph: minibatch[0],
+                            self.network.action_ph: minibatch[1],
+                            self.network.reward_ph: minibatch[2],
+                            self.network.next_state_ph: minibatch[3],
+                            self.network.is_not_terminal_ph: minibatch[4]})
+
+                    self.buffer.update_priorities(minibatch[6],
+                                                  np.abs(td_errors))
                     # update target networks
                     _ = self.sess.run(self.network.update_slow_targets_op)
 
+                episode_reward += r
                 s = s_
                 episode_step += 1
                 self.total_steps += 1
@@ -98,7 +116,7 @@ class Agent:
             if ep % parameters.DISP_EP_REWARD_FREQ == 0:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon : %7.3f, Max steps : %i' %
                       (ep, episode_reward, episode_step, self.epsilon, max_steps))
-            
+
             DISPLAYER.add_reward(episode_reward)
 
             if episode_reward > self.best_run and ep > 100:

@@ -124,10 +124,10 @@ class Network:
             self.slow_q_values_next
 
         # 1-step temporal difference errors
-        td_errors = targets - self.q_values_of_given_actions
+        self.td_errors = targets - self.q_values_of_given_actions
 
         # Critic loss and optimization
-        critic_loss = tf.reduce_mean(tf.square(td_errors))
+        critic_loss = tf.reduce_mean(tf.square(self.td_errors))
         for var in self.critic_vars:
             if not 'bias' in var.name:
                 critic_loss += 1e-6 * 0.5 * tf.nn.l2_loss(var)

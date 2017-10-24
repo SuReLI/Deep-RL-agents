@@ -2,7 +2,7 @@
 ENV = "NIPS"
 
 LOAD = True
-DISPLAY = True
+DISPLAY = False
 
 
 DISCOUNT = 0.99

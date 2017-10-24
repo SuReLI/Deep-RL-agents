@@ -33,16 +33,20 @@ class Agent:
 
     def __init__(self, sess):
         print("Initializing the agent...")
+
         self.sess = sess
         self.env = Environment()
         self.state_size = self.env.get_state_size()
         self.action_size = self.env.get_action_size()
 
-        print("Creation of the main QNetwork")
+        print("Creation of the main QNetwork...")
         self.mainQNetwork = QNetwork(self.state_size, self.action_size, 'main')
-        print("Creation of the target QNetwork")
+        print("Main QNetwork created !\n")
+
+        print("Creation of the target QNetwork...")
         self.targetQNetwork = QNetwork(self.state_size, self.action_size,
                                        'target')
+        print("Target QNetwork created !\n")
 
         self.buffer = PrioritizedReplayBuffer(parameters.BUFFER_SIZE,
                                               parameters.ALPHA)
@@ -53,17 +57,46 @@ class Agent:
         trainables = tf.trainable_variables()
         self.update_target_ops = updateTargetGraph(trainables)
 
+        self.nb_ep = 1
         self.best_run = -1e10
+        self.n_gif = 0
+
+    def pre_train(self):
+        print("Beginning of the pre-training...")
+
+        for i in range(parameters.PRE_TRAIN_STEPS):
+
+            s = self.env.reset()
+            done = False
+            episode_step = 0
+            episode_reward = 0
+
+            while episode_step < parameters.MAX_EPISODE_STEPS and not done:
+
+                a = random.randint(0, self.action_size - 1)
+                s_, r, done, info = self.env.act(a)
+                self.buffer.add(s, a, r, s_, done)
+
+                s = s_
+                episode_reward += r
+                episode_step += 1
+
+            if i % 100 == 0:
+                print("Pre-train step n", i)
+
+            self.best_run = max(self.best_run, episode_reward)
+
+        print("End of the pre training !")
 
     def run(self):
+        print("Beginning of the run...")
+
+        self.pre_train()
 
         self.total_steps = 0
-        while self.total_steps < (parameters.PRE_TRAIN_STEPS +
-                                  parameters.TRAINING_STEPS):
+        self.nb_ep = 1
 
-            pre_training = (self.total_steps <= parameters.PRE_TRAIN_STEPS)
-            if self.total_steps == parameters.PRE_TRAIN_STEPS:
-                print("End of the pre training")
+        while self.nb_ep < parameters.TRAINING_STEPS:
 
             s = self.env.reset()
             episode_reward = 0
@@ -73,17 +106,26 @@ class Agent:
             discount_R = 0
 
             episode_step = 0
+            max_step = parameters.MAX_EPISODE_STEPS + \
+                self.nb_ep // parameters.EP_ELONGATION
 
-            while episode_step < parameters.MAX_EPISODE_STEPS and not done:
+            # Render parameters
+            self.env.set_render(self.nb_ep % parameters.RENDER_FREQ == 0)
+            gif = (self.nb_ep % parameters.GIF_FREQ ==
+                   0) and parameters.DISPLAY
 
-                if pre_training or random.random() < self.epsilon:
+            while episode_step < max_step and not done:
+
+                if random.random() < self.epsilon:
                     a = random.randint(0, self.action_size - 1)
                 else:
                     a = self.sess.run(self.mainQNetwork.predict,
                                       feed_dict={self.mainQNetwork.inputs: [s]})
                     a = a[0]
 
-                s_, r, done, info = self.env.act(a)
+                s_, r, done, info = self.env.act(a, gif)
+                episode_reward += r
+
                 memory.append((s, a, r, s_, done))
 
                 if len(memory) <= parameters.N_STEP_RETURN:
@@ -95,12 +137,7 @@ class Agent:
                         parameters.DISCOUNT_N * r
                     self.buffer.add(s_mem, a_mem, discount_R, s_, done)
 
-                episode_reward += r
-                s = s_
-                episode_step += 1
-
-                if not pre_training and \
-                        episode_step % parameters.TRAINING_FREQ == 0:
+                if episode_step % parameters.TRAINING_FREQ == 0:
 
                     train_batch = self.buffer.sample(parameters.BATCH_SIZE,
                                                      self.beta)
@@ -144,37 +181,45 @@ class Agent:
 
                     update_target(self.update_target_ops, self.sess)
 
+                s = s_
+                episode_step += 1
+                self.total_steps += 1
+
+            self.nb_ep += 1
+
             # Decay epsilon
             if self.epsilon > parameters.EPSILON_STOP:
                 self.epsilon -= parameters.EPSILON_DECAY
 
-            if pre_training:
-                self.best_run = max(self.best_run, episode_reward)
+            DISPLAYER.add_reward(episode_reward)
+            if episode_reward > self.best_run and \
+                    self.nb_ep > 50 + parameters.PRE_TRAIN_STEPS:
+                self.best_run = episode_reward
+                print("Save best", episode_reward)
+                SAVER.save('best')
+                self.play(1, 'results/gif/best.gif')
 
-            else:
-                DISPLAYER.add_reward(episode_reward)
-                if episode_reward > self.best_run and \
-                        self.total_steps > 1000 + parameters.PRE_TRAIN_STEPS:
-                    self.best_run = episode_reward
-                    print("Save best", episode_reward)
-                    SAVER.save('best', self.buffer)
-                    self.play_gif('results/gif/best.gif')
+            if gif:
+                self.env.save_gif('results/gif/gif_save', self.n_gif)
+                self.n_gif = (self.n_gif + 1) % parameters.MAX_NB_GIF
 
             self.total_steps += 1
 
-            if self.total_steps % 1000 == 0:
-                print("Episode", self.total_steps)
+            if self.nb_ep % parameters.DISP_EP_REWARD_FREQ == 0:
+                print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %i'
+                      ', Max steps: %i' % (self.nb_ep, episode_reward,
+                                           episode_step, self.epsilon,
+                                           max_step))
 
             # Save the model
-            if self.total_steps % 5000 == 0:
-                SAVER.save(self.total_steps, self.buffer)
+            if self.nb_ep % parameters.SAVE_FREQ == 0:
+                SAVER.save(self.nb_ep)
 
-    def play(self, number_run):
+    def play(self, number_run, path=''):
         print("Playing for", number_run, "runs")
 
-        self.env.set_render(True)
         try:
-            for _ in range(number_run):
+            for i in range(number_run):
 
                 s = self.env.reset()
                 episode_reward = 0
@@ -184,11 +229,14 @@ class Agent:
                     a = self.sess.run(self.mainQNetwork.predict,
                                       feed_dict={self.mainQNetwork.inputs: [s]})
                     a = a[0]
-                    s, r, done, info = self.env.act(a)
+                    s, r, done, info = self.env.act(a, path != '')
 
                     episode_reward += r
 
                 print("Episode reward :", episode_reward)
+
+                if path != '':
+                    self.env.save_gif(path, i)
 
         except KeyboardInterrupt as e:
             pass
@@ -198,33 +246,6 @@ class Agent:
 
         finally:
             self.env.set_render(False)
-            print("End of the demo")
-            self.env.close()
-
-    def play_gif(self, path):
-
-        try:
-            s = self.env.reset()
-            episode_reward = 0
-            done = False
-
-            while not done:
-                a = self.sess.run(self.mainQNetwork.predict,
-                                  feed_dict={self.mainQNetwork.inputs: [s]})
-                a = a[0]
-                s, r, done, info = self.env.act_gif(a)
-
-                episode_reward += r
-            print("Episode reward :", episode_reward)
-            self.env.save_gif(path)
-
-        except KeyboardInterrupt as e:
-            pass
-
-        except Exception as e:
-            print("Exception :", e)
-
-        finally:
             print("End of the demo")
             self.env.close()
 

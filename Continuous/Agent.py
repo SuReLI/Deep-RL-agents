@@ -55,8 +55,12 @@ class Agent:
 
             # Initial state
             s = self.env.reset()
-            self.env.set_render(ep % 10 == 0)
-            gif = (ep % 100 == 0)
+            if ep % parameters.RENDER_FREQ == 0 and parameters.DISPLAY:
+                self.env.set_render(True)
+            else:
+                self.env.set_render(False)
+
+            gif = (ep % 50 == 0) and parameters.DISPLAY
 
             while episode_step < parameters.MAX_EPISODE_STEPS and not done:
 
@@ -99,18 +103,24 @@ class Agent:
                 self.total_steps += 1
 
             if gif:
-                self.env.save_gif('results/gif/', self.n_gif)
+                self.env.save_gif('results/gif/gif_save', self.n_gif)
                 self.n_gif = (self.n_gif + 1) % 5
 
-            print('Episode %2i, Reward: %7.3f, Steps: %i, Final noise scale: %7.3f' %
-                  (ep, episode_reward, episode_step, noise_scale))
+            if ep > 50 and episode_reward > self.best_run:
+                print("Saving best")
+                self.play(1, 'results/gif/gif_best')
+                self.best_run = episode_reward
+
+            if ep % parameters.DISP_EP_REWARD_FREQ == 0:
+                print('Episode %2i, Reward: %7.3f, Steps: %i, Final noise scale: %7.3f' %
+                      (ep, episode_reward, episode_step, noise_scale))
             DISPLAYER.add_reward(episode_reward)
 
 
     def play(self, number_run, path=''):
         print("Playing for", number_run, "runs")
 
-        self.env.set_render(True)
+        self.env.set_render(path != '')
         try:
             for i in range(number_run):
 
@@ -123,7 +133,7 @@ class Agent:
                     a, = self.sess.run(self.network.actions,
                                        feed_dict={self.network.state_ph: s[None]})
 
-                    s_, r, done, info = self.env.act(a, path != '')
+                    s, r, done, info = self.env.act(a, path != '')
                     episode_reward += r
                 
                 print("Episode reward :", episode_reward)

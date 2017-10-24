@@ -66,7 +66,7 @@ class Environment:
         return s_, r, done, info
 
     def save_gif(self, path, i):
-        path = path + "Gif_save_{}.gif".format(i)
+        path = path + "_{}.gif".format(i)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         imageio.mimsave(path, self.images, duration=1)
         self.images = []

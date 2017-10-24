@@ -30,7 +30,7 @@ class Displayer:
 
     def add_reward(self, reward):
         self.rewards.append(reward)
-        if len(self.rewards) % 100 == 0:
+        if len(self.rewards) % parameters.PLOT_FREQ == 0:
             if parameters.DISPLAY:
                 self.disp()
             else:

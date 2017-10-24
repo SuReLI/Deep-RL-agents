@@ -21,19 +21,16 @@ if __name__ == '__main__':
 
         SAVER.load(agent)
 
-        print("Beginning of the run")
         try:
             agent.run()
         except KeyboardInterrupt:
             pass
         print("End of the run")
-        SAVER.save(agent.total_steps, agent.buffer)
+        SAVER.save(agent.nb_ep)
         DISPLAYER.disp()
 
         agent.play(10)
 
-        agent.play_gif("results/gif/{}_1.gif".format(parameters.ENV))
-        agent.play_gif("results/gif/{}_2.gif".format(parameters.ENV))
-        agent.play_gif("results/gif/{}_3.gif".format(parameters.ENV))
+        agent.play(3, "results/gif/{}".format(parameters.ENV))
 
     agent.stop()

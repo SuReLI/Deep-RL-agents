@@ -4,16 +4,28 @@ ENV = "Acrobot-v1"
 LOAD = False
 DISPLAY = True
 
-BUFFER_SAVE = False
-
 CONV = False
 
+LEARNING_RATE = 7.5e-4
 
 DISCOUNT = 0.99
 N_STEP_RETURN = 3
 DISCOUNT_N = DISCOUNT**(N_STEP_RETURN-1)
 
 FRAME_SKIP = 0
+BUFFER_SIZE = 100000
+BATCH_SIZE = 32
+
+# Number of episodes of game environment to train with
+TRAINING_STEPS = 10000
+PRE_TRAIN_STEPS = 500
+
+# Maximal number of steps during one episode
+MAX_EPISODE_STEPS = 50
+TRAINING_FREQ = 4
+
+# Rate to update target network toward primary network
+UPDATE_TARGET_RATE = 0.001
 
 
 EPSILON_START = 0.8
@@ -21,24 +33,19 @@ EPSILON_STOP = 0.01
 EPSILON_STEPS = 100000
 EPSILON_DECAY = (EPSILON_START - EPSILON_STOP) / EPSILON_STEPS
 
-LEARNING_RATE = 7.5e-4
-
-BUFFER_SIZE = 100000
 ALPHA = 0.5
 BETA_START = 0.4
 BETA_STOP = 1
 BETA_STEPS = 25000
 BETA_INCR = (BETA_STOP - BETA_START) / BETA_STEPS
 
-BATCH_SIZE = 32
 
-# Number of episodes of game environment to train with
-TRAINING_STEPS = 10000
-PRE_TRAIN_STEPS = 1000
+# Display Frequencies
+DISP_EP_REWARD_FREQ = 10
+PLOT_FREQ = 50
+RENDER_FREQ = 250
 
-# Maximal number of steps during one episode
-MAX_EPISODE_STEPS = 600
-TRAINING_FREQ = 4
-
-# Rate to update target network toward primary network
-UPDATE_TARGET_RATE = 0.001
+SAVE_FREQ = 200
+GIF_FREQ = 100
+MAX_NB_GIF = 5
+EP_ELONGATION = 50

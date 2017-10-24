@@ -28,8 +28,8 @@ if __name__ == '__main__':
         SAVER.save(agent.total_steps)
         DISPLAYER.disp()
 
-        # agent.play(10)
+        agent.play(10)
 
-        # agent.play(3, "results/gif/".format(parameters.ENV))
+        agent.play(3, "results/gif/gif_save".format(parameters.ENV))
 
     agent.close()

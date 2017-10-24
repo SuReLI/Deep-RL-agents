@@ -170,7 +170,7 @@ class Agent:
                     targetQvalues = train_batch[2] + \
                         parameters.DISCOUNT * doubleQ * done_multiplier
 
-                    errors = np.abs(targetQvalues - oldQvalues)
+                    errors = np.square(targetQvalues - oldQvalues) + 1e-6
                     self.buffer.update_priorities(train_batch[6], errors)
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[0],

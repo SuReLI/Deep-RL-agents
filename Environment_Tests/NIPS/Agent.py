@@ -104,7 +104,7 @@ class Agent:
                             self.network.is_not_terminal_ph: minibatch[4]})
 
                     self.buffer.update_priorities(minibatch[6],
-                                                  np.abs(td_errors))
+                                                  np.abs(td_errors)+1e-6)
                     # update target networks
                     _ = self.sess.run(self.network.update_slow_targets_op)
 

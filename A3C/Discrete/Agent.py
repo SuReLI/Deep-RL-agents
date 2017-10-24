@@ -56,11 +56,6 @@ class Agent:
         self.starting_time = 0
         self.epsilon = parameters.EPSILON_START
 
-        self.states_buffer = []
-        self.actions_buffer = []
-        self.rewards_buffer = []
-        self.values_buffer = []
-
         if self.name != 'global':
             self.summary_writer = tf.summary.FileWriter("results/" + self.name,
                                                         sess.graph)
@@ -98,7 +93,11 @@ class Agent:
         advantages = self.rewards_buffer + \
             parameters.DISCOUNT * self.next_values - \
             self.values_buffer
-        advantages = discount(advantages, 0.96 * parameters.DISCOUNT)
+        advantages = discount(
+            advantages, parameters.GENERALIZED_LAMBDA * parameters.DISCOUNT)
+
+
+        lstm_first_state = self.lstm_buffer[0]
 
         # Update the global network
         feed_dict = {
@@ -106,7 +105,7 @@ class Agent:
             self.network.inputs: self.states_buffer,
             self.network.actions: self.actions_buffer,
             self.network.advantages: advantages,
-            self.network.state_in: self.lstm_state}
+            self.network.state_in: lstm_first_state}
         losses = sess.run([self.network.value_loss,
                            self.network.policy_loss,
                            self.network.entropy,
@@ -119,12 +118,12 @@ class Agent:
         self.value_loss, self.policy_loss, self.entropy = losses[:3]
         self.grad_norm, self.lstm_state, _ = losses[3:]
 
-
         # Reinitialize buffers and variables
         self.states_buffer = []
         self.actions_buffer = []
         self.rewards_buffer = []
         self.values_buffer = []
+        self.lstm_buffer = []
 
     def work(self, sess, coord):
         print("Running", self.name, end='\n\n')
@@ -141,6 +140,7 @@ class Agent:
                     self.rewards_buffer = []
                     self.values_buffer = []
                     self.mean_values_buffer = []
+                    self.lstm_buffer = []
 
                     self.total_steps = 0
                     episode_reward = 0
@@ -151,14 +151,17 @@ class Agent:
 
                     s = self.env.reset()
                     done = False
-                    render = (self.nb_ep % 500 == 0)
-                    if self.worker_index == 1 and render:
+                    render = (self.nb_ep % parameters.RENDER_FREQ == 0)
+                    if self.worker_index == 1 and render and parameters.DISPLAY:
                         self.env.set_render(True)
 
                     self.lstm_state = self.network.lstm_state_init
 
                     while not coord.should_stop() and not done and \
                             episode_step < parameters.MAX_EPISODE_STEP:
+
+                        self.lstm_buffer.append(self.lstm_state)
+
                         # Prediction of the policy and the value
                         feed_dict = {self.network.inputs: [s],
                                      self.network.state_in: self.lstm_state}
@@ -249,11 +252,11 @@ class Agent:
         with sess.as_default(), sess.graph.as_default():
 
             try:
-                # Reset the local network to the global
-                if self.name != 'global':
-                    sess.run(self.update_local_vars)
-
                 for i in range(number_run):
+
+                    # Reset the local network to the global
+                    if self.name != 'global':
+                        sess.run(self.update_local_vars)
 
                     s = self.env.reset()
                     episode_reward = 0
@@ -262,19 +265,18 @@ class Agent:
                     self.lstm_state = self.network.lstm_state_init
 
                     while not done:
-                        # Prediction of the policy and the value
+                        # Prediction of the policy
                         feed_dict = {self.network.inputs: [s],
                                      self.network.state_in: self.lstm_state}
-                        policy, value, self.lstm_state = sess.run(
+                        policy, self.lstm_state = sess.run(
                             [self.network.policy,
-                             self.network.value,
                              self.network.state_out], feed_dict=feed_dict)
 
-                        policy, value = policy[0], value[0][0]
+                        policy = policy[0]
 
                         # Choose an action according to the policy
                         action = np.random.choice(self.action_size, p=policy)
-                        s_, r, done, info = self.env.act(action, path != '')
+                        s, r, done, info = self.env.act(action, path != '')
                         episode_reward += r
 
                     print("Episode reward :", episode_reward)

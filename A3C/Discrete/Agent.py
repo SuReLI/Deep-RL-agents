@@ -81,7 +81,7 @@ class Agent:
         self.summary_writer.add_summary(summary, self.nb_ep)
         self.summary_writer.flush()
 
-    def update_global_network(self, sess, bootstrap_value):
+    def train(self, sess, bootstrap_value):
 
         # Add the bootstrap value to our experience
         self.rewards_plus = np.asarray(self.rewards_buffer + [bootstrap_value])
@@ -96,16 +96,13 @@ class Agent:
         advantages = discount(
             advantages, parameters.GENERALIZED_LAMBDA * parameters.DISCOUNT)
 
-
-        lstm_first_state = self.lstm_buffer[0]
-
         # Update the global network
         feed_dict = {
             self.network.discounted_reward: discounted_reward,
             self.network.inputs: self.states_buffer,
             self.network.actions: self.actions_buffer,
             self.network.advantages: advantages,
-            self.network.state_in: lstm_first_state}
+            self.network.state_in: self.initial_lstm_state}
         losses = sess.run([self.network.value_loss,
                            self.network.policy_loss,
                            self.network.entropy,
@@ -156,6 +153,7 @@ class Agent:
                         self.env.set_render(True)
 
                     self.lstm_state = self.network.lstm_state_init
+                    self.initial_lstm_state = self.lstm_state
 
                     while not coord.should_stop() and not done and \
                             episode_step < parameters.MAX_EPISODE_STEP:
@@ -205,8 +203,10 @@ class Agent:
                             bootstrap_value = sess.run(
                                 self.network.value,
                                 feed_dict=feed_dict)
-                            self.update_global_network(sess, bootstrap_value)
+
+                            self.train(sess, bootstrap_value)
                             sess.run(self.update_local_vars)
+                            self.initial_lstm_state = self.lstm_state
 
                     if len(self.states_buffer) != 0:
                         if done:
@@ -217,7 +217,7 @@ class Agent:
                             bootstrap_value = sess.run(
                                 self.network.value,
                                 feed_dict=feed_dict)
-                        self.update_global_network(sess, bootstrap_value)
+                        self.train(sess, bootstrap_value)
 
                     if self.epsilon > parameters.EPSILON_STOP:
                         self.epsilon -= parameters.EPSILON_DECAY

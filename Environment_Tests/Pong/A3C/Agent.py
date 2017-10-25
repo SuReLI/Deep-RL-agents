@@ -80,7 +80,7 @@ class Agent:
         self.summary_writer.add_summary(summary, self.nb_ep)
         self.summary_writer.flush()
 
-    def update_global_network(self, sess, bootstrap_value):
+    def train(self, sess, bootstrap_value):
 
         # Add the bootstrap value to our experience
         self.rewards_plus = np.asarray(self.rewards_buffer + [bootstrap_value])
@@ -94,15 +94,13 @@ class Agent:
             self.values_buffer
         advantages = discount(advantages, parameters.GENERALIZED_LAMBDA * parameters.DISCOUNT)
 
-        lstm_first_state = self.lstm_buffer[0]
-
         # Update the global network
         feed_dict = {
             self.network.discounted_reward: discounted_reward,
             self.network.inputs: self.states_buffer,
             self.network.actions: self.actions_buffer,
             self.network.advantages: advantages,
-            self.network.state_in: lstm_first_state}
+            self.network.state_in: self.initial_lstm_state}
         losses = sess.run([self.network.value_loss,
                            self.network.policy_loss,
                            self.network.entropy,
@@ -120,7 +118,6 @@ class Agent:
         self.actions_buffer = []
         self.rewards_buffer = []
         self.values_buffer = []
-        self.lstm_buffer = []
 
     def work(self, sess, coord):
         print("Running", self.name, end='\n\n')
@@ -137,7 +134,6 @@ class Agent:
                     self.rewards_buffer = []
                     self.values_buffer = []
                     self.mean_values_buffer = []
-                    self.lstm_buffer = []
 
                     self.total_steps = 0
                     episode_reward = 0
@@ -153,11 +149,10 @@ class Agent:
                         self.env.set_render(True)
 
                     self.lstm_state = self.network.lstm_state_init
+                    self.initial_lstm_state = self.lstm_state
 
                     while not coord.should_stop() and not done and \
                             episode_step < parameters.MAX_EPISODE_STEP:
-
-                        self.lstm_buffer.append(self.lstm_state)
 
                         # Prediction of the policy and the value
                         feed_dict = {self.network.inputs: [s],
@@ -197,8 +192,10 @@ class Agent:
                             bootstrap_value = sess.run(
                                 self.network.value,
                                 feed_dict=feed_dict)
-                            self.update_global_network(sess, bootstrap_value)
+
+                            self.train(sess, bootstrap_value)
                             sess.run(self.update_local_vars)
+                            self.initial_lstm_state = self.lstm_state
 
                     if len(self.states_buffer) != 0:
                         if done:
@@ -209,7 +206,7 @@ class Agent:
                             bootstrap_value = sess.run(
                                 self.network.value,
                                 feed_dict=feed_dict)
-                        self.update_global_network(sess, bootstrap_value)
+                        self.train(sess, bootstrap_value)
 
                     self.nb_ep += 1
 
@@ -223,7 +220,7 @@ class Agent:
 
                     if (self.worker_index == 1 and
                             self.nb_ep % parameters.SAVE_FREQ == 0):
-                        self.save(self.total_steps)
+                        self.save(self.nb_ep)
 
                     if time() - self.starting_time > parameters.LIMIT_RUN_TIME:
                         coord.request_stop()

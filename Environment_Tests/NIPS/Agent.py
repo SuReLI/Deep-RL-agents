@@ -44,9 +44,10 @@ class Agent:
 
     def run(self):
 
+        self.nb_ep = 1
         self.total_steps = 0
 
-        for ep in range(1, parameters.TRAINING_STEPS + 1):
+        for self.nb_ep in range(1, parameters.TRAINING_STEPS + 1):
 
             episode_reward = 0
             episode_step = 0
@@ -56,7 +57,7 @@ class Agent:
 
             # Initial state
             s = self.env.reset()
-            max_steps = parameters.MAX_EPISODE_STEPS + ep // parameters.EP_ELONGATION
+            max_steps = parameters.MAX_EPISODE_STEPS + self.nb_ep // parameters.EP_ELONGATION
 
             while episode_step < max_steps and not done:
 
@@ -103,8 +104,7 @@ class Agent:
                             self.network.next_state_ph: minibatch[3],
                             self.network.is_not_terminal_ph: minibatch[4]})
 
-                    self.buffer.update_priorities(minibatch[6],
-                                                  np.abs(td_errors)+1e-6)
+                    self.buffer.update_priorities(minibatch[6], td_errors+1e-6)
                     # update target networks
                     _ = self.sess.run(self.network.update_slow_targets_op)
 
@@ -113,19 +113,21 @@ class Agent:
                 episode_step += 1
                 self.total_steps += 1
 
-            if ep % parameters.DISP_EP_REWARD_FREQ == 0:
+            self.nb_ep += 1
+
+            if self.nb_ep % parameters.DISP_EP_REWARD_FREQ == 0:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon : %7.3f, Max steps : %i' %
-                      (ep, episode_reward, episode_step, self.epsilon, max_steps))
+                      (self.nb_ep, episode_reward, episode_step, self.epsilon, max_steps))
 
             DISPLAYER.add_reward(episode_reward)
 
-            if episode_reward > self.best_run and ep > 100:
+            if episode_reward > self.best_run and self.nb_ep > 100:
                 self.best_run = episode_reward
                 print("Best agent ! ", episode_reward)
                 SAVER.save('best')
 
-            if ep % parameters.SAVE_FREQ == 0:
-                SAVER.save(ep)
+            if self.nb_ep % parameters.SAVE_FREQ == 0:
+                SAVER.save(self.nb_ep)
 
     def play(self, number_run):
         print("Playing for", number_run, "runs")

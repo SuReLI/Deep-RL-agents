@@ -36,15 +36,15 @@ class NetworkArchitecture:
                                      name='Input_state')
 
         with tf.variable_scope('Convolutional_Layers'):
-            self.conv1 = slim.conv2d(activation_fn=tf.nn.elu,
+            self.conv1 = slim.conv2d(activation_fn=tf.nn.relu,
                                      inputs=self.inputs,
-                                     num_outputs=32,
+                                     num_outputs=16,
                                      kernel_size=[8, 8],
                                      stride=[4, 4],
                                      padding='VALID')
-            self.conv2 = slim.conv2d(activation_fn=tf.nn.elu,
+            self.conv2 = slim.conv2d(activation_fn=tf.nn.relu,
                                      inputs=self.conv1,
-                                     num_outputs=64,
+                                     num_outputs=32,
                                      kernel_size=[4, 4],
                                      stride=[2, 2],
                                      padding='VALID')
@@ -52,7 +52,7 @@ class NetworkArchitecture:
         # Flatten the output
         flat_conv2 = flatten(self.conv2)
         self.hidden = slim.fully_connected(flat_conv2, 256,
-                                           activation_fn=tf.nn.elu)
+                                           activation_fn=tf.nn.relu)
         return self.inputs
 
     def build_lstm(self):

@@ -124,7 +124,8 @@ class Network:
             self.slow_q_values_next
 
         # 1-step temporal difference errors
-        self.td_errors = tf.square(targets - self.q_values_of_given_actions)
+        self.td_errors = tf.clip_by_value(
+            tf.square(targets - self.q_values_of_given_actions), -50, 50)
 
         # Critic loss and optimization
         critic_loss = tf.reduce_mean(self.td_errors)

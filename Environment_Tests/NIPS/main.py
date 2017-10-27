@@ -23,7 +23,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         print("End of the run")
-        SAVER.save(agent.total_steps)
+        SAVER.save(agent.nb_ep)
         DISPLAYER.disp()
 
         # agent.play(10)
@@ -31,10 +31,11 @@ if __name__ == '__main__':
     agent.close()
 
 
-def test():
+def test(best=False):
     with tf.Session() as sess:
+        agent = Agent(sess)
         agent.sess = sess
         SAVER.set_sess(sess)
-        SAVER.load(agent)
+        SAVER.load(agent, best)
         agent.env.set_render(True)
         agent.play(3)

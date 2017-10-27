@@ -149,7 +149,7 @@ class Agent:
                     s = self.env.reset()
                     done = False
                     render = (self.nb_ep % parameters.RENDER_FREQ == 0)
-                    if self.worker_index == 1 and render and parameters.DISPLAY:
+                    if render and parameters.DISPLAY:
                         self.env.set_render(True)
 
                     self.lstm_state = self.network.lstm_state_init
@@ -227,12 +227,11 @@ class Agent:
                     if not coord.should_stop():
                         DISPLAYER.add_reward(episode_reward, self.worker_index)
 
-                    if (self.worker_index == 1 and
-                            self.nb_ep % parameters.DISP_EP_REWARD_FREQ == 0):
-                        print('Episode %2i, Reward: %i, Steps: %i, '
+                    if self.nb_ep % parameters.DISP_EP_REWARD_FREQ == 0:
+                        print('Agent: %i, Episode %2i, Reward: %i, Steps: %i, '
                               'Epsilon: %7.3f' %
-                              (self.nb_ep, episode_reward, episode_step,
-                               self.epsilon))
+                              (self.worker_index, self.nb_ep, episode_reward,
+                               episode_step, self.epsilon))
 
                     if (self.worker_index == 1 and
                             self.nb_ep % parameters.SAVE_FREQ == 0):

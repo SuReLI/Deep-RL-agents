@@ -24,12 +24,16 @@ class Saver:
         self.saver.save(self.sess, "model/Model_" + str(n_episode) + ".cptk")
         print("Model saved !")
 
-    def load(self, agent):
+    def load(self, agent, best=False):
         if parameters.LOAD:
             print("Loading model...")
             try:
-                ckpt = tf.train.get_checkpoint_state("model/")
-                self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+                if best:
+                    self.saver.restore(self.sess, 'model/Model_best.cptk')
+                else:
+                    ckpt = tf.train.get_checkpoint_state("model/")
+                    print(ckpt.model_checkpoint_path)
+                    self.saver.restore(self.sess, ckpt.model_checkpoint_path)
             except (ValueError, AttributeError):
                 print("No model is saved !")
                 self.sess.run(tf.global_variables_initializer())

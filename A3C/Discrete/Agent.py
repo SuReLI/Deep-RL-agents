@@ -37,12 +37,12 @@ def update_target_graph(from_scope, to_scope):
 class Agent:
 
     def __init__(self, worker_index, sess, render=False, master=False):
-        print("Initialization of the agent", str(worker_index))
 
         self.worker_index = worker_index
         if master:
             self.name = 'global'
         else:
+            print("Initialization of the agent", str(worker_index))
             self.name = 'Worker_' + str(worker_index)
 
         self.env = Environment()
@@ -96,6 +96,7 @@ class Agent:
         advantages = discount(
             advantages, parameters.GENERALIZED_LAMBDA * parameters.DISCOUNT)
 
+
         # Update the global network
         feed_dict = {
             self.network.discounted_reward: discounted_reward,
@@ -107,20 +108,19 @@ class Agent:
                            self.network.policy_loss,
                            self.network.entropy,
                            self.network.grad_norm,
-                           self.network.state_out,
                            self.network.apply_grads],
                           feed_dict=feed_dict)
 
         # Get the losses for tensorboard
         self.value_loss, self.policy_loss, self.entropy = losses[:3]
-        self.grad_norm, self.lstm_state, _ = losses[3:]
+        self.grad_norm, _ = losses[3:]
+
 
         # Reinitialize buffers and variables
         self.states_buffer = []
         self.actions_buffer = []
         self.rewards_buffer = []
         self.values_buffer = []
-        self.lstm_buffer = []
 
     def work(self, sess, coord):
         print("Running", self.name, end='\n\n')
@@ -137,7 +137,6 @@ class Agent:
                     self.rewards_buffer = []
                     self.values_buffer = []
                     self.mean_values_buffer = []
-                    self.lstm_buffer = []
 
                     self.total_steps = 0
                     episode_reward = 0
@@ -158,7 +157,6 @@ class Agent:
                     while not coord.should_stop() and not done and \
                             episode_step < parameters.MAX_EPISODE_STEP:
 
-                        self.lstm_buffer.append(self.lstm_state)
 
                         # Prediction of the policy and the value
                         feed_dict = {self.network.inputs: [s],

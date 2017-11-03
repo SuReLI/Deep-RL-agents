@@ -54,18 +54,22 @@ class Network:
             self.advantages = tf.placeholder(tf.float32, [None], 'Advantage')
             self.discounted_reward = tf.placeholder(tf.float32, [None],
                                                     'Discounted_Reward')
+            self.policy = tf.clip_by_value(
+                self.policy, 1e-20, 1)
             self.responsible_outputs = tf.reduce_sum(
                 self.policy * self.actions_onehot, [1])
+            self.responsible_outputs = tf.clip_by_value(
+                self.responsible_outputs, 1e-20, 1)
 
             # Estimate the policy loss and regularize it by adding uncertainty
             # (subtracting entropy)
-            self.policy_loss = -tf.reduce_sum(
-                tf.log(self.responsible_outputs) * self.advantages)
+            self.policy_loss = -tf.reduce_sum(tf.multiply(
+                tf.log(self.responsible_outputs), self.advantages))
             self.entropy = -tf.reduce_sum(self.policy * tf.log(self.policy))
 
             # Estimate the value loss using the sum of squared errors.
-            self.value_loss = tf.reduce_sum(tf.square(
-                tf.reshape(self.value, [-1]) - self.discounted_reward))
+            self.value_loss = tf.reduce_sum(tf.square(self.advantages))
+                # tf.reshape(self.value, [-1]) - self.discounted_reward))
 
             # Estimate the final loss.
             self.loss = self.policy_loss + \

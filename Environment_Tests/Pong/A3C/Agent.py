@@ -105,13 +105,12 @@ class Agent:
                            self.network.policy_loss,
                            self.network.entropy,
                            self.network.grad_norm,
-                           self.network.state_out,
                            self.network.apply_grads],
                           feed_dict=feed_dict)
 
         # Get the losses for tensorboard
         self.value_loss, self.policy_loss, self.entropy = losses[:3]
-        self.grad_norm, self.lstm_state, _ = losses[3:]
+        self.grad_norm, _ = losses[3:]
 
         # Reinitialize buffers and variables
         self.states_buffer = []

@@ -13,7 +13,7 @@ import imageio
 
 class Environment:
 
-    def __init__(self):
+    def __init__(self, worker_index=0):
 
         self.env_no_frame_skip = gym.make(ENV)
         self.env = gym.wrappers.SkipWrapper(FRAME_SKIP)(self.env_no_frame_skip)
@@ -22,8 +22,8 @@ class Environment:
         self.reset()
 
         self.render = False
-        self.offset = 0
         self.images = []
+        self.tmp_name = 'tmp_{}.png'.format(worker_index)
 
     def get_state_size(self):
         try:
@@ -32,16 +32,10 @@ class Environment:
             return (84, 84, FRAME_BUFFER_SIZE)
 
     def get_action_size(self):
-        if ENV == "SpaceInvaders-v0" or ENV == "SpaceInvaders-ram-v0":
-            return 4
-        elif ENV == "Pong-v0" or ENV == "Pong-ram-v0":
-            self.offset = 2
-            return 3
-        else:
-            try:
-                return self.env.action_space.n
-            except AttributeError:
-                return self.env.action_space.shape[0]
+        try:
+            return self.env.action_space.n
+        except AttributeError:
+            return self.env.action_space.shape[0]
 
     def set_render(self, render):
         self.render = render
@@ -72,8 +66,6 @@ class Environment:
             return self._act_gif(action)
 
     def _act(self, action):
-        action += self.offset
-
         # Check whether the action is valid
         assert self.env.action_space.contains(action)
 
@@ -85,8 +77,6 @@ class Environment:
         return self._convert_process_buffer(), r, done, info
 
     def _act_gif(self, action):
-        action += self.offset
-
         # Check whether the action is valid
         assert self.env.action_space.contains(action)
 
@@ -98,8 +88,8 @@ class Environment:
 
             # Save image
             img = Image.fromarray(self.env.render(mode='rgb_array'))
-            img.save('tmp.png')
-            self.images.append(imageio.imread('tmp.png'))
+            img.save(self.tmp_name)
+            self.images.append(imageio.imread(self.tmp_name))
 
             s_, r_tmp, done, info = self.env_no_frame_skip.step(action)
             r += r_tmp
@@ -108,7 +98,8 @@ class Environment:
         self.frame_buffer.append(s_)
         return self._convert_process_buffer(), r, done, info
 
-    def save_gif(self, path):
+    def save_gif(self, path, i):
+        path = path + "_{}.gif".format(i)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         imageio.mimsave(path, self.images, duration=1)
         self.images = []

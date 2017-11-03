@@ -9,7 +9,7 @@ from Saver import SAVER
 import parameters
 
 if __name__ == '__main__':
-
+    
     tf.reset_default_graph()
 
     with tf.Session() as sess:
@@ -21,19 +21,16 @@ if __name__ == '__main__':
 
         SAVER.load(agent)
 
-        print("Beginning of the run")
         try:
             agent.run()
         except KeyboardInterrupt:
             pass
         print("End of the run")
-        SAVER.save(agent.total_steps, agent.buffer)
+        SAVER.save(agent.nb_ep)
         DISPLAYER.disp()
 
         agent.play(10)
 
-        for i in range(20):
-            agent.play_gif("results/gif/{}_{}.gif".format(parameters.ENV,
-                                                          str(i)))
+        agent.play(3, "results/gif/{}".format(parameters.ENV))
 
     agent.stop()

@@ -82,6 +82,9 @@ class Network:
             # Apply gradients to global network
             global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
                                             'global')
-            optimizer = tf.train.AdamOptimizer(parameters.LEARNING_RATE)
+            self.learning_rate = tf.placeholder(tf.float32,
+                                                name='learning_rate')
+            optimizer = tf.train.RMSPropOptimizer(self.learning_rate,
+                                                  decay=0.99)
             grads_and_vars = zip(clipped_gradients, global_vars)
             self.apply_grads = optimizer.apply_gradients(grads_and_vars)

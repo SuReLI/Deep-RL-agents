@@ -17,7 +17,6 @@ class Environment:
 
         self.env_no_frame_skip = gym.make(ENV)
         self.env = gym.wrappers.SkipWrapper(FRAME_SKIP)(self.env_no_frame_skip)
-        print()
         self.frame_buffer = deque(maxlen=FRAME_BUFFER_SIZE)
         self.reset()
 
@@ -98,7 +97,8 @@ class Environment:
         self.frame_buffer.append(s_)
         return self._convert_process_buffer(), r, done, info
 
-    def save_gif(self, path):
+    def save_gif(self, path, i):
+        path = path + "_{}.gif".format(i)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         imageio.mimsave(path, self.images, duration=1)
         self.images = []

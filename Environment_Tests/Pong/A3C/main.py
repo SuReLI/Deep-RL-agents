@@ -18,6 +18,7 @@ if __name__ == '__main__':
         with tf.device("/cpu:0"):
 
             # Create the global network
+            print("Creating master agent")
             render = parameters.DISPLAY
             master_agent = Agent(0, sess, render=render, master=True)
 
@@ -36,8 +37,7 @@ if __name__ == '__main__':
         for i, worker in enumerate(workers):
             print("Threading worker", i + 1)
             sleep(0.05)
-            work = lambda: worker.work(sess, coord)
-            t = threading.Thread(target=(work))
+            t = threading.Thread(target=(worker.work), args=(sess, coord))
             t.start()
             worker_threads.append(t)
             sleep(0.1)

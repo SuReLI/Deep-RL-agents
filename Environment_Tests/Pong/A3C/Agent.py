@@ -37,7 +37,7 @@ def update_target_graph(from_scope, to_scope):
 class Agent:
 
     def __init__(self, worker_index, sess, render=False, master=False):
-        print("Initialization of the agent", str(worker_index))
+        print("\nInitialization of the agent", str(worker_index))
 
         self.worker_index = worker_index
         if master:
@@ -52,6 +52,8 @@ class Agent:
 
         self.network = Network(self.state_size, self.action_size, self.name)
         self.update_local_vars = update_target_graph('global', self.name)
+
+        self.learning_rate = np.random.choice(parameters.LOGUNIFORM)
 
         self.starting_time = 0
 
@@ -92,7 +94,10 @@ class Agent:
         advantages = self.rewards_buffer + \
             parameters.DISCOUNT * self.next_values - \
             self.values_buffer
-        advantages = discount(advantages, parameters.GENERALIZED_LAMBDA * parameters.DISCOUNT)
+        advantages = discount(
+            advantages, parameters.GENERALIZED_LAMBDA * parameters.DISCOUNT)
+
+        lr = self.learning_rate * np.exp(-parameters.LR_DECAY*self.nb_ep)
 
         # Update the global network
         feed_dict = {
@@ -100,7 +105,8 @@ class Agent:
             self.network.inputs: self.states_buffer,
             self.network.actions: self.actions_buffer,
             self.network.advantages: advantages,
-            self.network.state_in: self.initial_lstm_state}
+            self.network.state_in: self.initial_lstm_state,
+            self.network.learning_rate: self.learning_rate}
         losses = sess.run([self.network.value_loss,
                            self.network.policy_loss,
                            self.network.entropy,
@@ -122,6 +128,7 @@ class Agent:
         print("Running", self.name, end='\n\n')
         self.starting_time = time()
         self.nb_ep = 1
+        self.n_gif = 0
 
         with sess.as_default(), sess.graph.as_default():
 
@@ -143,9 +150,12 @@ class Agent:
 
                     s = self.env.reset()
                     done = False
-                    render = (self.nb_ep % parameters.RENDER_FREQ == 0)
-                    if self.worker_index == 1 and render and parameters.DISPLAY:
-                        self.env.set_render(True)
+                    render = (self.worker_index == 1 and parameters.DISPLAY and
+                              self.nb_ep % parameters.RENDER_FREQ == 0)
+                    gif = (self.worker_index == 1 and parameters.DISPLAY and
+                           self.nb_ep % parameters.GIF_FREQ == 0)
+
+                    self.env.set_render(render)
 
                     self.lstm_state = self.network.lstm_state_init
                     self.initial_lstm_state = self.lstm_state
@@ -166,7 +176,7 @@ class Agent:
                         action = np.random.choice(self.action_size,
                                                   p=policy)
 
-                        s_, r, done, _ = self.env.act(action)
+                        s_, r, done, _ = self.env.act(action, gif)
 
                         # Store the experience
                         self.states_buffer.append(s)
@@ -188,9 +198,8 @@ class Agent:
 
                             feed_dict = {self.network.inputs: [s],
                                          self.network.state_in: self.lstm_state}
-                            bootstrap_value = sess.run(
-                                self.network.value,
-                                feed_dict=feed_dict)
+                            bootstrap_value = sess.run(self.network.value,
+                                                       feed_dict=feed_dict)
 
                             self.train(sess, bootstrap_value)
                             sess.run(self.update_local_vars)
@@ -214,12 +223,17 @@ class Agent:
 
                     if (self.worker_index == 1 and
                             self.nb_ep % parameters.DISP_EP_REWARD_FREQ == 0):
-                        print('Episode %2i, Reward: %i, Steps: %i, ' %
-                              (self.nb_ep, episode_reward, episode_step))
+                        print('Episode %2i, Reward: %i, Steps: %i, LR: %.4f' %
+                              (self.nb_ep, episode_reward, episode_step,
+                               self.learning_rate))
 
                     if (self.worker_index == 1 and
                             self.nb_ep % parameters.SAVE_FREQ == 0):
                         self.save(self.nb_ep)
+
+                    if gif:
+                        self.env.save_gif('results/gif/gif_save', self.n_gif)
+                        self.n_gif = (self.n_gif + 1) % parameters.MAX_NB_GIF
 
                     if time() - self.starting_time > parameters.LIMIT_RUN_TIME:
                         coord.request_stop()
@@ -265,7 +279,7 @@ class Agent:
                     print("Episode reward :", episode_reward)
 
                     if path != '':
-                        self.env.save_gif(path)
+                        self.env.save_gif(path, 'play_{}'.format(i))
 
             except KeyboardInterrupt as e:
                 pass

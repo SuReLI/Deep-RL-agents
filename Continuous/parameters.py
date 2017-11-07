@@ -15,7 +15,7 @@ CRITIC_LEARNING_RATE = 5e-4
 
 # Memory size
 BUFFER_SIZE = 100000
-BATCH_SIZE = 1024
+BATCH_SIZE = 32
 
 # Number of episodes of game environment to train with
 TRAINING_STEPS = 1000

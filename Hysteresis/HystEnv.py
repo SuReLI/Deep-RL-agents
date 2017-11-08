@@ -14,6 +14,8 @@ background = [canvas.create_rectangle(0, 0, 200, 100, fill='green'),
 pos = random.randint(50, 150)
 cursor = canvas.create_rectangle(pos - 2, 0, pos + 2, 100, fill='black')
 
+manual_stalling = False
+
 SIGMA = 20
 
 canvas.grid()
@@ -37,7 +39,7 @@ class HystEnv:
         return [pos, self.speed]
 
     def step(self, action):
-        global pos
+        global pos, manual_stalling
 
         if action == 0:
             pos = max(pos - 1, 0)
@@ -50,14 +52,15 @@ class HystEnv:
         if (self.stalled and pos > 100) or (not self.stalled and pos > self.stall_limit):
             reward = 0
         if not self.stalled and 0 < self.stall_limit - pos <= 30:
-        	reward += (self.stall_limit - pos)**2
+            reward += (self.stall_limit - pos)**2
 
         if self.stalled and pos < 100:
             self.stalled = False
             self.stall_limit = 200 + random.normalvariate(0, SIGMA) // 2
             self.render_change = True
 
-        if not self.stalled and pos > self.stall_limit:
+        if (not self.stalled and pos > self.stall_limit) or manual_stalling:
+            manual_stalling = False
             self.stalled = True
             self.stall_limit = 100
             self.render_change = True
@@ -68,7 +71,12 @@ class HystEnv:
             self.stall_limit = 200 + random.normalvariate(0, SIGMA) // 2
             self.render_change = True
 
-        self.speed = (self.speed + 3 * reward) // 4
+        if not self.stalled:
+            max_speed = max(50, 2 * pos)
+            self.speed = min(max_speed, (self.speed + max_speed) // 2)
+
+        else:
+            self.speed = (3 * self.speed + 50) // 4
 
         return [pos, self.speed], reward / 600, False, None
 
@@ -82,3 +90,9 @@ class HystEnv:
 
     def close(self):
         pass
+
+def manual_stall(event):
+    global manual_stalling
+    manual_stalling = True
+
+window.bind('<Control-j>', manual_stall)

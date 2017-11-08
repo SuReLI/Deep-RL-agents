@@ -171,8 +171,7 @@ class Agent:
                     feed_dict = {self.mainQNetwork.inputs: train_batch[0],
                                  self.mainQNetwork.Qtarget: targetQvalues,
                                  self.mainQNetwork.actions: train_batch[1]}
-                    _, tderr, loss = self.sess.run([self.mainQNetwork.train,
-                        self.mainQNetwork.td_error, self.mainQNetwork.loss],
+                    _ = self.sess.run(self.mainQNetwork.train,
                                       feed_dict=feed_dict)
 
                     update_target(self.update_target_ops, self.sess)

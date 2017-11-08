@@ -14,7 +14,7 @@ DISCOUNT_N = DISCOUNT**(N_STEP_RETURN-1)
 
 FRAME_SKIP = 0
 FRAME_BUFFER_SIZE = 4
-BUFFER_SIZE = 100000
+BUFFER_SIZE = 200000
 BATCH_SIZE = 32
 
 # Number of episodes of game environment to train with
@@ -22,7 +22,7 @@ TRAINING_STEPS = 100000
 PRE_TRAIN_STEPS = 500
 
 # Maximal number of steps during one episode
-MAX_EPISODE_STEPS = 100
+MAX_EPISODE_STEPS = 1000000
 TRAINING_FREQ = 4
 
 # Rate to update target network toward primary network
@@ -42,9 +42,9 @@ BETA_INCR = (BETA_STOP - BETA_START) / BETA_STEPS
 
 
 # Display Frequencies
-DISP_EP_REWARD_FREQ = 10
-PLOT_FREQ = 50
-RENDER_FREQ = 50
+DISP_EP_REWARD_FREQ = 5
+PLOT_FREQ = 10
+RENDER_FREQ = 10
 
 SAVE_FREQ = 100
 GIF_FREQ = 50

@@ -128,13 +128,11 @@ class Agent:
 
                 memory.append((s, a, r, s_, done))
 
-                if len(memory) <= parameters.N_STEP_RETURN:
-                    discount_R += parameters.DISCOUNT**(len(memory) - 1) * r
-
-                else:
+                if len(memory) > parameters.N_STEP_RETURN:
                     s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
-                    discount_R = (discount_R - r_mem) / parameters.DISCOUNT +\
-                        parameters.DISCOUNT_N * r
+                    discount_R = r_mem
+                    for i, (si, ai, ri, s_i, di) in enumerate(memory):
+                        discount_R += ri * parameters.DISCOUNT ** (i+1)
                     self.buffer.add(s_mem, a_mem, discount_R, s_, done)
 
                 if episode_step % parameters.TRAINING_FREQ == 0:
@@ -185,8 +183,6 @@ class Agent:
                 episode_step += 1
                 self.total_steps += 1
 
-            self.nb_ep += 1
-
             # Decay epsilon
             if self.epsilon > parameters.EPSILON_STOP:
                 self.epsilon -= parameters.EPSILON_DECAY
@@ -214,6 +210,8 @@ class Agent:
             # Save the model
             if self.nb_ep % parameters.SAVE_FREQ == 0:
                 SAVER.save(self.nb_ep)
+
+            self.nb_ep += 1
 
     def play(self, number_run, path=''):
         print("Playing for", number_run, "runs")

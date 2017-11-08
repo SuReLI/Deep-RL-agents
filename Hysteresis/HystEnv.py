@@ -48,12 +48,6 @@ class HystEnv:
 
         canvas.coords(cursor, (pos - 2, 0, pos + 2, 100))
 
-        reward = pos
-        if (self.stalled and pos > 100) or (not self.stalled and pos > self.stall_limit):
-            reward = 0
-        if not self.stalled and 0 < self.stall_limit - pos <= 30:
-            reward += (self.stall_limit - pos)**2
-
         if self.stalled and pos < 100:
             self.stalled = False
             self.stall_limit = 200 + random.normalvariate(0, SIGMA) // 2
@@ -78,7 +72,7 @@ class HystEnv:
         else:
             self.speed = (3 * self.speed + 50) // 4
 
-        return [pos, self.speed], reward / 600, False, None
+        return [pos, self.speed], self.speed / 400, False, None
 
     def render(self):
         if self.render_change:

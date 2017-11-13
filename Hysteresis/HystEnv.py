@@ -1,6 +1,7 @@
 
 import tkinter
 import random
+import graph
 
 
 # RANDOM_STALL = 1/2500
@@ -72,6 +73,7 @@ class HystEnv:
         else:
             self.speed = (3 * self.speed + 50) // 4
 
+        graph.add(pos, self.speed / 2, self.stall_limit)
         return [pos, self.speed], self.speed / 400, False, None
 
     def render(self):

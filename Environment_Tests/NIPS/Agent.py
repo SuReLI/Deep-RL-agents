@@ -52,7 +52,6 @@ class Agent:
             episode_reward = 0
             episode_step = 0
             done = False
-            discount_R = 0
             memory = deque()
 
             # Initial state
@@ -75,13 +74,11 @@ class Agent:
                 s_, r, done, info = self.env.act(a)
                 memory.append((s, a, r, s_, 0.0 if done else 1.0))
 
-                if len(memory) <= parameters.N_STEP_RETURN:
-                    discount_R += parameters.DISCOUNT**(len(memory) - 1) * r
-
-                else:
+                if len(memory) > parameters.N_STEP_RETURN:
                     s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
-                    discount_R = (discount_R - r_mem) / parameters.DISCOUNT +\
-                        parameters.DISCOUNT_N * r
+                    discount_R = 0
+                    for i, (si, ai, ri, s_i, di) in enumerate(memory):
+                        discount_R += ri * parameters.DISCOUNT ** (i+1)
                     self.buffer.add(s_mem, a_mem, discount_R, s_, done)
 
                 # update network weights to fit a minibatch of experience

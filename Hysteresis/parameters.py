@@ -1,7 +1,7 @@
 
 ENV = "Acrobot-v1"
 
-LOAD = False
+LOAD = True
 DISPLAY = True
 
 CONV = False

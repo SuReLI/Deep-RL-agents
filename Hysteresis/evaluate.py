@@ -7,6 +7,7 @@ from Displayer import DISPLAYER
 from Saver import SAVER
 
 import parameters
+import graph
 
 if __name__ == '__main__':
     
@@ -23,6 +24,10 @@ if __name__ == '__main__':
 
         SAVER.load(agent)
 
-        agent.play(10)
+        # parameters.MAX_EPISODE_STEPS = 100000
+
+        agent.play(1)
 
     agent.stop()
+
+    graph.disp()

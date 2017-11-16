@@ -1,8 +1,8 @@
 
 ENV = "BipedalWalker-v2"
 
-LOAD = False
-DISPLAY = False
+LOAD = True
+DISPLAY = True
 
 
 DISCOUNT = 0.99
@@ -50,5 +50,5 @@ EXPLO_SIGMA = 0.2
 # Display settings
 DISP_REWARD_FREQ = 5
 PLOT_FREQ = 10000
-RENDER_FREQ = 100
+RENDER_FREQ = 5
 SAVE_FREQ = 100

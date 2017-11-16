@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-ENV = "ms_pacman.bin"
-ACTION_SIZE = 5
+ENV = "breakout.bin"
+ACTION_SIZE = 4
 
-DISPLAY = True
+DISPLAY = False
 LOAD = False
 
-NB_THREADS = 12 # parallel thread size
+NB_THREADS = 6 # parallel thread size
 
 GAMMA = 0.99
 UPDATE_FREQ = 25

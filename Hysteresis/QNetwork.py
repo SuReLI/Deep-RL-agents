@@ -41,6 +41,9 @@ class QNetwork:
 
             self.td_error = tf.square(self.Qtarget - self.Qaction)
             self.loss = tf.reduce_mean(self.td_error)
+
+            self.learning_rate = tf.placeholder(shape=None, dtype=tf.float32)
+
             self.trainer = tf.train.AdamOptimizer(
-                learning_rate=parameters.LEARNING_RATE)
+                learning_rate=self.learning_rate)
             self.train = self.trainer.minimize(self.loss)

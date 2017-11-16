@@ -54,6 +54,8 @@ class Agent:
         self.epsilon = parameters.EPSILON_START
         self.beta = parameters.BETA_START
 
+        self.initial_learning_rate = parameters.LEARNING_RATE
+
         trainables = tf.trainable_variables()
         self.update_target_ops = updateTargetGraph(trainables)
 
@@ -97,6 +99,10 @@ class Agent:
 
         while self.nb_ep < parameters.TRAINING_STEPS:
 
+            self.learning_rate = self.initial_learning_rate * \
+                (parameters.TRAINING_STEPS - self.nb_ep) / \
+                parameters.TRAINING_STEPS
+
             s = self.env.reset()
             episode_reward = 0
             done = False
@@ -129,7 +135,7 @@ class Agent:
                     s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
                     discount_R = r_mem
                     for i, (si, ai, ri, s_i, di) in enumerate(memory):
-                        discount_R += ri * parameters.DISCOUNT ** (i+1)
+                        discount_R += ri * parameters.DISCOUNT ** (i + 1)
                     self.buffer.add(s_mem, a_mem, discount_R, s_, done)
 
                 if episode_step % parameters.TRAINING_FREQ == 0:
@@ -170,7 +176,8 @@ class Agent:
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[0],
                                  self.mainQNetwork.Qtarget: targetQvalues,
-                                 self.mainQNetwork.actions: train_batch[1]}
+                                 self.mainQNetwork.actions: train_batch[1],
+                                 self.mainQNetwork.learning_rate: self.learning_rate}
                     _ = self.sess.run(self.mainQNetwork.train,
                                       feed_dict=feed_dict)
 
@@ -196,9 +203,9 @@ class Agent:
 
             if self.nb_ep % parameters.DISP_EP_REWARD_FREQ == 0:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %.3f'
-                      ', Max steps: %i' % (self.nb_ep, episode_reward,
-                                           episode_step, self.epsilon,
-                                           max_step))
+                      ', Max steps: %i, Learning rate: %g' % (
+                          self.nb_ep, episode_reward, episode_step,
+                          self.epsilon, max_step, self.learning_rate))
 
             # Save the model
             if self.nb_ep % parameters.SAVE_FREQ == 0:

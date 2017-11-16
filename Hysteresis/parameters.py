@@ -17,8 +17,8 @@ BUFFER_SIZE = 100000
 BATCH_SIZE = 32
 
 # Number of episodes of game environment to train with
-TRAINING_STEPS = 100000
-PRE_TRAIN_STEPS = 10
+TRAINING_STEPS = 1000
+PRE_TRAIN_STEPS = 100
 
 # Maximal number of steps during one episode
 MAX_EPISODE_STEPS = 6000

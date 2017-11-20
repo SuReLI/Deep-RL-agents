@@ -15,7 +15,7 @@ class Saver:
         self.saver = tf.train.Saver()
         self.sess = sess
 
-    def save(self, n_episode, agent_buffer):
+    def save(self, n_episode):
         print("Saving model", n_episode, "...")
         os.makedirs(os.path.dirname("model/"), exist_ok=True)
         self.saver.save(self.sess, "model/Model_" + str(n_episode) + ".cptk")

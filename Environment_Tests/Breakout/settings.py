@@ -3,9 +3,9 @@ ENV = "breakout.bin"
 ACTION_SIZE = 4
 
 DISPLAY = False
-LOAD = False
+LOAD = True
 
-NB_THREADS = 6 # parallel thread size
+NB_THREADS = 12 # parallel thread size
 
 GAMMA = 0.99
 UPDATE_FREQ = 25

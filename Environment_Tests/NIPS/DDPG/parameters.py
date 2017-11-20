@@ -1,7 +1,7 @@
 
 ENV = "NIPS"
 
-LOAD = False
+LOAD = True
 DISPLAY = True
 
 
@@ -11,7 +11,7 @@ FRAME_SKIP = 0
 
 EPSILON_START = 0.6
 EPSILON_STOP = 0.01
-EPSILON_STEPS = 15000
+EPSILON_STEPS = 150000
 EPSILON_DECAY = (EPSILON_START - EPSILON_STOP) / EPSILON_STEPS
 
 ACTOR_LEARNING_RATE = 5e-4
@@ -23,7 +23,7 @@ BUFFER_SIZE = 100000
 BATCH_SIZE = 64
 
 # Number of episodes of game environment to train with
-TRAINING_STEPS = 15000
+TRAINING_STEPS = 150000
 
 # Maximal number of steps during one episode
 MAX_EPISODE_STEPS = 200

@@ -26,6 +26,8 @@ def log_uniform(lo, hi, rate):
 def work(worker_index):
     global global_total_time, total_eps, total_steps
 
+    print("Starting agent {}".format(worker_index))
+
     worker = workers[worker_index]
 
     while not stop_requested and total_steps <= settings.MAX_TIME_STEP:
@@ -122,7 +124,6 @@ if __name__ == '__main__':
 
     print('Press Ctrl+C to stop')
     signal.pause()
-
 
     for t in train_threads:
         t.join()

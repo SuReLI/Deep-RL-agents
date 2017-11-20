@@ -29,7 +29,7 @@ class Saver:
             print("Loading model...")
             try:
                 if best:
-                    self.saver.restore(self.sess, 'model/Model_best.cptk')
+                    self.saver.restore(self.sess, 'model/save/Model_best.cptk')
                 else:
                     ckpt = tf.train.get_checkpoint_state("model/")
                     print(ckpt.model_checkpoint_path)

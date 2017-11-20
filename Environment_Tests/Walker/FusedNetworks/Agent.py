@@ -102,6 +102,11 @@ class Agent:
                 self.env.save_gif('results/gif/', self.n_gif)
                 self.n_gif = (self.n_gif + 1) % 5
 
+            if episode_reward > self.best_run:
+                self.best_run = episode_reward
+                print("Save best", episode_reward)
+                SAVER.save('best')
+
             DISPLAYER.add_reward(episode_reward)
             if ep % 50 == 0:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %7.3f'

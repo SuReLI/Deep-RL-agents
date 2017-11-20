@@ -133,7 +133,7 @@ class Agent:
                     a, = self.sess.run(self.network.actions,
                                        feed_dict={self.network.state_ph: s[None]})
 
-                    s_, r, done, info = self.env.act(a, path != '')
+                    s, r, done, info = self.env.act(a, path != '')
                     episode_reward += r
 
                 print("Episode reward :", episode_reward)

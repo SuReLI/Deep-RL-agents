@@ -1,7 +1,7 @@
 
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
 import numpy as np
+
 from NetworkArchitecture import NetworkArchitecture
 import parameters
 
@@ -37,14 +37,11 @@ class Network:
                 model_output = self.model.return_output(False)
 
             # Policy estimation
-            self.policy = slim.fully_connected(
-                model_output, action_size,
-                activation_fn=tf.nn.softmax)
+            self.policy = tf.layers.dense(model_output, action_size,
+                                          activation=tf.nn.softmax)
 
             # Value estimation
-            self.value = slim.fully_connected(
-                model_output, 1,
-                activation_fn=None)
+            self.value = tf.layers.dense(model_output, 1, activation=None)
 
         if scope != 'global':
             self.actions = tf.placeholder(tf.int32, [None], 'Action')
@@ -54,8 +51,7 @@ class Network:
             self.advantages = tf.placeholder(tf.float32, [None], 'Advantage')
             self.discounted_reward = tf.placeholder(tf.float32, [None],
                                                     'Discounted_Reward')
-            self.policy = tf.clip_by_value(
-                self.policy, 1e-20, 1)
+
             self.responsible_outputs = tf.reduce_sum(
                 self.policy * self.actions_onehot, [1])
             self.responsible_outputs = tf.clip_by_value(
@@ -69,7 +65,7 @@ class Network:
 
             # Estimate the value loss using the sum of squared errors.
             self.value_loss = tf.reduce_sum(tf.square(self.advantages))
-                # tf.reshape(self.value, [-1]) - self.discounted_reward))
+            # tf.reshape(self.value, [-1]) - self.discounted_reward))
 
             # Estimate the final loss.
             self.loss = self.policy_loss + \

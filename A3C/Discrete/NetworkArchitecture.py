@@ -27,7 +27,10 @@ class NetworkArchitecture:
         return self.inputs
 
     def build_conv(self):
+        """Define a succesion of convolutional layers followed by a fully
+        connected layer and return the input placeholder"""
 
+        # Placeholder for the input states (e.g the raw pixel frames)
         self.inputs = tf.placeholder(tf.float32, [None, *self.state_size],
                                      name='Input_state')
 

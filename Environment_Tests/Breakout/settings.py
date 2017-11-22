@@ -15,8 +15,8 @@ RMSP_ALPHA = 0.99
 RMSP_EPSILON = 0.1
 
 # Learning rate distribution parameters
-INITIAL_ALPHA_LOW = 1e-4
-INITIAL_ALPHA_HIGH = 1e-2
+INITIAL_ALPHA_LOW = 1e-7
+INITIAL_ALPHA_HIGH = 1e-5
 INITIAL_ALPHA_LOG_RATE = 0.4226 # log_uniform interpolate rate for learning rate (around 7 * 10^-4)
 
 ENTROPY_REG = 0.01

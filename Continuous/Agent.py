@@ -60,7 +60,7 @@ class Agent:
             else:
                 self.env.set_render(False)
 
-            gif = (ep % 50 == 0) and parameters.DISPLAY
+            gif = (ep % parameters.GIF_FREQ == 0) and parameters.DISPLAY
 
             while episode_step < parameters.MAX_EPISODE_STEPS and not done:
 
@@ -106,10 +106,10 @@ class Agent:
                 self.env.save_gif('results/gif/gif_save', self.n_gif)
                 self.n_gif = (self.n_gif + 1) % 5
 
-            if ep > 50 and episode_reward > self.best_run:
-                print("Saving best")
-                self.play(1, 'results/gif/gif_best')
-                self.best_run = episode_reward
+#            if ep > 50 and episode_reward > self.best_run:
+#                print("Saving best")
+#                self.play(1, 'results/gif/gif_best')
+#                self.best_run = episode_reward
 
             if ep % parameters.DISP_EP_REWARD_FREQ == 0:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Final noise scale: %7.3f' %

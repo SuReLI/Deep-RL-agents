@@ -1,0 +1,134 @@
+
+A3C:
+	Asynchronous => multi-thread agents, each one interacting with a different environment but updating a shared global network
+	Advantage => Loss function based on an advantage estimation (A(s, a) = Q(s, a) - V(s))
+	Actor-critic => predicts the policy AND the value function
+	Notes : no need for experience replay (variance and bias reduced by the multiple agents parallel work)
+
+DDPG:
+	Motivation : introduce an algorithm to make continuous control
+	Implementation : actor-critic and model-free algorithm : NN outputs Q-value and action to take
+	Critic is learned with Bellman equation (classic update), actor with chain rule dQ/da*da/dtheta
+	Notes : Use Uhlenbeck&Ornstein process to generate noise to force exploration
+
+PER:
+	In a batch of experience replay, some experiences bring a lot of information (i.e. prevision very different from reality)
+	while others are not interesting => priorization
+	When TD-error is important : more chance to be picked for a mini-batch
+	BUT raw TD-error unefficient, so we use P(i) = p_i^alpha / sum_k(p_k^alpha) with (2 variants) :
+		- p_i = |TD-error_i| + epsilon (to be != 0)
+	    OR  - p_i = 1/rank(i)   (no significative difference between the two)
+
+Double DQN:
+	Regular DQN tends to overestimate the Q-value because it chooses only what it thinks is best => divergence/instability
+	One way to fix it is to have two separate networks : one to choose an action, one to evaluate the Q-value of this action
+	Implementation :
+		Target Y_t = r_t + GAMMA * Q_target(s_(t+1), argmax_a(Q(s_(t+1), a)))
+		Q_target is frozen during the optimization, but is updated to Q every 4/5 optimizations
+
+FiGAR: (see DFDQN)
+	Instead of choosing an action at each time step, the network chooses an action + a number of times the action must be repeated
+	=> temporal abstraction (= no need for LSTM or more generally RNNs)
+	FiGAR is a framework which can extend any deep RL algo => FiGAR-A3C, FiGAR-TRPO, FiGAR-DDPG...
+	
+N-Step Return:
+	Instead of using the instantaneous reward r_t to compute the td-error, we wait for a few steps to get a better approximation
+	of the real target ; i.e. instead of target y_t = r_t+ GAMMA * max_a Q(s_(t+1), a), we have :
+	target y_t = r_t + GAMMA * r_(t+1) + GAMMA^2 * r_(t+2) + ... + GAMMA^(n-1) * r_(t+n-1) + GAMMA^n * max_a Q(s_(t+n), a)
+
+Dueling DQN:
+	For many states, every action has the same Q-Value (for instance in Pong, when the ball just hit your pad, you can move as
+	you want, it won't modify the Q-value because your action has no effect on long term)
+	To capture this idea, we decompose Q into Q(s, a) = V(s) + A(s, a), with A called Advantage function
+	So V corresponds to whether a state in general is good or not, whereas A indicates if a particular action is interesting in a
+	given general state
+	Implementation: the network has two streams after the CNN: one to compute A(s, a) (ACTION_SIZE outputs)
+								   one to compute V(s)    (1 output)
+
+Rainbow:
+	= DQN + Double DQN + Dueling DQN + PER + N-Step Return + C51 + Noisy Nets => state-of-the-art performance
+	Interesting part : comparison between Rainbow (every feature) and Rainbow minus one feature
+	=> we can see which feature is the most interesting
+	=> Double DQN / Dueling DQN < Noisy Nets < C51 / N-Step Return / PER
+
+NoisyNets:
+	Classic exploration (= e-greedy) are local perturbations that don't have any chance to lead to exploration patterns sometimes needed
+	BUT any slight modification of a weight in a network can lead to significative changes in the output policy
+	SO => random Gaussian noise on the weights and biases of the network y = (mu_w + sigma_w . e_w) x + (mu_b + sigma_b . e_b)
+	=> Framework easily applicable on DQN or A3C that replaces e-greedy or entropy exploration
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+Generalized Advantage:
+	= Family of policy gradient estimators that reduce variance and keep low level of bias
+	In an advantage actor critic, we replace the advantage needed for the loss computation by a generalized version
+	Let d_t = r_t + V(s_t+1) - V(s_t), then we define generalized advantage estimator :
+	Gen_A(t, gamma, lambda) = sum_{0, +inf} ((gamma.lambda)^i d_(t+i) parametrized by lambda
+	=> If lambda = 0, Gen_A(t) = d_t = r_t =+ V(s_t+1) - V(s_t) : bias, but very low variance
+	=> If lambda = 1, Gen_A(t) = sum_{0, +inf} (gamma^i d_(t+i)) - V(s_t) : infinite horizon, no bias but very high variance
+	By adjusting lambda, compromise between bias and variance (generally, lambda = ~0.96)
+
+Combining PG and QL:
+	During learning, we apply a policy gradient update AND a Q-learning update
+	Implementation :
+		Take an A3C and add a new fully connected layer after pi and V :
+			+----------+	[PI]	+-------+
+			+  Input   + -->    --> + Fully + --> Q
+			+----------+	[V ]	+-------+
+		Usual updates on Pi and V and periodic updates on Q with a replay memory buffer shared by every agent
+
+Effects of Memory Replay:
+	The size of the replay memory buffer is quite important and can deeply modify the learning speed (too small == not enough experience,
+		too big == long computational time)
+	=> Algo to dynamically change the memory size
+	Periodically compute the sum of TD-errors sum_i |ri + gamma max_a Q(s_(i+1), a) - Q(s_i, a_i)|
+	=> If this is greater than the old sum of TD-errors, then enlarge the memory
+	=> Else shrink the memory
+
+Dynamic Frameskip DQN (DFDQN):
+	Predecessor of FiGAR : authors had the idea of temporal dependency, but only on two possible frameskip values
+	=> the network had twice the number of outputs and could choose (action A repeated r1 times) or (action A repeated r2 times)
+
+Value Prediction Network (VPN):
+	Model-based RL algos attempt to learn a model that can be used to simulate the real environment and do multi-step lookaheads for planning
+	=> Is it possible to plan without having to predict future observations ? (Interesting for partially observable MDPs)
+	=> VPN : network that learns Q-value AND dynamic of rewards/values :
+		Inputs : partial observation x_t and action a_t
+		Outputs : s_t the abstract state of the system, r_t, gamma_t (discount factor),
+			  s_(t+1), value of this abstract next state V(s_(t+1))
+		Then, compute Q(x_t, a_t) = r_t + gamma_t * V(s_(t+1))
+	Possibility to simulate and plan the future with MCTS methods : performs rollouts using VPN prediction up to a certain depth and use
+	this to get a better approximation of the real Q-value (sort of N-step return) ; and even possibility to use UCT
+
+UNREAL:
+	Instead of just maximising cumulative reward, there are a lot of other training signals that can be used to improve the policy (pseudo-
+	reward functions) => allow to continue learning event in the case of very sparse rewards
+	I. Auxiliary Control Tasks : we can add tasks to optimize to the agent. For instance,
+		"PIXEL CONTROL" : a new reward is given to the agent depending on whether or not the new image is very different from
+			the previous one (=maximisation of pixel changes) because changes in pixel often mean important event
+		"NETWORK FEATURE" : we want the network to extract task-relevant high-level features of the environment, so we force it to
+			activate of hidden unit (=we want every neuron to be useful for something)
+
+	II. Auxiliary Reward Tasks : we can add prediction tasks like "REWARD PREDICTION" : from a set of state (s_t-k, s_t-k+1, ..., s_t-1),
+		the agent must predict the reward r_t that it will receive
+		The sample of the set of state (s_t-k, ..., s_t-1) is made such that rewarding and non-rewarding experiences are equally likely to
+		be drawn by separating them in the experience replay => in an environment with sparse rewards, the rewarding events will be oversampled
+
+Batch Normalization (BN):
+	In a deep network, a small shift in the input of the first layer induces a modification on the input of the second layer, etc. until the last
+	layer which receive a whole new data set almost every time and has to relearn
+	One way to avoid that is Batch Normalization (BN) : after each layer output, we add a normalization layer which takes the batch and shift it
+	to a zero mean + unit variance batch : for a batch {x_1, ..., x_m} we define mu = sum_i(x_i)/m and sigma^2 = sum_i((x_i - mu)^2)/m
+	Then x'_i = (x_i - mu)/sqrt(sigma^2) and finally (scale and shift) y_i = gamma * x'_i + beta, with gamma and beta to be learned by the network
+	The parameters gamma and beta allow the network to choose whether it wants to shift and scale or not : if the original distribution of x_i was
+	good, then the network will learn gamma = sqrt(Var(x)) and beta = E(x) and so batch normalization is skipped
+
+Imagination-Augmented Agents (I2A):
+	Idea : there are complex domains where no simulator exist => in these, the environment is built on models that suffer errors,
+		therefore can't have model-based RL
+	=> Combining model-free and model-based RL to build an agent robust against model imperfections
+	The agent:
+	- has an "imagination core" which acts as an environment predictor : takes a state in input and predicts the next state
+	- when receiving a state s_t, uses it to simulate the ~3 next states of the environment
+	- encodes these states and inputs them into a fully-connected layer (along with the original state s_t) to predict policy and value
+	=> the predicted environment is just a context for the network to compute pi and V, and it can learns to ignore it if it thinks that it is wrong

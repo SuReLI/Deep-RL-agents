@@ -14,18 +14,18 @@ ACTOR_LEARNING_RATE = 5e-4
 CRITIC_LEARNING_RATE = 5e-4
 
 # Memory size
-BUFFER_SIZE = 100000
-BATCH_SIZE = 32
+BUFFER_SIZE = 1000000
+BATCH_SIZE = 1024
 
 # Number of episodes of game environment to train with
 TRAINING_STEPS = 1000
 
 # Maximal number of steps during one episode
-MAX_EPISODE_STEPS = 200
+MAX_EPISODE_STEPS = 200*4
 TRAINING_FREQ = 1
 
 # Rate to update target network toward primary network
-UPDATE_TARGET_RATE = 0.01
+UPDATE_TARGET_RATE = 0.05
 
 
 # scale of the exploration noise process (1.0 is the range of each action
@@ -42,6 +42,7 @@ EXPLO_THETA = 0.15
 EXPLO_SIGMA = 0.2
 
 # Display Frequencies
-DISP_EP_REWARD_FREQ = 5
-PLOT_FREQ = 25
-RENDER_FREQ = 50
+DISP_EP_REWARD_FREQ = 50
+PLOT_FREQ = 2500
+RENDER_FREQ = 5000
+GIF_FREQ = 1000

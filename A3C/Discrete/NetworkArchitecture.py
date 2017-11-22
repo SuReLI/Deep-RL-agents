@@ -1,8 +1,5 @@
 
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
-from tensorflow.contrib.layers import flatten
-
 import numpy as np
 
 import parameters
@@ -13,7 +10,7 @@ class NetworkArchitecture:
     def __init__(self, state_size):
         self.state_size = state_size
 
-    def build_regular_layers(self, activation_fn=tf.nn.elu):
+    def build_regular_layers(self, activation_fn=tf.nn.relu):
 
         self.inputs = tf.placeholder(tf.float32, [None, *self.state_size],
                                      name='Input_state')
@@ -22,9 +19,8 @@ class NetworkArchitecture:
 
         size = parameters.LAYERS_SIZE
         for n in range(len(size)):
-            layer = slim.fully_connected(inputs=layers[n],
-                                         num_outputs=size[n],
-                                         activation_fn=activation_fn)
+            layer = tf.layers.dense(
+                layers[n], size[n], activation=activation_fn)
             layers.append(layer)
 
         self.hidden = layers[-1]
@@ -36,23 +32,22 @@ class NetworkArchitecture:
                                      name='Input_state')
 
         with tf.variable_scope('Convolutional_Layers'):
-            self.conv1 = slim.conv2d(activation_fn=tf.nn.elu,
-                                     inputs=self.inputs,
-                                     num_outputs=32,
-                                     kernel_size=[8, 8],
-                                     stride=[4, 4],
-                                     padding='VALID')
-            self.conv2 = slim.conv2d(activation_fn=tf.nn.elu,
-                                     inputs=self.conv1,
-                                     num_outputs=64,
-                                     kernel_size=[4, 4],
-                                     stride=[2, 2],
-                                     padding='VALID')
+            self.conv1 = tf.layers.conv2d(inputs=self.inputs,
+                                          filters=32,
+                                          kernel_size=[8, 8],
+                                          strides=[4, 4],
+                                          padding='valid',
+                                          activation=tf.nn.relu)
+            self.conv2 = tf.layers.conv2d(inputs=self.conv1,
+                                          filters=64,
+                                          kernel_size=[4, 4],
+                                          strides=[2, 2],
+                                          padding='valid',
+                                          activation=tf.nn.relu)
 
         # Flatten the output
-        flat_conv2 = flatten(self.conv2)
-        self.hidden = slim.fully_connected(flat_conv2, 256,
-                                           activation_fn=tf.nn.elu)
+        flat_conv2 = tf.layers.flatten(self.conv2)
+        self.hidden = tf.layers.dense(flat_conv2, 256, activation=tf.nn.elu)
         return self.inputs
 
     def build_lstm(self):

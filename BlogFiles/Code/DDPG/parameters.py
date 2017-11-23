@@ -1,7 +1,7 @@
 
 ENV = "Pendulum-v0"
 
-LOAD = True
+LOAD = False
 DISPLAY = True
 
 
@@ -42,7 +42,6 @@ EXPLO_THETA = 0.15
 EXPLO_SIGMA = 0.2
 
 # Display Frequencies
-DISP_EP_REWARD_FREQ = 10
-PLOT_FREQ = 50
-RENDER_FREQ = 50
-GIF_FREQ = 1000
+DISP_EP_REWARD_FREQ = 25
+PLOT_FREQ = 100
+RENDER_FREQ = 100

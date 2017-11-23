@@ -11,7 +11,6 @@ from Environment import Environment
 from ExperienceBuffer import ExperienceBuffer
 
 from Displayer import DISPLAYER
-from Saver import SAVER
 import parameters
 
 
@@ -55,12 +54,8 @@ class Agent:
 
             # Initial state
             s = self.env.reset()
-            if ep % parameters.RENDER_FREQ == 0 and parameters.DISPLAY:
-                self.env.set_render(True)
-            else:
-                self.env.set_render(False)
-
-            gif = (ep % parameters.GIF_FREQ == 0) and parameters.DISPLAY
+            render = ep % parameters.RENDER_FREQ == 0 and parameters.DISPLAY
+            env.set_render(render)            
 
             while episode_step < parameters.MAX_EPISODE_STEPS and not done:
 
@@ -69,13 +64,14 @@ class Agent:
                                    feed_dict={self.network.state_ph: s[None]})
 
                 # add temporally-correlated exploration noise to action
+                # (using an Ornstein-Uhlenbeck process)
                 noise_process = parameters.EXPLO_THETA * \
                     (parameters.EXPLO_MU - noise_process) + \
                     parameters.EXPLO_SIGMA * np.random.randn(self.action_size)
 
                 a += noise_scale * noise_process
 
-                s_, r, done, info = self.env.act(a, gif)
+                s_, r, done, info = self.env.act(a)
                 episode_reward += r
 
                 self.buffer.add((s, a, r, s_, 0.0 if done else 1.0))
@@ -101,22 +97,13 @@ class Agent:
                 episode_step += 1
                 self.total_steps += 1
 
-            if gif:
-                self.env.save_gif('results/gif/gif_save', self.n_gif)
-                self.n_gif = (self.n_gif + 1) % 5
-
-#            if ep > 50 and episode_reward > self.best_run:
-#                print("Saving best")
-#                self.play(1, 'results/gif/gif_best')
-#                self.best_run = episode_reward
-
             if ep % parameters.DISP_EP_REWARD_FREQ == 0:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Final noise scale: %7.3f' %
                       (ep, episode_reward, episode_step, noise_scale))
             DISPLAYER.add_reward(episode_reward)
 
 
-    def play(self, number_run, path=''):
+    def play(self, number_run):
         print("Playing for", number_run, "runs")
 
         self.env.set_render(path != '')
@@ -132,13 +119,10 @@ class Agent:
                     a, = self.sess.run(self.network.actions,
                                        feed_dict={self.network.state_ph: s[None]})
 
-                    s, r, done, info = self.env.act(a, path != '')
+                    s, r, done, info = self.env.act(a)
                     episode_reward += r
                 
                 print("Episode reward :", episode_reward)
-
-                if path != '':
-                    self.env.save_gif(path, i)
 
         except KeyboardInterrupt as e:
             pass

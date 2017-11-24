@@ -1,87 +1,120 @@
-
+# -*- coding: utf-8 -*-
 import tensorflow as tf
 import numpy as np
 
-from NetworkArchitecture import NetworkArchitecture
-import parameters
+from settings import ENTROPY_REG, ACTION_SIZE
 
 
 class Network:
 
-    def __init__(self, state_size, action_size, scope):
-        if scope == 'global':
-            print("Initialization of the global network")
+    def __init__(self, thread_index, device):
 
-        with tf.variable_scope(scope):
-            self.state_size = state_size
-            self.action_size = action_size
+        self.device = device
+        self.thread_index = thread_index
+        self.build_layers()
 
-            self.model = NetworkArchitecture(self.state_size)
+    def build_layers(self):
 
-            # Convolution network - or not
-            if parameters.CONV:
-                self.inputs = self.model.build_conv()
+        scope_name = "net_" + str(self.thread_index)
+        with tf.device(self.device), tf.variable_scope(scope_name) as scope:
+            self.state = tf.placeholder("float", [None, 84, 84, 4])
 
-            else:
-                self.inputs = self.model.build_regular_layers()
+            conv1 = tf.layers.conv2d(self.state, 64, [8, 8],
+                                     strides=4, padding="valid",
+                                     activation=tf.nn.relu)
+            conv2 = tf.layers.conv2d(conv1, 128, [4, 4],
+                                     strides=2, padding="valid",
+                                     activation=tf.nn.relu)
 
-            # LSTM Network - or not
-            if parameters.LSTM:
-                # Input placeholder
-                self.state_in = self.model.build_lstm()
+            conv2_flat = tf.layers.flatten(h_conv2)
+            hidden = tf.layers.dense(conv2_flat, 256, activation=tf.nn.relu)
+            hidden_reshaped = tf.reshape(h_fc1, [1, -1, 256])
 
-                self.lstm_state_init = self.model.lstm_state_init
-                self.state_out, model_output = self.model.return_output(True)
+            self.lstm = tf.contrib.rnn.BasicLSTMCell(256, state_is_tuple=True)
 
-            else:
-                model_output = self.model.return_output(False)
+            # place holder for LSTM unrolling time step size.
+            self.step_size = tf.placeholder(tf.float32, [1])
+
+            self.initial_lstm_state_c = tf.placeholder(tf.float32, [1, 256])
+            self.initial_lstm_state_h = tf.placeholder(tf.float32, [1, 256])
+            self.initial_lstm_state = tf.contrib.rnn.LSTMStateTuple(self.initial_lstm_state_c,
+                                                                    self.initial_lstm_state_h)
+
+            lstm_outputs, self.lstm_state = tf.nn.dynamic_rnn(self.lstm,
+                                                              hidden_reshaped,
+                                                              initial_state=self.initial_lstm_state,
+                                                              sequence_length=self.step_size,
+                                                              time_major=False,
+                                                              scope=scope)
+
+            lstm_outputs = tf.reshape(lstm_outputs, [-1, 256])
 
             # Policy estimation
-            self.policy = tf.layers.dense(model_output, action_size,
-                                          activation=tf.nn.softmax)
+            self.policy = tf.layers.dense(
+                lstm_outputs, ACTION_SIZE, activation=tf.nn.softmax)
 
             # Value estimation
-            self.value = tf.layers.dense(model_output, 1, activation=None)
+            v_ = tf.layers.dense(lstm_outputs, 1, activation=None)
+            self.value = tf.reshape(v_, [-1])
 
-        if scope != 'global':
-            self.actions = tf.placeholder(tf.int32, [None], 'Action')
-            self.actions_onehot = tf.one_hot(self.actions,
-                                             self.action_size,
-                                             dtype=tf.float32)
-            self.advantages = tf.placeholder(tf.float32, [None], 'Advantage')
-            self.discounted_reward = tf.placeholder(tf.float32, [None],
-                                                    'Discounted_Reward')
+    def build_loss(self):
 
-            self.responsible_outputs = tf.reduce_sum(
-                self.policy * self.actions_onehot, [1])
-            self.responsible_outputs = tf.clip_by_value(
-                self.responsible_outputs, 1e-20, 1)
+        with tf.device(self.device):
 
-            # Estimate the policy loss and regularize it by adding uncertainty
-            # (subtracting entropy)
-            self.policy_loss = -tf.reduce_sum(tf.multiply(
-                tf.log(self.responsible_outputs), self.advantages))
-            self.entropy = -tf.reduce_sum(self.policy * tf.log(self.policy))
+            self.action = tf.placeholder("float", [None, ACTION_SIZE])
+            self.reward = tf.placeholder("float", [None])
+            self.td_error = tf.placeholder("float", [None])
 
-            # Estimate the value loss using the sum of squared errors.
-            self.value_loss = tf.reduce_sum(tf.square(self.advantages))
-            # tf.reshape(self.value, [-1]) - self.discounted_reward))
+            log_pi = tf.log(tf.clip_by_value(self.policy, 1e-20, 1.0))
 
-            # Estimate the final loss.
-            self.loss = self.policy_loss + \
-                parameters.VALUE_REG * self.value_loss - \
-                parameters.ENTROPY_REG * self.entropy
+            entropy = -tf.reduce_sum(self.policy * log_pi, reduction_indices=1)
 
-            # Fetch and clip the gradients of the local network.
-            local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
-                                           scope)
-            gradients = tf.gradients(self.loss, local_vars)
-            clipped_gradients, self.grad_norm = tf.clip_by_global_norm(
-                gradients, parameters.MAX_GRADIENT_NORM)
+            policy_loss = - tf.reduce_sum(tf.reduce_sum(
+                tf.multiply(log_pi, self.action), reduction_indices=1) *
+                self.td_error + entropy * ENTROPY_REG)
 
-            # Apply gradients to global network
-            global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
-                                            'global')
-            optimizer = tf.train.AdamOptimizer(parameters.LEARNING_RATE)
-            grads_and_vars = zip(clipped_gradients, global_vars)
-            self.apply_grads = optimizer.apply_gradients(grads_and_vars)
+            value_loss = 0.5 * tf.nn.l2_loss(self.reward - self.value)
+
+            self.total_loss = policy_loss + value_loss
+
+    def copy_network(self, src_network, name=None):
+        src_vars = src_network.get_vars()
+        dst_vars = self.get_vars()
+
+        copy_ops = []
+        with tf.device(self.device):
+            with tf.name_scope(name, "Network", []) as name:
+                for(src_var, dst_var) in zip(src_vars, dst_vars):
+                    copy_ops.append(tf.assign(dst_var, src_var))
+
+                return tf.group(*copy_ops, name=name)
+    def reset_state(self):
+        self.lstm_state_out = tf.contrib.rnn.LSTMStateTuple(np.zeros([1, 256]),
+                                                            np.zeros([1, 256]))
+
+    def run_policy_and_value(self, sess, state):
+        feed_dict = {self.state: [state],
+                     self.initial_lstm_state_c: self.lstm_state_out[0],
+                     self.initial_lstm_state_h: self.lstm_state_out[1],
+                     self.step_size: [1]}
+        pi_out, v_out, self.lstm_state_out = sess.run([self.policy,
+                                                       self.value,
+                                                       self.lstm_state],
+                                                      feed_dict=feed_dict)
+        return (pi_out[0], v_out[0])
+
+    def run_value(self, sess, state):
+        prev_lstm_state_out = self.lstm_state_out
+        v_out, _ = sess.run([self.value, self.lstm_state],
+                            feed_dict={self.state: [state],
+                                       self.initial_lstm_state_c: self.lstm_state_out[0],
+                                       self.initial_lstm_state_h: self.lstm_state_out[1],
+                                       self.step_size: [1]})
+
+        # roll back lstm state
+        self.lstm_state_out = prev_lstm_state_out
+        return v_out[0]
+
+    def get_vars(self):
+        return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
+                                 scope="net_" + str(self.thread_index))

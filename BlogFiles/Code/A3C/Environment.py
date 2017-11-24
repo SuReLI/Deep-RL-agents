@@ -1,70 +1,78 @@
-
+# -*- coding: utf-8 -*-
 import os
-import gym
-from parameters import ENV, FRAME_SKIP
-
-from PIL import Image
+import numpy as np
+from ale_python_interface import ALEInterface
+import cv2
 import imageio
+
+from settings import *
+
 
 class Environment:
 
-    def __init__(self):
+    def __init__(self, render=False):
+        self.ale = ALEInterface()
+        self.ale.setInt(b'random_seed', 0)
+        self.ale.setFloat(b'repeat_action_probability', 0.0)
+        self.ale.setBool(b'color_averaging', True)
+        self.ale.setInt(b'frame_skip', 4)
+        self.ale.setBool(b'display_screen', render)
+        self.ale.loadROM(ENV.encode('ascii'))
+        self._screen = np.empty((210, 160, 1), dtype=np.uint8)
+        self._no_op_max = 7
 
-        self.env_no_frame_skip = gym.make(ENV)
-        self.env = gym.wrappers.SkipWrapper(FRAME_SKIP)(self.env_no_frame_skip)
-        print()
-        self.render = False
-        self.offset = 0
-        self.images = []
-
-    def get_state_size(self):
-        try:
-            return (self.env.observation_space.n, )
-        except AttributeError:
-            return list(self.env.observation_space.shape)
-
-    def get_action_size(self):
-        return self.env.action_space.n
+        self.img_buffer = []
 
     def set_render(self, render):
-        self.render = render
+        if not render:
+            self.ale.setBool(b'display_screen', render)
 
     def reset(self):
-        return self.env.reset()
+        self.ale.reset_game()
 
-    def act(self, action, gif=False):
+        # randomize initial state
+        if self._no_op_max > 0:
+            no_op = np.random.randint(0, self._no_op_max + 1)
+            for _ in range(no_op):
+                self.ale.act(0)
+
+        self.img_buffer = []
+        self.img_buffer.append(self.ale.getScreenRGB())
+
+        self.ale.getScreenGrayscale(self._screen)
+        screen = np.reshape(self._screen, (210, 160))
+        screen = cv2.resize(screen, (84, 110))
+        screen = screen[18:102, :]
+        screen = screen.astype(np.float32)
+        screen /= 255.0
+
+        self.frame_buffer = np.stack((screen, screen, screen, screen), axis=2)
+        return self.frame_buffer
+
+    def process(self, action, gif=False):
+
+        reward = self.ale.act(4+action)
+        done = self.ale.game_over()
+
         if gif:
-            return self._act_gif(action)
-        else:
-            return self._act(action)
+            self.img_buffer.append(self.ale.getScreenRGB())
 
-    def _act(self, action):
-        if self.render:
-            self.env.render()
-        return self.env.step(action)
+        self.ale.getScreenGrayscale(self._screen)
+        screen = np.reshape(self._screen, (210, 160))
+        screen = cv2.resize(screen, (84, 110))
+        screen = np.reshape(screen[18:102, :], (84, 84, 1))
+        screen = screen.astype(np.float32)
+        screen *= (1/255.0)
 
-    def _act_gif(self, action):
-        r = 0
-        i, done = 0, False
-        while i < (FRAME_SKIP + 1) and not done:
-            if self.render:
-                self.env_no_frame_skip.render()
+        self.frame_buffer = np.append(self.frame_buffer[:, :, 1:],
+                                      screen, axis=2)
 
-            # Save image
-            img = Image.fromarray(self.env.render(mode='rgb_array'))
-            img.save('tmp.png')
-            self.images.append(imageio.imread('tmp.png'))
-
-            s_, r_tmp, done, info = self.env_no_frame_skip.step(action)
-            r += r_tmp
-            i += 1
-        return s_, r, done, info
+        return self.frame_buffer, reward, done, ""
 
     def save_gif(self, path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        imageio.mimsave(path, self.images, duration=1)
-        self.images = []
+        imageio.mimsave(path, self.img_buffer, duration=0.001)
+        self.img_buffer = []
 
     def close(self):
-        self.env.render(close=True)
-        self.env.close()
+        self.ale.setBool(b'display_screen', False)

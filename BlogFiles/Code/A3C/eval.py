@@ -9,7 +9,6 @@ from Saver import SAVER
 import settings
 
 NB_PLAY = 1
-GIF = True
 
 if __name__ == '__main__':
 
@@ -32,8 +31,6 @@ if __name__ == '__main__':
     settings.LOAD = True
     global_total_time, wall_time, total_eps, total_steps = SAVER.load()
 
-    gif_saver = []
-
     for i in range(NB_PLAY):
         done = False
         reward, step = 0, 0
@@ -45,11 +42,9 @@ if __name__ == '__main__':
 
             pi, value = global_network.run_policy_and_value(sess, state)
             a = np.random.choice(settings.ACTION_SIZE, p=pi)
-            state, r, done, _ = env.process(a, True)
+            state, r, done, _ = env.process(a)
 
             reward += r
             step += 1
 
         print("Episode reward {} (in {} steps)".format(reward, step))
-        print("Saving gif...")
-        env.save_gif("results/gif/{}.gif".format(settings.ENV))

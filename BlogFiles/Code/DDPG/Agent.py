@@ -31,10 +31,8 @@ class Agent:
         self.network = Network(self.state_size, self.action_size,
                                self.low_bound, self.high_bound)
 
-        self.best_run = -1e10
-        self.n_gif = 0
-
         self.sess.run(tf.global_variables_initializer())
+        DISPLAYER.reset()
 
     def run(self):
 
@@ -54,8 +52,8 @@ class Agent:
 
             # Initial state
             s = self.env.reset()
-            render = ep % parameters.RENDER_FREQ == 0 and parameters.DISPLAY
-            env.set_render(render)            
+            render = (ep % parameters.RENDER_FREQ == 0 and parameters.DISPLAY)
+            self.env.set_render(render)
 
             while episode_step < parameters.MAX_EPISODE_STEPS and not done:
 
@@ -106,7 +104,7 @@ class Agent:
     def play(self, number_run):
         print("Playing for", number_run, "runs")
 
-        self.env.set_render(path != '')
+        self.env.set_render(True)
         try:
             for i in range(number_run):
 

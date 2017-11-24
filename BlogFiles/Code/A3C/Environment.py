@@ -3,7 +3,6 @@ import os
 import numpy as np
 from ale_python_interface import ALEInterface
 import cv2
-import imageio
 
 from settings import *
 
@@ -21,8 +20,6 @@ class Environment:
         self._screen = np.empty((210, 160, 1), dtype=np.uint8)
         self._no_op_max = 7
 
-        self.img_buffer = []
-
     def set_render(self, render):
         if not render:
             self.ale.setBool(b'display_screen', render)
@@ -36,9 +33,6 @@ class Environment:
             for _ in range(no_op):
                 self.ale.act(0)
 
-        self.img_buffer = []
-        self.img_buffer.append(self.ale.getScreenRGB())
-
         self.ale.getScreenGrayscale(self._screen)
         screen = np.reshape(self._screen, (210, 160))
         screen = cv2.resize(screen, (84, 110))
@@ -49,13 +43,10 @@ class Environment:
         self.frame_buffer = np.stack((screen, screen, screen, screen), axis=2)
         return self.frame_buffer
 
-    def process(self, action, gif=False):
+    def process(self, action):
 
         reward = self.ale.act(4+action)
         done = self.ale.game_over()
-
-        if gif:
-            self.img_buffer.append(self.ale.getScreenRGB())
 
         self.ale.getScreenGrayscale(self._screen)
         screen = np.reshape(self._screen, (210, 160))
@@ -68,11 +59,6 @@ class Environment:
                                       screen, axis=2)
 
         return self.frame_buffer, reward, done, ""
-
-    def save_gif(self, path):
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        imageio.mimsave(path, self.img_buffer, duration=0.001)
-        self.img_buffer = []
 
     def close(self):
         self.ale.setBool(b'display_screen', False)

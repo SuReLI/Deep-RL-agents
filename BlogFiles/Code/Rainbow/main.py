@@ -12,9 +12,9 @@ if __name__ == '__main__':
 
     with tf.Session() as sess:
 
-        sess.run(tf.global_variables_initializer())
-
         agent = Agent(sess)
+
+        sess.run(tf.global_variables_initializer())
 
         try:
             agent.run()

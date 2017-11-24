@@ -57,8 +57,6 @@ class Agent:
         self.update_target_ops = updateTargetGraph(trainables)
 
         self.nb_ep = 1
-        self.best_run = -1e10
-        self.n_gif = 0
 
     def pre_train(self):
         print("Beginning of the pre-training...")
@@ -82,8 +80,6 @@ class Agent:
 
             if i % 100 == 0:
                 print("Pre-train step n", i)
-
-            self.best_run = max(self.best_run, episode_reward)
 
         print("End of the pre training !")
 
@@ -109,7 +105,7 @@ class Agent:
             # Render parameters
             self.env.set_render(self.nb_ep % parameters.RENDER_FREQ == 0)
 
-            while episode_step < MAX_EPISODE_STEPS and not done:
+            while episode_step < parameters.MAX_EPISODE_STEPS and not done:
 
                 if random.random() < self.epsilon:
                     a = random.randint(0, self.action_size - 1)
@@ -127,7 +123,7 @@ class Agent:
                     s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
                     discount_R = r_mem
                     for i, (si, ai, ri, s_i, di) in enumerate(memory):
-                        discount_R += ri * parameters.DISCOUNT ** (i+1)
+                        discount_R += ri * parameters.DISCOUNT ** (i + 1)
                     self.buffer.add(s_mem, a_mem, discount_R, s_, done)
 
                 if episode_step % parameters.TRAINING_FREQ == 0:
@@ -137,14 +133,6 @@ class Agent:
                     # Incr beta
                     if self.beta <= parameters.BETA_STOP:
                         self.beta += parameters.BETA_INCR
-
-                    feed_dict = {self.mainQNetwork.inputs: train_batch[0]}
-                    oldQvalues = self.sess.run(self.mainQNetwork.Qvalues,
-                                               feed_dict=feed_dict)
-                    tmp = [0] * len(oldQvalues)
-                    for i, oldQvalue in enumerate(oldQvalues):
-                        tmp[i] = oldQvalue[train_batch[1][i]]
-                    oldQvalues = tmp
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
                     mainQaction = self.sess.run(self.mainQNetwork.predict,
@@ -163,14 +151,13 @@ class Agent:
                     targetQvalues = train_batch[2] + \
                         parameters.DISCOUNT * doubleQ * done_multiplier
 
-                    errors = np.square(targetQvalues - oldQvalues) + 1e-6
-                    self.buffer.update_priorities(train_batch[6], errors)
-
                     feed_dict = {self.mainQNetwork.inputs: train_batch[0],
                                  self.mainQNetwork.Qtarget: targetQvalues,
                                  self.mainQNetwork.actions: train_batch[1]}
-                    _ = self.sess.run(self.mainQNetwork.train,
-                                      feed_dict=feed_dict)
+                    td_error, _ = self.sess.run([self.mainQNetwork.td_error, self.mainQNetwork.train],
+                                                feed_dict=feed_dict)
+
+                    self.buffer.update_priorities(train_batch[6], td_error+1e-6)
 
                     update_target(self.update_target_ops, self.sess)
 
@@ -188,9 +175,8 @@ class Agent:
 
             if self.nb_ep % parameters.DISP_EP_REWARD_FREQ == 0:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %f'
-                      ', Max steps: %i' % (self.nb_ep, episode_reward,
-                                           episode_step, self.epsilon,
-                                           max_step))
+                      % (self.nb_ep, episode_reward,
+                         episode_step, self.epsilon))
             self.nb_ep += 1
 
     def play(self, number_run):

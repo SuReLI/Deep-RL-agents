@@ -1,6 +1,4 @@
 
-import os
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -10,7 +8,6 @@ import parameters
 def save(saver, fig_name):
     for path, data in saver:
         plt.plot(data)
-    os.makedirs(os.path.dirname(fig_name), exist_ok=True)
     plt.show(block=False)
 
 
@@ -30,5 +27,8 @@ class Displayer:
         saver = [("results/Reward", self.rewards),
                  ("results/Mean_reward", mean_reward)]
         save(saver, "results/Reward.png")
+
+    def reset(self):
+        self.rewards = []
 
 DISPLAYER = Displayer()

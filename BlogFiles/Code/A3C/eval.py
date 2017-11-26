@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
             pi, value = global_network.run_policy_and_value(sess, state)
             a = np.random.choice(settings.ACTION_SIZE, p=pi)
-            state, r, done, _ = env.process(a)
+            state, r, done, _ = env.act(a)
 
             reward += r
             step += 1

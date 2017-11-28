@@ -132,3 +132,13 @@ Imagination-Augmented Agents (I2A):
 	- when receiving a state s_t, uses it to simulate the ~3 next states of the environment
 	- encodes these states and inputs them into a fully-connected layer (along with the original state s_t) to predict policy and value
 	=> the predicted environment is just a context for the network to compute pi and V, and it can learns to ignore it if it thinks that it is wrong
+
+Curriculum Learning:
+	VizDoom : Instead of learning from scratch on the hardest task, learning on tasks with progressive difficulty : map changes, weapons, enemys, health...
+
+GA3C:
+	New architecture for A3C to use GPUs : several Agents without DNN acting on CPU, asking for policy to the network which is on GPU, and
+	adding experience in a global queue => large batch for gradient descent on GPU
+
+DRQN:
+	Introduction of LSTM in DQN for POMDP 

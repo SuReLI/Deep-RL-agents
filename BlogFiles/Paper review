@@ -8,37 +8,34 @@
 
 
 <h1 id="Index">Index</h1>
+<h2 style="font-size: 10px">Keystones</h2>
 <ul>
-    <li><b><a href="#A3C">A3C</a></b> : asynchronous actor-critic RL architecture</li><br/>
-    <li><b><a href="#GA3C">GA3C</a></b> : A3C with modified architecture to run on GPU (x6 faster)</li><br/>
-
-    <li><b><a href="#DDPG">DDPG</a></b> : environment with continuous action space</li><br/>
-
-    <li><b><a href="#DRQN">DRQN</a></b> : introduction of recurrence (LSTM) to slive POMDP</li><br/>
-
-    <li><b><a href="#Double DQN">Double DQN</a></b> : introduction of a second network to stabilize convergence</li><br/>
-    <li><b><a href="#Dueling DQN">Dueling DQN</a></b> : decomposition of Q-Value into Value and Advantage</li><br/>
-    <li><b><a href="#PER">PER</a></b> : prioritization of the experience replay to be more data efficient</li><br/>
-    <li><b><a href="#NoisyNets">NoisyNets</a></b> : Gaussian noise on network's weights to force exploration</li><br/>
-    <li><b><a href="#C51">C51</a></b> : estimate the value function distribution instead of the mean</li><br/>
-    <li><b><a href="#Rainbow">Rainbow</a></b> : combination of 6 DQN features : state-of-the-art results</li><br/>
-    
-    <li><b><a href="#N-Step Return">N-Step Return</a></b> : multi-step discounted reward to better estimate the Q-Value</li><br/>
-
-    <li><b><a href="#DFDQN">Dynamic FrameSkip</a></b> : the network chooses an action and its duration (among {1, 3, 5})</li><br/>
-    <li><b><a href="#FiGAR">FiGAR</a></b> : the network also outputs the number of times to repeat an action</li><br/>
-    <li><b><a href="#Effects of Memory replay">Effects of Memory replay</a></b> : dynamic change in the memory size</li><br/>
-    <li><b><a href="#Generalized Advantage">Generalized Advantage</a></b> : use of a better equation to estimate Advantage</li><br/>
-    <li><b><a href="#PGQL">Combining PG and QL</a></b></li><br/>
-    <li><b><a href="#UNREAL">UNREAL</a></b> : use other training signals to improve pliicy (learn the reward for instance)</li><br/>
-    <li><b><a href="#BN">Batch Normalization</a></b> : after each layer, we normalize the batch : 0 mean, 1 variance </li><br/>
-    <li><b><a href="#Options">Options in RL</a></b> : defines macro actions (=set of actions to solve a subtask)</li><br/>
-    <li><b><a href="#VPN">Value Prediction Network</a></b> : network that learns the abstract state from an observation without a model (useful for POMDPs)</li><br/>
-    <li><b><a href="#I2A">Imagination-Augmented Agents</a></b> : new architecture to slive environments with models that suffer errors</li><br/>
-    <li><b><a href="#Curriculum Learning">Curriculum Learning</a></b> : learn gradually (simple tasks -> real problem)</li><br/>
-
+    <li><b><a href="#A3C">A3C</a></b> : asynchronous actor-critic RL architecture</li>
+    <li><b><a href="#DDPG">DDPG</a></b> : environment with continuous action space</li>
+    <li><b><a href="#DRQN">DRQN</a></b> : introduction of recurrence (LSTM) to solve POMDP</li>
+    <li><b><a href="#Double DQN">Double DQN</a></b> : introduction of a second network to stabilize convergence</li>
+    <li><b><a href="#Dueling DQN">Dueling DQN</a></b> : decomposition of Q-Value into Value and Advantage</li>
+    <li><b><a href="#PER">PER</a></b> : prioritization of the experience replay to be more data efficient</li>
+    <li><b><a href="#NoisyNets">NoisyNets</a></b> : Gaussian noise on network's weights to force exploration</li>
+    <li><b><a href="#C51">C51</a></b> : estimate the value function distribution instead of the mean</li>
+    <li><b><a href="#Rainbow">Rainbow</a></b> : combination of 6 DQN features : state-of-the-art results</li>
+    <li><b><a href="#N-Step Return">N-Step Return</a></b> : multi-step discounted reward to better estimate the Q-Value</li>
+    <li><b><a href="#FiGAR">FiGAR</a></b> : the network also outputs the number of times to repeat an action</li>
 </ul>
-
+<h2 style="font-size: 10px">Alternative techniques</h2>
+<ul>
+    <li><b><a href="#GA3C">GA3C</a></b> : A3C with modified architecture to run on GPU (x6 faster)</li>
+    <li><b><a href="#DFDQN">Dynamic FrameSkip</a></b> : the network chooses an action and its duration (among {1, 3, 5})</li>
+    <li><b><a href="#Effects of Memory replay">Effects of Memory replay</a></b> : dynamic change in the memory size</li>
+    <li><b><a href="#Generalized Advantage">Generalized Advantage</a></b> : use of a better equation to estimate Advantage</li>
+    <li><b><a href="#PGQL">Combining PG and QL</a></b></li>
+    <li><b><a href="#UNREAL">UNREAL</a></b> : use other training signals to improve policy (learn the reward for instance)</li>
+    <li><b><a href="#BN">Batch Normalization</a></b> : after each layer, we normalize the batch : 0 mean, 1 variance </li>
+    <li><b><a href="#Options">Options in RL</a></b> : defines macro actions (=set of actions to solve a subtask)</li>
+    <li><b><a href="#VPN">Value Prediction Network</a></b> : network that learns the abstract state from an observation without a model (useful for POMDPs)</li>
+    <li><b><a href="#I2A">Imagination-Augmented Agents</a></b> : new architecture to solve environments with models that suffer errors</li>
+    <li><b><a href="#Automated Curriculum Learning">Automated Curriculum Learning</a></b> : learn gradually (simple tasks -> real problem) with a bandit-algorithm to choose the task</li>
+</ul>
 
 
 
@@ -54,23 +51,23 @@ The authors present four algorithms that can run asynchronously : one-step Q-lea
 This has two main advantages :
 <ul>
     <li>the parallelism of today hardware allows to run tens or even hundreds of workers in the same time on different threads, and so to maximize the work done in a given time</li>
-    <li>each worker being independent of the others, they clilect a lot of various experience and assure a better exploration of the state space, removing the necessity to have a replay memory buffer and reducing the bias</li>
+    <li>each worker being independent of the others, they collect a lot of various experience and assure a better exploration of the state space, removing the necessity to have a replay memory buffer and reducing the bias</li>
 </ul>
-<li><b>Actor-Critic :</b> Instead of just estimating the Q-Value function and then inducing a pliicy by acting greedily with respect to the action Q-Values, in Actor-Critic algorithms, the network estimates both the Value function $V$ and a pliicy $\pi$. The value estimator is called the <b>critic</b> and the pliicy estimator the <b>actor</b>.</li>
-<li><b>Advantage :</b> Advantage is the difference between the Q-Value and the Value of a given state and action $A(s, a) = Q(s, a) - V(s)$ : it represents how much better an action is than expected. During a gradient descent, the updates usually use discounted reward to tell the quality of a taken action, but one way to be more efficient is instead to use an advantage estimate to get how much better it is than on average.
+<li><b>Actor-Critic :</b> Instead of just estimating the Q-Value function and then inducing a policy by acting greedily with respect to the action Q-Values, in Actor-Critic algorithms, the network estimates both the Value function $latex V$ and a policy $latex \pi$. The value estimator is called the <b>critic</b> and the policy estimator the <b>actor</b>.</li>
+<li><b>Advantage :</b> Advantage is the difference between the Q-Value and the Value of a given state and action $latex A(s, a) = Q(s, a) - V(s)$ : it represents how much better an action is than expected. During a gradient descent, the updates usually use discounted reward to tell the quality of a taken action, but one way to be more efficient is instead to use an advantage estimate to get how much better it is than on average.
 
- This advantage can be estimated quite easily because $V(s_t)$ is the output of the actor-critic network and $Q(s_t, a_t)$ can be estimated by the discounted reward $R_t = \sum_{k=0}^{+\infty}{\gamma^k r_{t+k}}$ : $$A_{est}(s_t, a_t) = R_t - V(s_t)$$</li>
+ This advantage can be estimated quite easily because $latex V(s_t)$ is the output of the actor-critic network and $latex Q(s_t, a_t)$ can be estimated by the discounted reward $latex R_t = \sum_{k=0}^{+\infty}{\gamma^k r_{t+k}}$ : $latex A_{est}(s_t, a_t) = R_t - V(s_t)$</li>
 </ul>
-To encourage exploration, the authors introduce an entropy term $H = \pi*log(\pi))$.
+To encourage exploration, the authors introduce an entropy term $latex H = \pi*\log{\pi}$.
 
 
 <h2 id="GA3C">GA3C<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1611.06256.pdf">Babaeizadeh et al., 2017</a><br/>
 The authors suggest a new architecture for A3C that uses GPU :
-The primary components of GA3C are a deep neural network with training and prediction on a GPU, as well as a multi-process, multi-thread CPU architecture with the flilowing components:
+The primary components of GA3C are a deep neural network with training and prediction on a GPU, as well as a multi-process, multi-thread CPU architecture with the following components:
 <ul>
-    <li><b>Agent :</b> a process interacting with the simulation environment:  choosing actions according to the learned pliicy and gathering experiences for further training.  Similar to A3C, multiple concurrent agents run independent instances of the environment.  Unlike the original, each agent does not have its own copy of the model. Instead it queues pliicy requests in a <i>Prediction Queue</i> before each action, and periodically submits a batch of input/reward experiences to a <i>Training Queue</i></li>
-    <li><b>Predictor :</b> a thread which dequeues as many prediction requests as are immediately available and batches them into a single inference query to the DNN model on the GPU. When predictions are completed, the predictor returns the requested pliicy to each respective waiting agent.  To hide latency, one or more predictors can act concurrently.</li>
+    <li><b>Agent :</b> a process interacting with the simulation environment:  choosing actions according to the learned policy and gathering experiences for further training.  Similar to A3C, multiple concurrent agents run independent instances of the environment.  Unlike the original, each agent does not have its own copy of the model. Instead it queues policy requests in a <i>Prediction Queue</i> before each action, and periodically submits a batch of input/reward experiences to a <i>Training Queue</i></li>
+    <li><b>Predictor :</b> a thread which dequeues as many prediction requests as are immediately available and batches them into a single inference query to the DNN model on the GPU. When predictions are completed, the predictor returns the requested policy to each respective waiting agent.  To hide latency, one or more predictors can act concurrently.</li>
     <li><b>Trainer :</b> a thread which dequeues training batches submitted by agents and submits them to the GPU for model updates. Multiple trainers may run in parallel to hide latency.</li>
 </ul>
 A discussion is then held on the optimal number of agents, predictors and trainers to maintain to get the best performances : #agents  = #CPU, #predictors = #trainers = 2.
@@ -79,17 +76,17 @@ This architecture multiplies the number of frames seen by second by 6.
 
 <h2 id="DDPG">DDPG<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1509.02971.pdf">Lillicrap et al., 2015</a><br/>
-The idea is to build an algorithm to slive environments with continuous action space.
+The idea is to build an algorithm to solve environments with continuous action space.
 The implementation is simple : based on a classic actor-critic, but instead of outputting the probability of each action to be the best with a softmax, the network outputs an action.
 In practice, the softmax activation function is replaced by a sigmoid function and a linear transformation that scales the output onto the action space.
 The critic (= the Q-Value estimator) is updated as usual whereas the actor is updated by using the Q estimation to apply the chain rule and compute the gradient with respect to its parameters.
-To encourage exploration, the authors introduce a temporaly correlated noise base on Ornstein-Uhlenbeck process : $noise_t = \theta * (\mu - noise_{t-1}) + \sigma * normal(0, 1)$ with $normal$ the normal distribution.
+To encourage exploration, the authors introduce a temporaly correlated noise base on Ornstein-Uhlenbeck process : $latex noise_t = \theta * (\mu - noise_{t-1}) + \sigma * normal(0, 1)$ with $latex normal$ the normal distribution.
 
 
 <h2 id="DRQN">DRQN<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1507.06527.pdf">Hausknecht and Stone, 2015</a><br/>
-In order to slive environments with partially-observable variables, the authors add a recurrent layer to a classic DQN algorithm, giving the Deep Recurrent Q-Network.
-It consists in adding a LSTM layer with 512 cells between the convliutional layers and the fully connected ones.
+In order to solve environments with partially-observable variables, the authors add a recurrent layer to a classic DQN algorithm, giving the Deep Recurrent Q-Network.
+It consists in adding a LSTM layer with 512 cells between the convolutional layers and the fully connected ones.
 This additional layer allows the network to induce hidden variables, such as speed of moving objects, without the need to input 4 frames at a time as it was done before.
 
 
@@ -97,20 +94,20 @@ This additional layer allows the network to induce hidden variables, such as spe
 <a href="https://arxiv.org/pdf/1509.06461.pdf">Van Hasselt et al., 2015</a>
 In a regular DQN, at each time step, the algorithm performs the action that it thinks is best, which favors the overestimation of the Q-Value. This overestimation can lead to instability and even divergence in the learning.
 One way to fix it is to have two separate networks : one to choose the action to perform at a certain time step, called the main network ; and one to evaluate the Q-Value of this action, called the target network.
-For the gradient descent, the target becomes $Y_t = r_t + GAMMA * Q_target(s_(t+1), \argmax_a(Q(s_(t+1), a)))$.
+For the gradient descent, the target becomes $latex Y_t = r_t + \gamma * Q_{target}(s_{t+1}, argmax_a(Q(s_{t+1}, a)))$.
 The weights of the target network are frozen during the gradient descent and are updated to the main network's weights only after 4 or 5 descents have been made.
 
 
 <h2 id="Dueling DQN">Dueling DQN<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1511.06581.pdf">Wang et al., 2015</a>
 In classic environments, for many states, every possible action has the same Q-Value and leads to nearly the same states. For example, in the Atari 2600 game <i>Pong</i>, when the ball just hit the player's pad, they can act randomly without affecting the future of the game because they must wait for the ball to come back towards them.
-To capture this idea, we decompose the Q-Value into $Q(s, a) = V(s) + A(s, a)$ with $A$ the advantage function.
-Intuitively, $V$ corresponds to whether a state <i>in general</i> is good or not, whereas A indicates the benefits of a <i>particular action</i> in a state compared to the other possible actions.
-The implementation is quite simple : the network is just divided after the convliutional layers into two streams of fully connected layers : one stream to compute the advantage $A(s, a)$ (with as many outputs as the number of possible actions) and the other stream to compute the value $V(s)$ (with 1 output).
-But given $Q$, we cannot recover $V$ and $A$ uniquely : if we add a constant to $V$ and subtract the same constant from $A$, the decomposition is still valid but does not represent anything.
+To capture this idea, we decompose the Q-Value into $latex Q(s, a) = V(s) + A(s, a)$ with $latex A$ the advantage function.
+Intuitively, $latex V$ corresponds to whether a state <i>in general</i> is good or not, whereas A indicates the benefits of a <i>particular action</i> in a state compared to the other possible actions.
+The implementation is quite simple : the network is just divided after the convolutional layers into two streams of fully connected layers : one stream to compute the advantage $latex A(s, a)$ (with as many outputs as the number of possible actions) and the other stream to compute the value $latex V(s)$ (with 1 output).
+But given $latex Q$, we cannot recover $latex V$ and $latex A$ uniquely : if we add a constant to $latex V$ and subtract the same constant from $latex A$, the decomposition is still valid but does not represent anything.
 To address this issue of identifiability, we can force the advantage  function  estimator  to  have  zero  advantage  at  the chosen action.  That is, we let the last module of the network implement the forward mapping. 
-$$Q(s, a) = V(s, a) + (A(s, a) - \max_a'{A(s, a')})$$.
-Now, for $a^* = \argmax_a{Q(s, a)} = \argmax_a{A(s, a)}$, we obtain $Q(s, a^*) = V(s)$, hence, the stream $V(s)$ provides an estimate of the value function, while the other stream produces an estimate of the advantage function.
+$latex Q(s, a) = V(s, a) + (A(s, a) - \max_a'{A(s, a')})$.
+Now, for $latex a^* = argmax_a{Q(s, a)} = argmax_a{A(s, a)}$, we obtain $latex Q(s, a^*) = V(s)$, hence, the stream $latex V(s)$ provides an estimate of the value function, while the other stream produces an estimate of the advantage function.
 
 
 <h2 id="PER">PER<a href="#Index">&#8618;</a></h2>
@@ -119,21 +116,21 @@ In a batch of experience replay, some experiences bring a lot of information (e.
 To take that into account, we use <b>prioritization</b>.
 We base the prioritization on the TD-Error of each experience : indeed, if the TD-Error is large, it means that the network badly predicted the Q-Value when it was in this state and so that it can learn a lot from this.
 But using raw TD-Error is inefficient because each error will be updated only for the experience that are replayed, so some experiences won't be reseen at all and just a few of them will be replayed most of the time.
-Instead, we use prioritization with the probability for the experience $i$ to be replayed : $$P(i) = p_i^alpha / \sum_k{p_k^alpha}$$ with $alpha$ that determines how much prioritization is used, and :
+Instead, we use prioritization with the probability for the experience $latex i$ to be replayed : $latex P(i) = \frac{p_i^\alpha}{\sum_k{p_k^\alpha}}$ with $latex \alpha$ that determines how much prioritization is used, and :
 <ul>
-    <li>$p_i = |TD-Error_i| + \epsilon$ : <b>proportional prioritization</b></li>
+    <li>$latex p_i = |TD-Error_i| + \epsilon$ : <b>proportional prioritization</b></li>
     OR
-    <li>$p_i = 1/rank(i)$ : <b>rank-based prioritization</b></li>
+    <li>$latex p_i = 1/rank(i)$ : <b>rank-based prioritization</b></li>
 </ul>
 The implementation is trickier because it has to be efficient (insertion and sampling complexity cannot depend on the number of experiences stored), so we use a Sum-Tree structure.
 
 
 <h2 id="NoisyNets">NoisyNets<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1706.10295.pdf">Fortunato et al., 2017</a>
-A classic way to encourage exploration is to use an $\epsilon$-greedy pliicy, but this pliicy can only bring local perturbations that don't have any chance to lead to exploration patterns that are sometimes needed.
-However, in a neural network, a slight modification of a weight in the first layer can lead to significative changes in the output pliicy and induce new behaviors.
-The idea is to apply a random Gaussian noise on the weights and biases of the network that replace $\epsilon$-greedy or entropy strategies :
-instead of having linear layers $y = wx + b$, we define noisy layers : $y = (\mu_w + \sigma_w . \epsilon_w) x + (\mu_b + \sigma_b . \epsilon_b)$ with $\mu$ and $\sigma$ are learnable and $\epsilon$ is a noise random variable.
+A classic way to encourage exploration is to use an $latex \epsilon$-greedy policy, but this policy can only bring local perturbations that don't have any chance to lead to exploration patterns that are sometimes needed.
+However, in a neural network, a slight modification of a weight in the first layer can lead to significative changes in the output policy and induce new behaviors.
+The idea is to apply a random Gaussian noise on the weights and biases of the network that replace $latex \epsilon$-greedy or entropy strategies :
+instead of having linear layers $latex y = wx + b$, we define noisy layers : $latex y = (\mu_w + \sigma_w . \epsilon_w) x + (\mu_b + \sigma_b . \epsilon_b)$ with $latex \mu$ and $latex \sigma$ are learnable and $latex \epsilon$ is a noise random variable.
 
 
 <h2 id="C51">C51<a href="#Index">&#8618;</a></h2>
@@ -157,20 +154,20 @@ Just the application of 6 techniques on a DQN :
 <h2 id="N-Step Return">N-Step Return<a href="#Index">&#8618;</a></h2>
 <a href="http://www2.fiit.stuba.sk/~kvasnicka/CognitiveScience/5.prednaska/sutton-88.pdf">Sutton, 1988</a>
 Q-learning accumulates a single reward and then uses the greedy action at the next step to bootstrap.
-Alternatively, forward-view <i>multi-step</i> targets can be used. We define the truncated n-step return from a given state $s_t$ :
-$$R_t^n = \sum_{k=0}^{n-1}{\gamma_t^k r_{t+k+1}}$$
-A multi-step variant of DQN is then defined by minimizing the alternative loss : $$\left[R_t^n + \gamma_t^n \max_a{Q_{target}(s_{t+n}, a) - Q(s_t, a_t))}\right]^2$$
+Alternatively, forward-view <i>multi-step</i> targets can be used. We define the truncated n-step return from a given state $latex s_t$ :
+$latex R_t^n = \sum_{k=0}^{n-1}{\gamma_t^k r_{t+k+1}}$
+A multi-step variant of DQN is then defined by minimizing the alternative loss : $latex \left[R_t^n + \gamma_t^n \max_a{Q_{target}(s_{t+n}, a) - Q(s_t, a_t))}\right]^2$
 
 
 <h2 id="DFDQN">Dynamic FrameSkip<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1605.05365.pdf">Lakshminarayanan et al., 2016</a>
 Dynamic FrameSkip DQN (DFDQN) is the predecessor of FiGAR : the authors introduce in this paper the idea of temporal abstraction by allowing the network to choose not only an action, but also a number of times this action will be repeated.
-The implementation consists in doubling the possible outputs of the network (which can now choose between $2 #actions$) corresponding to the pairs (action, #repetition) with action $\in A$ and #repetition $\in \{r1, r2}$.
+The implementation consists in doubling the possible outputs of the network (which can now choose between two times the number of original actions) corresponding to the pairs (action, #repetition) with action $latex \in A$ and #repetition $latex \in \{r1, r2\}$.
 
 
 <h2 id="FiGAR">FiGAR<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1702.06054.pdf">Sharma et al., 2017</a>
-<b>Fi</b>ned <b>G</b>rained <b>A</b>ction <b>R</b>epetition (FiGAR) is the logic continuation of DFDQN : the idea is the same but instead of choosing to repeat an action $r1$ or $r2$ times, we add a stream to the network that outputs this number of times an action will be repeated.
+<b>Fi</b>ned <b>G</b>rained <b>A</b>ction <b>R</b>epetition (FiGAR) is the logic continuation of DFDQN : the idea is the same but instead of choosing to repeat an action $latex r1$ or $latex r2$ times, we add a stream to the network that outputs this number of times an action will be repeated.
 This brings temporal abstraction : in a game such as Seaquest, when the submarine has to return to the surface to breathe, the agent doesn't need to remember this objective during many frames, which can be complicated without a recurrent neural network. Instead, it corresponds to just one action : swim upward during several frames.
 FiGAR is a framework which can easily extend any Deep RL algo : FiGAR-A3C, FiGAR-TRPO, FiGAR-DDPG...
 
@@ -179,67 +176,64 @@ FiGAR is a framework which can easily extend any Deep RL algo : FiGAR-A3C, FiGAR
 <a href="https://arxiv.org/pdf/1710.06574.pdf">Liu and Zou, 2017</a>
 The replay memory buffer is a major feature of Deep RL that boosts the performances of different algorithms, but it also brings a sensitive hyperparameter : the size of this memory buffer.
 In fact, this size can deeply modify the learning speed and performances : if the buffer is too small, the network won't see enough various experiences and will have trouble to converge, on the other hand if the buffer is too large, the computational time will raise significatively.
-A sliution for that issue is, instead of fixing the size to an arbitrary value, to let the algorithm dynamically change the buffer size.
-To do so, every k steps, we compute the TD-Error magnitude of the n lidest transitions strored in the memory $|\delta_{k+1}| = \sum_{t=mem_size-n}^{mem_size}{|r_t + \gamma \max_a{Q_{target}(s_{t+1}, a)} - Q(s_t, a_t)|}$, 
-we then compare this value to the lid TD-Error magnitude $|\delta_k|$ computed and if this value has increased (e.g. $|\delta_{k+1)| > |\delta_k|$ then we increase the memory, otherwise we shrink it.
-Intuitively, this is because if the TD-Error magnitude increases, this is a sign that the agent might be overshooting and overfitting for the more recent experiences, so we increase the memory buffer to ensure that the lider experiences are kept longer to be used for future updates. On the other hand, it the TD-Error magnitude decreases, it means the lidest transitions are less useful so we reduce the memory buffer to accelerate the learning process.
+A solution for that issue is, instead of fixing the size to an arbitrary value, to let the algorithm dynamically change the buffer size.
+To do so, every k steps, we compute the TD-Error magnitude of the n oldest transitions strored in the memory $latex |\delta_{k+1}| = \sum_{t=mem\_size-n}^{mem\_size}{|r_t + \gamma \max_a{Q_{target}(s_{t+1}, a)} - Q(s_t, a_t)|}$, 
+we then compare this value to the old TD-Error magnitude $latex |\delta_k|$ computed and if this value has increased (e.g. $latex |\delta_{k+1}| > |\delta_k|$ then we increase the memory, otherwise we shrink it.
+Intuitively, this is because if the TD-Error magnitude increases, this is a sign that the agent might be overshooting and overfitting for the more recent experiences, so we increase the memory buffer to ensure that the older experiences are kept longer to be used for future updates. On the other hand, it the TD-Error magnitude decreases, it means the oldest transitions are less useful so we reduce the memory buffer to accelerate the learning process.
 
 
 <h2 id="Generalized Advantage">Generalized Advantage<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1710.06574.pdf">Schulman et al., 2015</a>
-In some algorithms such as A3C, we use an estimation of the advantage to compute and apply the pliicy gradient on the network, generally equals to $r_t - V(s_t)$.
-Let's define $\delta_t = r_t + V(s_{t+1}) - V(s_t)$, we can find a generalized advantage estimator :
-$\hat{A}(t, \gamma, \lambda) = \sum_{i=0}^{+\infnty}{(\gamma\lambda)^i \delta_{t+i}}$ parametrized by $\lambda$.
-If $\lambda = 0$, then $\hat{A} = \delta_t$ : we introduce a bias in the estimator, but it has low variance
-If $\lambda = 1$, then $\hat{A} = \sum_{i=0}^{+\infnty}{\gamma^i \r_{t+i}} - V(s_t)$ : no bias but large variance.
-So by adjusting $\lambda$, we can contrli the properties of the estimator. Generally, a value of $\lambda = 0.96$ gives good results.
+In some algorithms such as A3C, we use an estimation of the advantage to compute and apply the policy gradient on the network, generally equals to $latex r_t - V(s_t)$.
+Let's define $latex \delta_t = r_t + V(s_{t+1}) - V(s_t)$, we can find a generalized advantage estimator :
+$latex \hat{A}(t, \gamma, \lambda) = \sum_{i=0}^{+\infty}{(\gamma\lambda)^i \delta_{t+i}}$ parametrized by $latex \lambda$.
+If $latex \lambda = 0$, then $latex \hat{A} = \delta_t$ : we introduce a bias in the estimator, but it has low variance
+If $latex \lambda = 1$, then $latex \hat{A} = \sum_{i=0}^{+\infty}{\gamma^i r_{t+i}} - V(s_t)$ : no bias but large variance.
+So by adjusting $latex \lambda$, we can control the properties of the estimator. Generally, a value of $latex \lambda = 0.96$ gives good results.
 
 
 <h2 id="PGQL">Combining PG and QL<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1611.01626.pdf">O'Donoghue et al., 2016</a>
-The idea is explicit : combining Pliicy Gradient and Q-learning in the same algorithm.
-To do so, we define an estimate of the Q-Value from the pliicy $\pi$ and the value $V$ :
-$\textasciitilde{Q}^\pi(s, a) = \alpha (log(\pi(s, a)) + H^\pi(s)) + V(s)$ with $\alpha$ a regularization parameter and $H^\pi = \sum_a{\pi(s, a)log(\pi(s, a))$ the entropy of the pliicy.
-We can then use this estimation to perform a Q-learning update AND a pliicy gradient descent on the weights of the network.
-To implement it, one method is to use an A3C and add an extra layer with the pliicy and value as inputs and that outputs the estimated Q-Value and perform a single step of Q-learning each time an agent has accumulated the gradient for the pliicy update.
-+----------+    [PI]    +-------+
-+  Input   + -->    --> + Fully + --> Q
-+----------+    [V ]    +-------+
+The idea is explicit : combining policy Gradient and Q-learning in the same algorithm.
+To do so, we define an estimate of the Q-Value from the policy $latex \pi$ and the value $latex V$ :
+$latex Q_{est}^\pi(s, a) = \alpha (\log{\pi(s, a)} + H^\pi(s)) + V(s)$ with $latex \alpha$ a regularization parameter and $latex H^\pi = \sum_a{\pi(s, a) \log{\pi(s, a)}}$ the entropy of the policy.
+We can then use this estimation to perform a Q-learning update AND a policy gradient descent on the weights of the network.
+To implement it, one method is to use an A3C and add an extra layer with the policy and value as inputs and that outputs the estimated Q-Value and perform a single step of Q-learning each time an agent has accumulated the gradient for the policy update.
 
 
 <h2 id="UNREAL">UNREAL<a href="#Index">&#8618;</a></h2>
 <a href="https://openreview.net/pdf?id=SJ6yPD5xg">Jaderberg et al., 2017</a>
-Instead of just maximising cumulative reward, there are a lot of other training signals that can be used to improve the pliicy (pseudo-reward functions).
+Instead of just maximising cumulative reward, there are a lot of other training signals that can be used to improve the policy (pseudo-reward functions).
 This allows to continue learning even in the case of very sparse rewards.
 <ul>
-    <li>Auxiliary Contrli Tasks : we can add tasks to optimize to the agent. For instance,
+    <li>Auxiliary Control Tasks : we can add tasks to optimize to the agent. For instance,
         <ul>
-            <li>"PIXEL CONTRli" : a new reward is given to the agent depending on whether or not the new image is very different from
+            <li>"PIXEL CONTROL" : a new reward is given to the agent depending on whether or not the new image is very different from
                         the previous one (=maximisation of pixel changes) because changes in pixel often mean important event</li>
             <li>"NETWORK FEATURE" : we want the network to extract task-relevant high-level features of the environment, so we force it to
                         activate hidden units (=we want every neuron to be useful for something)</li>
         </ul></li>
 
-    <li>Auxiliary Reward Tasks : we can add prediction tasks like "REWARD PREDICTION" : from a set of state (s_t-k, s_t-k+1, ..., s_t-1),
-                the agent must predict the reward r_t that it will receive.
-                The sample of the set of state (s_t-k, ..., s_t-1) is made such that rewarding and non-rewarding experiences are equally likely to be drawn by separating them in the experience replay, so in an environment with sparse rewards, the rewarding events will be oversampled</li>
+    <li>Auxiliary Reward Tasks : we can add prediction tasks like "REWARD PREDICTION" : from a set of state $latex (s_{t-k}, s_{t-k+1}, ..., s_{t-1})$,
+                the agent must predict the reward $latex r_t$ that it will receive.
+                The sample of the set of state $latex (s_{t-k}, ..., s_{t-1})$ is made such that rewarding and non-rewarding experiences are equally likely to be drawn by separating them in the experience replay, so in an environment with sparse rewards, the rewarding events will be oversampled</li>
 </ul>
 
 
 <h2 id="BN">Batch Normalization<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1502.03167.pdf">Ioffe and Szegedy, 2015</a>
-In a deep network, a small shift in the input of the first layer induces a modification on the input of the second layer, etc. until the last layer which receive a whlie new data set almost every time and has to relearn from scratch.
-One way to avoid that is Batch Normalization (BN) : after each layer output, we add a normalization layer which takes the batch and shift it to a zero mean/unit variance batch : for a batch $\{x_1, ..., x_m\}$ we define $\mu = \sum_i(x_i)/m$ and $\sigma^2 = \sum_i((x_i - \mu)^2)/m$
-Then $x'_i = (x_i - \mu)/\sqrt(\sigma^2)$ and finally (scale and shift) $y_i = \gamma * x'_i + \beta$, with $\gamma$ and $\beta$ to be learned by the network
-The parameters $\gamma$ and $\beta$ allow the network to choose whether it wants to shift and scale or not : if the original distribution of $x_i$ was
-good, then the network will learn $\gamma = \sqrt(Var(x))$ and $\beta = E(x)$ and so batch normalization is skipped
+In a deep network, a small shift in the input of the first layer induces a modification on the input of the second layer, etc. until the last layer which receive a whole new data set almost every time and has to relearn from scratch.
+One way to avoid that is Batch Normalization (BN) : after each layer output, we add a normalization layer which takes the batch and shift it to a zero mean/unit variance batch : for a batch $latex \{x_1, ..., x_m\}$ we define $latex \mu = \frac{\sum_i{x_i}}{m}$ and $latex \sigma^2 = \frac{\sum_i{(x_i - \mu)^2}}{m}$
+Then $latex x'_i = \frac{x_i - \mu}{\sqrt{\sigma^2}}$ and finally (scale and shift) $latex y_i = \gamma x'_i + \beta$, with $latex \gamma$ and $latex \beta$ to be learned by the network
+The parameters $latex \gamma$ and $latex \beta$ allow the network to choose whether it wants to shift and scale or not : if the original distribution of $latex x_i$ was
+good, then the network will learn $latex \gamma = \sqrt{Var(x)}$ and $latex \beta = E(x)$ and so batch normalization is skipped
 
 
 <h2 id="Options">Options in RL<a href="#Index">&#8618;</a></h2>
 <a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.14.2402&rep=rep1&type=pdf">Stolle and Precup, 2002</a>
 <b>Options</b> are like "macro actions" that help solve easy subtasks.
-Mathematically, an option is defined as a 3-uplet $(I, \pi, \beta)$ with $I$ an input set, $\pi$ the option's policy and $\beta$ a termination condition (e.g. a probability function that takes a state as input and returns the probability to terminate the option).
-An option is available in state $s$ iff $s \in I$, then if the option is taken, actions are selected according to $\pi$ until the termination condition is verified.
+Mathematically, an option is defined as a 3-uplet $latex (I, \pi, \beta)$ with $latex I$ an input set, $latex \pi$ the option's policy and $latex \beta$ a termination condition (e.g. a probability function that takes a state as input and returns the probability to terminate the option).
+An option is available in state $latex s$ iff $latex s \in I$, then if the option is taken, actions are selected according to $latex \pi$ until the termination condition is verified.
 
 
 
@@ -255,7 +249,7 @@ The model has four modules :
 <ul>
     <li><b>Encoding module :</b> take an observation as input and return an abstract state (so with prediction of hidden variables)</li>
     <li><b>Value module :</b> estimate the value of an abstract state</li>
-    <li><b>Outcome module :</b> predicts the option-reward $r_t$ for executing the option <b>o</b> at abstract state <b>$s_t$</b>. If the option takes <i>k</i> primitive actions before termination, the outcome predicts the discounted reward of the trajectory. This module also predicts the option-discount $\gamma_t$ induced by the number of steps taken by the option.</li>
+    <li><b>Outcome module :</b> predicts the option-reward $latex r_t$ for executing the option <b>o</b> at abstract state <b>$latex s_t$</b>. If the option takes <i>k</i> primitive actions before termination, the outcome predicts the discounted reward of the trajectory. This module also predicts the option-discount $latex \gamma_t$ induced by the number of steps taken by the option.</li>
     <li><b>Transition module :</b> take an abstract state as inputs and outputs the next abstract state.</li>
 </ul>
 So the network :
@@ -263,10 +257,10 @@ So the network :
     <li> receive an observation and an option as inputs</li>
     <li> compute the abstract state corresponding to this observation</li>
     <li> predict the reward and discount of the option</li>
-    <li> compute the next abstract state (flilowing the execution of the option)</li>
+    <li> compute the next abstract state (following the execution of the option)</li>
     <li> computes the value of this next state</li>
 </ol>
-We can then use these predictions to estimate the Q-Value $Q(obs, option)$.
+We can then use these predictions to estimate the Q-Value $latex Q(obs, option)$.
 With this model, we can simulate and plan the future with MCTS methods : we perform rollouts up to a certain depth and use this to get a better approximation of the real Q-Value.
 It's also possible to add UCT approaches to encourage exploration.
 
@@ -279,12 +273,12 @@ The authors present an enhanced actor-critic agent that is robust against model 
 The agent has an <b>imagination core</b> which acts as an environment predictor : this is a neural network that takes a state as input and predicts the next state and the reward of the transition, like a classic environment would do.
 Then, to predict the policy and the Value of a state, the network :
 <ol>
-    <li> gets a state $s_t$ as input</li>
-    <li> uses its imagination core to carry out several rollouts from this state $s_t$</li>
+    <li> gets a state $latex s_t$ as input</li>
+    <li> uses its imagination core to carry out several rollouts from this state $latex s_t$</li>
     <li> encode these rollouts and concatenate them to get an object we'll call an <i>imagination code</i></li>
-    <li> inputs this imagination code along the state $(s_t, imagination_code)$ in a classic actor-critic network to predict $\pi$ and $V$</li>
+    <li> inputs this imagination code along the state $latex (s_t, imagination\_code)$ in a classic actor-critic network to predict $latex \pi$ and $latex V$</li>
 </ol>
-That way, the predicted environment is just a context for the network to compute $\pi$ and $V$, and it can learns to ignore it if it thinks that it is wrong.
+That way, the predicted environment is just a context for the network to compute $latex \pi$ and $latex V$, and it can learns to ignore it if it thinks that it is wrong.
 
 
 <h2 id="Automated Curriculum Learning">Automated Curriculum Learning<a href="#Index">&#8618;</a></h2>

@@ -80,7 +80,7 @@ class Agent:
                                                                 self.state)
 
             a = np.random.choice(ACTION_SIZE, p=pi)
-            s_, r, terminal, _ = self.env.process(a)
+            s_, r, terminal, _ = self.env.act(a)
 
             self.episode_reward += r
 

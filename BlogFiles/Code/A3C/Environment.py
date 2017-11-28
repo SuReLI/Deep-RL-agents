@@ -43,7 +43,7 @@ class Environment:
         self.frame_buffer = np.stack((screen, screen, screen, screen), axis=2)
         return self.frame_buffer
 
-    def process(self, action):
+    def act(self, action):
 
         reward = self.ale.act(4+action)
         done = self.ale.game_over()

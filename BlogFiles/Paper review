@@ -12,6 +12,7 @@
 <ul>
     <li><b><a href="#A3C">A3C</a></b> : asynchronous actor-critic RL architecture</li>
     <li><b><a href="#DDPG">DDPG</a></b> : environment with continuous action space</li>
+    <li><b><a href="#D4PG">D4PG</a></b> : application of distributional approach on DDPG</li>
     <li><b><a href="#DRQN">DRQN</a></b> : introduction of recurrence (LSTM) to solve POMDP</li>
     <li><b><a href="#Double DQN">Double DQN</a></b> : introduction of a second network to stabilize convergence</li>
     <li><b><a href="#Dueling DQN">Dueling DQN</a></b> : decomposition of Q-Value into Value and Advantage</li>
@@ -25,6 +26,8 @@
 <h2 style="font-size: 10px">Alternative techniques</h2>
 <ul>
     <li><b><a href="#GA3C">GA3C</a></b> : A3C with modified architecture to run on GPU (x6 faster)</li>
+    <li><b><a href="#DPER">Distributed PER</a></b> : DQN on massively distributed architecture with PER => crazy results</li>
+    <li><b><a href="#RichEnvs">Locomotion Behaviors in rich environments</a></b> : empirical demonstration that engineered reward function is not necessary and description of DPPO</li>
     <li><b><a href="#DFDQN">Dynamic FrameSkip</a></b> : the network chooses an action and its duration (among {1, 3, 5})</li>
     <li><b><a href="#Effects of Memory replay">Effects of Memory replay</a></b> : dynamic change in the memory size</li>
     <li><b><a href="#Generalized Advantage">Generalized Advantage</a></b> : use of a better equation to estimate Advantage</li>
@@ -83,6 +86,25 @@ The critic (= the Q-Value estimator) is updated as usual whereas the actor is up
 To encourage exploration, the authors introduce a temporaly correlated noise base on Ornstein-Uhlenbeck process : $latex noise_t = \theta * (\mu - noise_{t-1}) + \sigma * normal(0, 1)$ with $latex normal$ the normal distribution.
 
 
+<h2 id="D4PG">D4PG<a href="#Index">&#8618;</a></h2>
+<a href="https://openreview.net/pdf?id=SyZipzbCb">Anonymous for now, 2017</a><br/>
+With the success of the distributional approach presented in <a href="#C51">C51</a> in 2017, the authors tried to extend it to the <a href="#DDPG">DDPG algorithm</a>.
+They added four features to the original algorithm :
+<ul>
+    <li><b>distributional approach :</b> like in C51, the algorithm uses the distributional Bellman operator to predict the action-value distribution</li>
+    <li><b>prioritization :</b> the algorithm uses <a href="#PER">PER</a> to be more data-efficient</li>
+    <li><b>N-Step Return :</b> unlike DDPG which uses immediate rewards, D4PG accumulates discounted reward to better predict the target distribution</li>
+    <li><b>asynchronous approach :</b> the algorithm uses several asynchronous agents to gather experiences writing to the same replay table</li>
+</ul>
+By analysing different ablations of the algorithm (i.e. removing features one by one), the authors found that :
+<ul>
+    <li>prioritization is harmless, but doesn't improve the performance either</li>
+    <li>the introduction of temporaly correlated noise made in DDPG is not necessary and doesn't improve the performance</li>
+    <li>except the distributional approach, the biggest performance gain is the use of N-Step Return</li>
+</ul>
+
+
+
 <h2 id="DRQN">DRQN<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1507.06527.pdf">Hausknecht and Stone, 2015</a><br/>
 In order to solve environments with partially-observable variables, the authors add a recurrent layer to a classic DQN algorithm, giving the Deep Recurrent Q-Network.
@@ -112,7 +134,7 @@ Now, for $latex a^* = argmax_a{Q(s, a)} = argmax_a{A(s, a)}$, we obtain $latex Q
 
 <h2 id="PER">PER<a href="#Index">&#8618;</a></h2>
 <a href="https://arxiv.org/pdf/1511.05952.pdf">Schaul et al., 2015</a>
-In a batch of experience replay, some experiences bring a lot of information (e.g. a state of the environment that was very different from previsions) while others are not interesting.
+In a batch of experience replay, some experiences bring a lot of information (i.e. a state of the environment that was very different from previsions) while others are not interesting.
 To take that into account, we use <b>prioritization</b>.
 We base the prioritization on the TD-Error of each experience : indeed, if the TD-Error is large, it means that the network badly predicted the Q-Value when it was in this state and so that it can learn a lot from this.
 But using raw TD-Error is inefficient because each error will be updated only for the experience that are replayed, so some experiences won't be reseen at all and just a few of them will be replayed most of the time.
@@ -123,6 +145,16 @@ Instead, we use prioritization with the probability for the experience $latex i$
     <li>$latex p_i = 1/rank(i)$ : <b>rank-based prioritization</b></li>
 </ul>
 The implementation is trickier because it has to be efficient (insertion and sampling complexity cannot depend on the number of experiences stored), so we use a Sum-Tree structure.
+
+
+<h2 id="DPER">Distributed PER<a href="#Index">&#8618;</a></h2>
+<a href="https://openreview.net/pdf?id=H1Dy---0Z">Anonymous for now, 2017</a>
+The authors introduce the Ape-X architecture : many agents with each their own instance of the environment generate experiences and add it to a shared experience replay memory, while a single learner samples with prioritization (PER) from this memory and updates the network and the priorities of the experience it drew. The actors' networks are periodically updated with the learner's network.
+Each agent is on a separated computer or thread whereas the learner is on a single GPU.
+The authors ran 360 actors for one learner generating 12 500 transitions per second and computing the gradient for 9700 transitions per second on average (and limiting the size of the memory buffer).
+Moreover, each actor had a different exploration parameter ($latex \epsilon$ for a $latex \epsilon$-greedy policy).
+The results are astonishing : in 20 hours, the algorithm has better performances than Rainbow in 250 hours.
+Surprisingly, the results are not only faster but also better than other algorithms, probably because of the ability to avoid local minima due to the huge exploration and number of actors.
 
 
 <h2 id="NoisyNets">NoisyNets<a href="#Index">&#8618;</a></h2>
@@ -178,7 +210,7 @@ The replay memory buffer is a major feature of Deep RL that boosts the performan
 In fact, this size can deeply modify the learning speed and performances : if the buffer is too small, the network won't see enough various experiences and will have trouble to converge, on the other hand if the buffer is too large, the computational time will raise significatively.
 A solution for that issue is, instead of fixing the size to an arbitrary value, to let the algorithm dynamically change the buffer size.
 To do so, every k steps, we compute the TD-Error magnitude of the n oldest transitions strored in the memory $latex |\delta_{k+1}| = \sum_{t=mem\_size-n}^{mem\_size}{|r_t + \gamma \max_a{Q_{target}(s_{t+1}, a)} - Q(s_t, a_t)|}$, 
-we then compare this value to the old TD-Error magnitude $latex |\delta_k|$ computed and if this value has increased (e.g. $latex |\delta_{k+1}| > |\delta_k|$ then we increase the memory, otherwise we shrink it.
+we then compare this value to the old TD-Error magnitude $latex |\delta_k|$ computed and if this value has increased (i.e. $latex |\delta_{k+1}| > |\delta_k|$ then we increase the memory, otherwise we shrink it.
 Intuitively, this is because if the TD-Error magnitude increases, this is a sign that the agent might be overshooting and overfitting for the more recent experiences, so we increase the memory buffer to ensure that the older experiences are kept longer to be used for future updates. On the other hand, it the TD-Error magnitude decreases, it means the oldest transitions are less useful so we reduce the memory buffer to accelerate the learning process.
 
 
@@ -232,7 +264,7 @@ good, then the network will learn $latex \gamma = \sqrt{Var(x)}$ and $latex \bet
 <h2 id="Options">Options in RL<a href="#Index">&#8618;</a></h2>
 <a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.14.2402&rep=rep1&type=pdf">Stolle and Precup, 2002</a>
 <b>Options</b> are like "macro actions" that help solve easy subtasks.
-Mathematically, an option is defined as a 3-uplet $latex (I, \pi, \beta)$ with $latex I$ an input set, $latex \pi$ the option's policy and $latex \beta$ a termination condition (e.g. a probability function that takes a state as input and returns the probability to terminate the option).
+Mathematically, an option is defined as a 3-uplet $latex (I, \pi, \beta)$ with $latex I$ an input set, $latex \pi$ the option's policy and $latex \beta$ a termination condition (i.e. a probability function that takes a state as input and returns the probability to terminate the option).
 An option is available in state $latex s$ iff $latex s \in I$, then if the option is taken, actions are selected according to $latex \pi$ until the termination condition is verified.
 
 
@@ -244,7 +276,7 @@ Model-based RL algorithms attempt to learn a model that can be used to simulate 
 But building an accurate observation-prediction model is challenging, so this brings the question : is it possible to plan without having to predict future observations ? (observation = state without the hidden variables, for instance in a video game : just the frame pixels without the inner variables like velocity, number of ammo, life of an enemy...)
 Observations are not so essential for planning, what's really important is the prediction of rewards and values.
 The idea of VPN is to build a model that can directly generate and predict the value and reward of future states without generating future observations.
-We also consider options instead of actions : cf. <a href="Options">Options in RL</a>.
+We also consider options instead of actions : cf. <a href="#Options">Options in RL</a>.
 The model has four modules :
 <ul>
     <li><b>Encoding module :</b> take an observation as input and return an abstract state (so with prediction of hidden variables)</li>
@@ -300,6 +332,16 @@ The difficulty is to define the "how much the policy has improved" part. The aut
     <li>Loss-driven progess signals that acts w.r.t the evolution of the loss of the policy</li>
     <li>Complexity-driven progress signals that acts w.r.t. the rate at which the network's complexity increases</li>
 </ul>
+
+
+<h2 id="RichEnvs">Locomotion Behaviors in rich environments<a href="#Index">&#8618;</a></h2>
+<a href="https://arxiv.org/pdf/1707.02286.pdf">Heess et al., 2017</a>
+In RL, it is common to hand-design a reward function to encourage the agent to learn a particular  solution.
+The authors pretend that a rich and varied environment is enough to learn complex behaviors, even with a simple reward function.
+To demonstrate that, the environment used was the locomotion set on MuJoCo known for its sensitivity to the choice of reward.
+The authors developped a distributed variant of Proximal Policy Optimization (PPO) called DPPO and ran the algorithm on different locomotion tasks like <i>Planar Walker</i>, <i>Quadruped</i> or <i>Humanoid</i>.
+The agents were confronted to more and more challenging tasks (cf. <a href="#Automated Curriculum Learning">Curriculum Learning</a>) and were able to learn complex and robust behaviors due to the diversity of the tasks they had to solve. The results are quite impressive (and "visually pleasing").
+The conclusion is that rich and complex environments along more varied tasks can make learning easier and more general, instead of hand-designing a reward function for each task to solve.
 
 
 </body>

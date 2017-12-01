@@ -32,7 +32,10 @@ class ActorNetwork:
         self.sess.run(tf.global_variables_initializer())
 
         # WARNING : this update must be done with tau = 1 (target = main first)
+        tau = parameters.UPDATE_TARGET_RATE
+        parameters.UPDATE_TARGET_RATE = 1
         self.update_target()
+        parameters.UPDATE_TARGET_RATE = tau
 
         if parameters.LOAD:
             self.load_network()

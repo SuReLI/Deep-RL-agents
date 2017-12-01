@@ -36,14 +36,8 @@ class Agent:
         print("\tCreating the experience buffer")
         self.buffer = ExperienceBuffer()
 
-        self.epsilon = parameters.EPSILON_START
         self.gamma = parameters.DISCOUNT
         print("Agent initialized !\n")
-
-    def epsilon_decay(self):
-
-        if self.epsilon > parameters.EPSILON_STOP:
-            self.epsilon -= parameters.EPSILON_DECAY
 
     def run(self):
 
@@ -55,6 +49,12 @@ class Agent:
             episode_step = 0
             done = False
 
+            # Initialize exploration noise process
+            noise_process = np.zeros(self.action_size)
+            noise_scale = (parameters.NOISE_SCALE_INIT *
+                           parameters.NOISE_DECAY**ep) * \
+                (self.high_bound - self.low_bound)
+
             # Initial state
             s = self.env.reset()
 
@@ -65,13 +65,15 @@ class Agent:
 
             while episode_step < max_steps and not done:
 
-                    if random.random() < self.epsilon:
-                        a = np.random.uniform(self.low_bound,
-                                              self.high_bound,
-                                              self.action_size)
+                # choose action based on deterministic policy
+                a = self.actor_network.action(s)
 
-                    else:
-                        a = self.network.action(s)
+                # add temporally-correlated exploration noise to action
+                noise_process = parameters.EXPLO_THETA * \
+                    (parameters.EXPLO_MU - noise_process) + \
+                    parameters.EXPLO_SIGMA * np.random.randn(self.action_size)
+
+                a += noise_scale * noise_process
 
                 s_, r, done, info = self.env.act(a, gif)
 
@@ -121,17 +123,15 @@ class Agent:
                 episode_step += 1
                 self.total_steps += 1
 
-            self.epsilon_decay()
-
             if gif:
                 self.env.save_gif('results/gif/', self.n_gif)
                 self.n_gif = (self.n_gif + 1) % 5
 
             DISPLAYER.add_reward(episode_reward)
-            if ep % 50 == 0:
-                print("Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %7.3f"
+            if ep % 5 == 0:
+                print("Episode %2i, Reward: %7.3f, Steps: %i, Noise: %7.3f"
                       " (max step: %i)" % (ep, episode_reward, episode_step,
-                                           self.epsilon, max_steps))
+                                           0, max_steps))
 
             if ep % 500 == 0:
                 DISPLAYER.disp()

@@ -8,7 +8,7 @@
 
 
 <h1 id="Index">Index</h1>
-<h2 style="font-size: 10px">Keystones</h2>
+<h2 style="font-size: 26px">Keystones</h2>
 <ul>
     <li><b><a href="#A3C">A3C</a></b> : asynchronous actor-critic RL architecture</li>
     <li><b><a href="#DDPG">DDPG</a></b> : environment with continuous action space</li>
@@ -21,9 +21,10 @@
     <li><b><a href="#C51">C51</a></b> : estimate the value function distribution instead of the mean</li>
     <li><b><a href="#Rainbow">Rainbow</a></b> : combination of 6 DQN features : state-of-the-art results</li>
     <li><b><a href="#N-Step Return">N-Step Return</a></b> : multi-step discounted reward to better estimate the Q-Value</li>
+    <li><b><a href="#Lambda Return">Generalizing $latex \lambda$-Return</a></b> : use of $latex \lambda$ return in an A3C and extension to learn the weights of $latex \lambda$ return$</li>
     <li><b><a href="#FiGAR">FiGAR</a></b> : the network also outputs the number of times to repeat an action</li>
 </ul>
-<h2 style="font-size: 10px">Alternative techniques</h2>
+<h2 style="font-size: 26px">Alternative techniques</h2>
 <ul>
     <li><b><a href="#GA3C">GA3C</a></b> : A3C with modified architecture to run on GPU (x6 faster)</li>
     <li><b><a href="#DPER">Distributed PER</a></b> : DQN on massively distributed architecture with PER => crazy results</li>
@@ -189,6 +190,18 @@ Q-learning accumulates a single reward and then uses the greedy action at the ne
 Alternatively, forward-view <i>multi-step</i> targets can be used. We define the truncated n-step return from a given state $latex s_t$ :
 $latex R_t^n = \sum_{k=0}^{n-1}{\gamma_t^k r_{t+k+1}}$
 A multi-step variant of DQN is then defined by minimizing the alternative loss : $latex \left[R_t^n + \gamma_t^n \max_a{Q_{target}(s_{t+n}, a) - Q(s_t, a_t))}\right]^2$
+
+
+<h2 id="Lambda Return">Generalizing $latex \lambda$-Return<a href="#Index">&#8618;</a></h2>
+<a href="https://openreview.net/pdf?id=HkpRBFxRb">Anonymous for now, 2017</a>
+$latex \lambda$-Return consists in defining the target of an agent as a weighted combination of rewards estimated by using multiple many-step look-aheads.
+We define a N-Step Return as $latex G_t^{(n)} = \sum_{i=1}^n{\gamma^{i-1}r_{t+i} + \gamma^n V(s_{t+n})}$ and, given a weight vector $latex w = (w^{(1)}, w^{(2)}, ..., w^{(h)})$ such that $latex \sum_{i=2}^h{w^{(i)}} = 1$, we define a weighted return as $latex G_t^w = \sum_{n=1}^h{w^{(n)}G_t^{(n)}}$.
+With these definition, the $latex \lambda$-return can be seen as a weighted return with weight $latex w^{(i)} = (1-\lambda)lambda^i$.
+This method works and the authors improved A3C results by implementing a truncated form of $latex \lambda$-return, but they also introduce a new approach : <b>Confidence-based Autodidactic Returns (CAR)</b>.
+The idea is, instead of having fix weights, to let the network learn these weights based on its own confidence in the Value it computed.
+This is made by having the network compute additional weights called <i>confidences</i> and adding a softmax layer to these <i>confidences</i> to get dynamic weights $latex w = (w^{(1)}, w^{(2)}, ..., w^{(h)})$.
+The parameters specific to the computation of the autodidactic return do not contribute to the gradient to the gradient which flows back into the LSTM layer.
+
 
 
 <h2 id="DFDQN">Dynamic FrameSkip<a href="#Index">&#8618;</a></h2>

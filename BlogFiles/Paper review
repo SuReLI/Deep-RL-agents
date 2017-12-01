@@ -21,12 +21,13 @@
     <li><b><a href="#C51">C51</a></b> : estimate the value function distribution instead of the mean</li>
     <li><b><a href="#Rainbow">Rainbow</a></b> : combination of 6 DQN features : state-of-the-art results</li>
     <li><b><a href="#N-Step Return">N-Step Return</a></b> : multi-step discounted reward to better estimate the Q-Value</li>
-    <li><b><a href="#Lambda Return">Generalizing $latex \lambda$-Return</a></b> : use of $latex \lambda$ return in an A3C and extension to learn the weights of $latex \lambda$ return$</li>
+    <li><b><a href="#Lambda Return">Generalizing $latex \lambda$-Return</a></b> : use of $latex \lambda$ return in an A3C and extension to learn the weights of $latex \lambda$ return</li>
     <li><b><a href="#FiGAR">FiGAR</a></b> : the network also outputs the number of times to repeat an action</li>
 </ul>
 <h2 style="font-size: 26px">Alternative techniques</h2>
 <ul>
     <li><b><a href="#GA3C">GA3C</a></b> : A3C with modified architecture to run on GPU (x6 faster)</li>
+    <li><b><a href="#A4C">A4C</a></b> : GA3C with meta-actions</li>
     <li><b><a href="#DPER">Distributed PER</a></b> : DQN on massively distributed architecture with PER => crazy results</li>
     <li><b><a href="#RichEnvs">Locomotion Behaviors in rich environments</a></b> : empirical demonstration that engineered reward function is not necessary and description of DPPO</li>
     <li><b><a href="#DFDQN">Dynamic FrameSkip</a></b> : the network chooses an action and its duration (among {1, 3, 5})</li>
@@ -76,6 +77,18 @@ The primary components of GA3C are a deep neural network with training and predi
 </ul>
 A discussion is then held on the optimal number of agents, predictors and trainers to maintain to get the best performances : #agents  = #CPU, #predictors = #trainers = 2.
 This architecture multiplies the number of frames seen by second by 6.
+
+
+<h2 id="A4C">A4C<a href="#Index">&#8618;</a></h2>
+<a href="https://openreview.net/pdf?id=rkKkSzb0b">Anonymous for now, 2017</a><br/>
+The authors took the GA3C implementation and add meta-actions (e.g. in Cartpole, the valid actions are $latex A = \{L, R\}$, so here they defined $latex A^+ = \{L, R, LL, LR, RL, RR\}$).
+Two kinds of update are possible :
+<ul>
+    <li> Dependent Updating (UD) : the gradient is computed for each action or sequence of multi-actions : so for an experience queue $latex (s_0, a_0, r_0, s_1, a_1, r_1, s_2, ...)$, the network is updated twice for state $latex s_0$ : one for the basic action $latex a_0$ and one for the multi-action $latex (a_0, a_1)$</li>
+    <li> Independent Updating (ID) : each meta-action is seen as just one basic action with only one transition, one reward and one gradient</li>
+</ul>
+UD being more aggressive than ID, the authors choose Switching : the first hours of training are made using UD, and then the algorithm switches to ID
+
 
 
 <h2 id="DDPG">DDPG<a href="#Index">&#8618;</a></h2>
@@ -195,8 +208,8 @@ A multi-step variant of DQN is then defined by minimizing the alternative loss :
 <h2 id="Lambda Return">Generalizing $latex \lambda$-Return<a href="#Index">&#8618;</a></h2>
 <a href="https://openreview.net/pdf?id=HkpRBFxRb">Anonymous for now, 2017</a>
 $latex \lambda$-Return consists in defining the target of an agent as a weighted combination of rewards estimated by using multiple many-step look-aheads.
-We define a N-Step Return as $latex G_t^{(n)} = \sum_{i=1}^n{\gamma^{i-1}r_{t+i} + \gamma^n V(s_{t+n})}$ and, given a weight vector $latex w = (w^{(1)}, w^{(2)}, ..., w^{(h)})$ such that $latex \sum_{i=2}^h{w^{(i)}} = 1$, we define a weighted return as $latex G_t^w = \sum_{n=1}^h{w^{(n)}G_t^{(n)}}$.
-With these definition, the $latex \lambda$-return can be seen as a weighted return with weight $latex w^{(i)} = (1-\lambda)lambda^i$.
+We define a N-Step Return as $latex G_t^{(n)} = \sum_{i=1}^n{\gamma^{i-1}r_{t+i} + \gamma^n V(s_{t+n})}$ and, given a weight vector $latex w = (w^{(1)}, w^{(2)}, ..., w^{(h)})$ such that $latex \sum_{i=1}^h{w^{(i)}} = 1$, we define a weighted return as $latex G_t^w = \sum_{n=1}^h{w^{(n)}G_t^{(n)}}$.
+With these definition, the $latex \lambda$-return can be seen as a weighted return with weight $latex w^{(i)} = (1-\lambda)\lambda^i$.
 This method works and the authors improved A3C results by implementing a truncated form of $latex \lambda$-return, but they also introduce a new approach : <b>Confidence-based Autodidactic Returns (CAR)</b>.
 The idea is, instead of having fix weights, to let the network learn these weights based on its own confidence in the Value it computed.
 This is made by having the network compute additional weights called <i>confidences</i> and adding a softmax layer to these <i>confidences</i> to get dynamic weights $latex w = (w^{(1)}, w^{(2)}, ..., w^{(h)})$.

@@ -12,7 +12,7 @@ from ExperienceBuffer import ExperienceBuffer
 
 from Displayer import DISPLAYER
 from Saver import SAVER
-import parameters
+import settings
 
 
 class Agent:
@@ -40,8 +40,9 @@ class Agent:
     def run(self):
 
         self.total_steps = 0
+        self.sess.run(self.network.target_init)
 
-        for ep in range(1, parameters.TRAINING_STEPS+1):
+        for ep in range(1, settings.TRAINING_STEPS+1):
 
             episode_reward = 0
             episode_step = 0
@@ -49,29 +50,29 @@ class Agent:
 
             # Initialize exploration noise process
             noise_process = np.zeros(self.action_size)
-            noise_scale = (parameters.NOISE_SCALE_INIT *
-                           parameters.NOISE_DECAY**ep) * \
+            noise_scale = (settings.NOISE_SCALE_INIT *
+                           settings.NOISE_DECAY**ep) * \
                 (self.high_bound - self.low_bound)
 
             # Initial state
             s = self.env.reset()
-            if ep % parameters.RENDER_FREQ == 0 and parameters.DISPLAY:
+            if ep % settings.RENDER_FREQ == 0 and settings.DISPLAY:
                 self.env.set_render(True)
             else:
                 self.env.set_render(False)
 
-            gif = (ep % parameters.GIF_FREQ == 0) and parameters.DISPLAY
+            gif = (ep % settings.GIF_FREQ == 0) and settings.DISPLAY
 
-            while episode_step < parameters.MAX_EPISODE_STEPS and not done:
+            while episode_step < settings.MAX_EPISODE_STEPS and not done:
 
                 # choose action based on deterministic policy
                 a, = self.sess.run(self.network.actions,
                                    feed_dict={self.network.state_ph: s[None]})
 
                 # add temporally-correlated exploration noise to action
-                noise_process = parameters.EXPLO_THETA * \
-                    (parameters.EXPLO_MU - noise_process) + \
-                    parameters.EXPLO_SIGMA * np.random.randn(self.action_size)
+                noise_process = settings.EXPLO_THETA * \
+                    (settings.EXPLO_MU - noise_process) + \
+                    settings.EXPLO_SIGMA * np.random.randn(self.action_size)
 
                 a += noise_scale * noise_process
 
@@ -81,21 +82,23 @@ class Agent:
                 self.buffer.add((s, a, r, s_, 0.0 if done else 1.0))
 
                 # update network weights to fit a minibatch of experience
-                if self.total_steps % parameters.TRAINING_FREQ == 0 and \
-                        len(self.buffer) >= parameters.BATCH_SIZE:
+                if self.total_steps % settings.TRAINING_FREQ == 0 and \
+                        len(self.buffer) >= settings.BATCH_SIZE:
 
                     minibatch = self.buffer.sample()
 
-                    _, _ = self.sess.run([self.network.critic_train_op, self.network.actor_train_op],
+                    q, _, _ = self.sess.run([self.network.q_values_of_given_actions, self.network.critic_train_op, self.network.actor_train_op],
                                          feed_dict={
                         self.network.state_ph: np.asarray([elem[0] for elem in minibatch]),
                         self.network.action_ph: np.asarray([elem[1] for elem in minibatch]),
                         self.network.reward_ph: np.asarray([elem[2] for elem in minibatch]),
                         self.network.next_state_ph: np.asarray([elem[3] for elem in minibatch]),
-                        self.network.is_not_terminal_ph: np.asarray([elem[4] for elem in minibatch])})
+                        self.network.is_not_done_ph: np.asarray([elem[4] for elem in minibatch])})
+
+                    DISPLAYER.add_q(q[0])
 
                     # update target networks
-                    _ = self.sess.run(self.network.update_slow_targets_op)
+                    _ = self.sess.run(self.network.update_targets)
 
                 s = s_
                 episode_step += 1
@@ -110,7 +113,7 @@ class Agent:
 #                self.play(1, 'results/gif/gif_best')
 #                self.best_run = episode_reward
 
-            if ep % parameters.DISP_EP_REWARD_FREQ == 0:
+            if ep % settings.DISP_EP_REWARD_FREQ == 0:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Final noise scale: %7.3f' %
                       (ep, episode_reward, episode_step, noise_scale))
             DISPLAYER.add_reward(episode_reward)

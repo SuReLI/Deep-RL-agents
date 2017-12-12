@@ -6,7 +6,7 @@ from Agent import Agent
 from Displayer import DISPLAYER
 from Saver import SAVER
 
-import parameters
+import settings
 
 if __name__ == '__main__':
     
@@ -27,9 +27,10 @@ if __name__ == '__main__':
         print("End of the run")
         SAVER.save(agent.total_steps)
         DISPLAYER.disp()
+        DISPLAYER.disp_q()
 
         agent.play(10)
 
-        agent.play(3, "results/gif/gif_save".format(parameters.ENV))
+        agent.play(3, "results/gif/gif_save".format(settings.ENV))
 
     agent.close()

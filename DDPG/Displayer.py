@@ -4,17 +4,18 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-import parameters
+import settings
 
 
 def save(saver, fig_name):
-    if parameters.DISPLAY:
+    if settings.DISPLAY:
         for path, data in saver:
             plt.plot(data)
         fig = plt.gcf()
         os.makedirs(os.path.dirname(fig_name), exist_ok=True)
         fig.savefig(fig_name)
         plt.show(block=False)
+        fig.clf()
     else:
         for path, data in saver:
             os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -27,11 +28,12 @@ class Displayer:
 
     def __init__(self):
         self.rewards = []
+        self.q_buf = []
 
     def add_reward(self, reward):
         self.rewards.append(reward)
-        if len(self.rewards) % parameters.PLOT_FREQ == 0:
-            if parameters.DISPLAY:
+        if len(self.rewards) % settings.PLOT_FREQ == 0:
+            if settings.DISPLAY:
                 self.disp()
             else:
                 print(self.rewards[-50:])
@@ -42,5 +44,16 @@ class Displayer:
         saver = [("results/Reward", self.rewards),
                  ("results/Mean_reward", mean_reward)]
         save(saver, "results/Reward.png")
+
+    def add_q(self, q):
+        self.q_buf.append(q)
+
+    def disp_q(self):
+        mean_q = [np.mean(self.q_buf[max(1, i - 10):i])
+                  for i in range(1, len(self.q_buf))]
+        saver = [("results/Q", self.q_buf),
+                 ("results/Q_mean", mean_q)]
+        save(saver, "results/Q.png")
+
 
 DISPLAYER = Displayer()

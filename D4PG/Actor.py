@@ -2,7 +2,7 @@
 import tensorflow as tf
 import numpy as np
 
-from Model import build_actor, get_vars
+from Model import build_actor
 from ExperienceBuffer import BUFFER
 from Environment import Environment
 
@@ -46,8 +46,6 @@ class Actor:
         # Get the policy prediction network
         self.policy = build_actor(self.state_ph, self.bounds, self.action_size,
                                   trainable=False, scope=scope)
-
-        self.vars = get_vars(scope, trainable=False)
 
     def predict_action(self, s):
         return self.sess.run(self.policy, feed_dict={self.state_ph: s[None]})[0]

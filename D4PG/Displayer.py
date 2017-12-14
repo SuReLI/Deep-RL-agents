@@ -29,6 +29,7 @@ class Displayer:
     def __init__(self):
         self.rewards = [[] for a in range(settings.NB_ACTORS + 1)]
         self.sequential_rewards = []
+        self.q_buf = []
 
     def add_reward(self, reward, n_agent):
         self.rewards[n_agent].append(reward)
@@ -64,6 +65,16 @@ class Displayer:
         self.disp_all()
         self.disp_seq()
         self.disp_one()
+
+    def add_q(self, q):
+        self.q_buf.append(q)
+
+    def disp_q(self):
+        mean_q = [np.mean(self.q_buf[max(1, i-10):i]) for i in range(1, len(self.q_buf))]
+        saver = [("results/Q", self.q_buf),
+                 ("results/Q_mean", mean_q)]
+        save(saver, "results/Q.png")
+
 
 
 DISPLAYER = Displayer()

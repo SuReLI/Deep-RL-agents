@@ -8,6 +8,10 @@
 
 
 <h1 id="Index">Index</h1>
+<h2 style="font-size: 26px">Foundation</h2>
+<ul>
+    <li><b><a href="https://arxiv.org/pdf/1312.5602.pdf">DQN</a></b></li>
+</ul>
 <h2 style="font-size: 26px">Keystones</h2>
 <ul>
     <li><b><a href="#A3C">A3C</a></b> : asynchronous actor-critic RL architecture</li>
@@ -41,6 +45,12 @@
     <li><b><a href="#I2A">Imagination-Augmented Agents</a></b> : new architecture to solve environments with models that suffer errors</li>
     <li><b><a href="#Automated Curriculum Learning">Automated Curriculum Learning</a></b> : learn gradually (simple tasks -> real problem) with a bandit-algorithm to choose the task</li>
 </ul>
+<h2 style="font-size: 26px">To Do</h2>
+<ul>
+    <li><b><a href="https://arxiv.org/pdf/1702.08165.pdf">Deep Energy-based Policies</a></b></li>
+    <li><b><a href="https://arxiv.org/pdf/1502.05477.pdf">TRPO</a></b></li>
+</ul>
+
 
 
 

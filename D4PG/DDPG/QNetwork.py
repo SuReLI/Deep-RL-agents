@@ -1,16 +1,12 @@
-    
+
 import tensorflow as tf
 import numpy as np
-import time
 
-import Actor
 from Model import *
-from ExperienceBuffer import BUFFER
-
 import settings
 
 
-class Learner:
+class Network:
 
     def __init__(self, sess, state_size, action_size, bounds):
 
@@ -29,36 +25,36 @@ class Learner:
 
         # Main actor network
         self.actions = build_actor(self.state_ph, self.bounds, self.action_size,
-                                   trainable=True, scope='learner_actor')
+                                   trainable=True, scope='actor')
 
         # Main critic network
         self.q_values_of_given_actions = build_critic(
-            self.state_ph, self.action_ph, trainable=True, reuse=False, scope='learner_critic')
+            self.state_ph, self.action_ph, trainable=True, reuse=False, scope='critic')
         self.q_values_of_suggested_actions = build_critic(
-            self.state_ph, self.actions, trainable=True, reuse=True, scope='learner_critic')
-
-
+            self.state_ph, self.actions, trainable=True, reuse=True, scope='critic')
+        
         # Target actor network
         self.target_next_actions = tf.stop_gradient(
             build_actor(self.next_state_ph, self.bounds, self.action_size,
-                        trainable=False, scope='learner_target_actor'))
+                        trainable=False, scope='target_actor'))
 
         # Target critic network
         self.q_values_next = tf.stop_gradient(
             build_critic(self.next_state_ph, self.target_next_actions,
-                         trainable=False, reuse=False, scope='learner_target_critic'))
+                         trainable=False, reuse=False, scope='target_critic'))
 
         # Isolate vars for each network
-        self.actor_vars = get_vars('learner_actor', trainable=True)
-        self.critic_vars = get_vars('learner_critic', trainable=True)
+        self.actor_vars = get_vars('actor', trainable=True)
+        self.critic_vars = get_vars('critic', trainable=True)
         self.vars = self.actor_vars + self.critic_vars
 
-        self.target_actor_vars = get_vars('learner_target_actor', trainable=False)
-        self.target_critic_vars = get_vars('learner_target_critic', trainable=False)
+        self.target_actor_vars = get_vars('target_actor', trainable=False)
+        self.target_critic_vars = get_vars('target_critic', trainable=False)
         self.target_vars = self.target_actor_vars + self.target_critic_vars
 
-        # Initialize target vars to vars
-        self.target_init = copy_vars(self.vars, self.target_vars,
+        # Initialize target critic vars to critic vars
+        self.target_init = copy_vars(self.vars,
+                                     self.target_vars,
                                      1, 'init_target')
 
         # Update values for target vars towards current actor and critic vars
@@ -88,51 +84,23 @@ class Learner:
         self.actor_train_op = actor_trainer.minimize(actor_loss,
                                                      var_list=self.actor_vars)
 
-        update_actors = []
-        for i in range(settings.NB_ACTORS):
-            op = copy_vars(self.actor_vars,
-                           get_vars('worker_actor_%i'%(i+1), False),
-                           1, 'update_actor_%i'%i)
-            update_actors.append(op)
-        self.update_actors = tf.group(*update_actors, name='update_actors')
+    def train(self, batch):
 
-    def run(self):
+        states = np.asarray([elem[0] for elem in batch])
+        actions = np.asarray([elem[1] for elem in batch])
+        rewards = np.asarray([elem[2] for elem in batch])
+        next_states = np.asarray([elem[3] for elem in batch])
+        is_not_done = np.asarray([elem[4] for elem in batch])
 
-        total_eps = 1
-        start_time = time.time()
 
         with self.sess.as_default(), self.sess.graph.as_default():
+            feed_dict = {self.state_ph: states, 
+                         self.action_ph: actions,
+                         self.reward_ph: rewards,
+                         self.next_state_ph: next_states,
+                         self.is_not_done_ph: is_not_done}
+            
+            _, _ = self.sess.run([self.critic_train_op, self.actor_train_op],
+                                  feed_dict=feed_dict)
 
-            self.sess.run(self.target_init)
-            self.sess.run(self.update_actors)
-
-            while not Actor.STOP_REQUESTED:
-                
-                batch = BUFFER.sample()
-
-                if batch == []:
-                    continue
-
-                feed_dict = {
-                    self.state_ph: np.asarray([elem[0] for elem in batch]),
-                    self.action_ph: np.asarray([elem[1] for elem in batch]),
-                    self.reward_ph: np.asarray([elem[2] for elem in batch]),
-                    self.next_state_ph: np.asarray([elem[3] for elem in batch]),
-                    self.is_not_done_ph: np.asarray([elem[4] for elem in batch])
-                }
-
-                _, _ = self.sess.run([self.critic_train_op, self.actor_train_op],
-                                     feed_dict=feed_dict)
-
-                if total_eps % settings.UPDATE_TARGET_FREQ == 0:
-                    self.sess.run(self.update_targets)
-
-                if total_eps % settings.UPDATE_ACTORS_FREQ == 0:
-                    self.sess.run(self.update_actors)
-
-                total_eps += 1
-
-                if total_eps % settings.PERF_FREQ == 0:
-                    print("PERF : %i learning round in %fs" %
-                          (settings.PERF_FREQ, time.time() - start_time))
-                    start_time = time.time()
+            _ = self.sess.run(self.update_targets)

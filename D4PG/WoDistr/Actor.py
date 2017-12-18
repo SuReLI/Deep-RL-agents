@@ -84,6 +84,9 @@ class Actor:
 
                 s = s_
                 episode_step += 1
+
+            if self.n_actor == 1 and total_eps % 10 == 0:
+            	BUFFER.stats()
             
             if self.n_actor == 1 and total_eps % settings.EP_REW_FREQ == 0:
                 print("Episode %i : reward %i, steps %i, noise scale %f" % (total_eps, episode_reward, episode_step, noise_scale))
@@ -91,6 +94,6 @@ class Actor:
             if not STOP_REQUESTED:
                 DISPLAYER.add_reward(episode_reward, self.n_actor)
             
-                total_eps += 1
+            total_eps += 1
 
         self.env.close()

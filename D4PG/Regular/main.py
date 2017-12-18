@@ -19,7 +19,12 @@ def main():
         for i in range(settings.NB_ACTORS):
             workers.append(Actor(sess, i + 1))
 
+        # with tf.device('/device:GPU:0'):
+        print("Initializing learner...")
         learner = Learner(sess, *workers[0].get_env_features())
+        print("Learner initialized !\n")
+        if settings.LOAD:
+            learner.load()
 
         threads = []
         for i in range(settings.NB_ACTORS):
@@ -32,6 +37,7 @@ def main():
 
         for t in threads:
             t.start()
+        print("Running...")
 
         signal.signal(signal.SIGINT, request_stop)
         signal.pause()
@@ -39,7 +45,10 @@ def main():
         for t in threads:
             t.join()
 
+        learner.save()
+
         DISPLAYER.disp()
+        DISPLAYER.disp_q()
 
 
 if __name__ == '__main__':

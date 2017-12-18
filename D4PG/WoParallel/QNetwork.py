@@ -83,13 +83,49 @@ class Network:
 
     def build_critic_loss(self):
 
-        self.m = tf.placeholder(tf.float32, [None, settings.NB_ATOMS])
-        self.q_ph = tf.placeholder(tf.float32, [None, settings.NB_ATOMS])
+        # Compute the target value
+        reward = tf.expand_dims(self.reward_ph, 1)
+        not_done = tf.expand_dims(self.is_not_done_ph, 1)
+        targets = reward + not_done * settings.DISCOUNT * self.q_distrib_next
 
-        critic_loss = -tf.reduce_sum(self.m * tf.log(self.q_ph))
-        critic_loss += l2_regularization(self.critic_vars)
-        critic_trainer = tf.train.AdamOptimizer(settings.CRITIC_LEARNING_RATE)
-        self.critic_train_op = critic_trainer.minimize(critic_loss)
+        batch_size = tf.shape(self.reward_ph)[0]
+        shape = (batch_size, settings.NB_ATOMS)
+
+        m = tf.zeros([batch_size, settings.NB_ATOMS])
+        for i in range(settings.NB_ATOMS):
+            Tz = tf.clip_by_value(reward + settings.DISCOUNT * self.z[i],
+                                  self.min_q,
+                                  self.max_q)
+            bi = (Tz - self.min_q) / self.delta_z
+            l, u = tf.floor(bi), tf.ceil(bi)
+            l = tf.reshape(l, [-1])
+            u = tf.reshape(u, [-1])
+            bi = tf.reshape(bi, [-1])
+            l_index, u_index = tf.to_int32(l), tf.to_int32(u)
+
+            # While-loop in tensorflow : we iterate over each exp in the batch
+            # Loop counter
+            j = tf.constant(0)
+
+            # End condition
+            cond = lambda j, m: tf.less(j, batch_size)
+
+            # Function to apply in the loop : here, computation of the
+            # distributed probability and projection over the old support
+            # (c.f. C51 Algorithm 1) in a scattered tensor
+            def body(j, m):
+                indexes = [(j, l_index[j]), (j, u_index[j])]
+                values = [self.q_distrib_next[j, i] * (u[j] - bi[j]),
+                          self.q_distrib_next[j, i] * (bi[j] - l[j])]
+                return (j + 1, m + tf.scatter_nd(indexes, values, shape))
+
+            _, m = tf.while_loop(cond, body, [j, m])
+
+            # Critic loss and optimization
+            critic_loss = -tf.reduce_sum(m * tf.log(self.q_distrib_of_given_actions))
+            critic_loss += l2_regularization(self.critic_vars)
+            critic_trainer = tf.train.AdamOptimizer(settings.CRITIC_LEARNING_RATE)
+            self.critic_train_op = critic_trainer.minimize(critic_loss)
 
     def train(self, batch):
 
@@ -107,33 +143,7 @@ class Network:
                          self.next_state_ph: next_states,
                          self.is_not_done_ph: is_not_done}
             
-            q_next, q_giv_a, _ = self.sess.run([self.q_distrib_next,
-                                                self.q_distrib_of_given_actions,
-                                                self.actor_train_op],
-                                               feed_dict=feed_dict)
-
-            rewards = np.expand_dims(rewards, 1)
-            is_not_done = np.expand_dims(is_not_done, 1)
-
-            batch_size = len(batch)
-            m =  np.zeros([batch_size, settings.NB_ATOMS])
-
-            for i in range(settings.NB_ATOMS):
-                Tz = np.clip(rewards + settings.DISCOUNT * self.z[i],
-                                      self.min_q,
-                                      self.max_q)
-                bi = (Tz - self.min_q) / self.delta_z
-                l, u = np.floor(bi), np.ceil(bi)
-                l = np.reshape(l, [-1])
-                u = np.reshape(u, [-1])
-                bi = np.reshape(bi, [-1])
-                l_index, u_index = l.astype(int), u.astype(int)
-
-                for j in range(batch_size):
-                    m[j, l_index[j]] += q_next[j, i] * (u[j] - bi[j])
-                    m[j, u_index[j]] += q_next[j, i] * (bi[j] - l[j])
-
-            feed_dict = {self.m: m, self.q_ph: q_giv_a}
-            _ = self.sess.run(self.critic_train_op, feed_dict=feed_dict)
+            _, _ = self.sess.run([self.critic_train_op, self.actor_train_op],
+                                  feed_dict=feed_dict)
 
             _ = self.sess.run(self.update_targets)

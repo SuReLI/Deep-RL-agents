@@ -8,7 +8,7 @@ class Environment:
 
     def __init__(self):
         # self.env = RunEnv(visualize=False)
-        self.env = gym.make("Pendulum-v0")
+        self.env = gym.make("BipedalWalker-v2")
         print()
         self.render = False
 
@@ -34,7 +34,9 @@ class Environment:
         return self.env.action_space.sample()
 
     def act(self, action):
-        assert self.env.action_space.contains(action)
+        if not self.env.action_space.contains(action):
+            print(action)
+            assert self.env.action_space.contains(action)
         if self.render:
             self.env.render()
         return self.env.step(action)

@@ -12,7 +12,7 @@ DISCOUNT = 0.99
 
 # Memory settings
 MEMORY_SIZE = 1000000
-BATCH_SIZE = 1024
+BATCH_SIZE = 64
 
 # Learning rates
 ACTOR_LEARNING_RATE = 5e-4

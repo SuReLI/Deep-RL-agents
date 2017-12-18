@@ -1,6 +1,7 @@
 
 import tensorflow as tf
 import numpy as np
+from collections import deque
 
 from Model import build_actor
 from ExperienceBuffer import BUFFER
@@ -58,8 +59,9 @@ class Actor:
             episode_reward = 0
             episode_step = 0
             done = False
+            memory = deque()
 
-            noise_scale = settings.NOISE_SCALE * settings.NOISE_DECAY**total_eps
+            noise_scale = settings.NOISE_SCALE * settings.NOISE_DECAY**(total_eps//20)
 
             s = self.env.reset()
 
@@ -67,7 +69,9 @@ class Actor:
                       total_eps % settings.RENDER_FREQ == 0)
             self.env.set_render(render)
 
-            while not done and not STOP_REQUESTED:
+            max_steps = settings.MAX_STEPS + total_eps // 5
+
+            while episode_step < max_steps and not done and not STOP_REQUESTED:
 
                 noise = np.random.normal(size=self.action_size)
                 scaled_noise = noise_scale * noise
@@ -78,15 +82,20 @@ class Actor:
 
                 episode_reward += r
 
-                BUFFER.add(s, a, r, s_, 0 if done else 1)
+                memory.append((s, a, r, s_, 0 if done else 1))
+
+                if len(memory) >= settings.N_STEP_RETURN:
+                    s_mem, a_mem, discount_r, ss_mem, done_mem = memory.popleft()
+                    for i, (si, ai, ri, s_i, di) in enumerate(memory):
+                        discount_r += ri * settings.DISCOUNT ** (i + 1)
+                    BUFFER.add(s_mem, a_mem, discount_r, s_, done)
 
                 s = s_
                 episode_step += 1
             
-            if self.n_actor == 1 and total_eps % settings.EP_REW_FREQ == 0:
-                print("Episode %i : reward %i, steps %i, noise scale %f" % (total_eps, episode_reward, episode_step, noise_scale))
-
             if not STOP_REQUESTED:
+                if self.n_actor == 1 and total_eps % settings.EP_REW_FREQ == 0:
+                    print("Episode %i : reward %i, steps %i, noise scale %f" % (total_eps, episode_reward, episode_step, noise_scale))
                 DISPLAYER.add_reward(episode_reward, self.n_actor)
             
                 total_eps += 1

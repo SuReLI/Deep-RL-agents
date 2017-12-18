@@ -5,11 +5,11 @@ import settings
 
 def build_actor(states, bounds, action_size, trainable, scope):
     with tf.variable_scope(scope):
-        hidden = tf.layers.dense(states, 8, trainable=trainable,
+        hidden = tf.layers.dense(states, 64, trainable=trainable,
                                  activation=tf.nn.relu, name='dense')
-        hidden_2 = tf.layers.dense(hidden, 8, trainable=trainable,
+        hidden_2 = tf.layers.dense(hidden, 64, trainable=trainable,
                                    activation=tf.nn.relu, name='dense_1')
-        hidden_3 = tf.layers.dense(hidden_2, 8, trainable=trainable,
+        hidden_3 = tf.layers.dense(hidden_2, 64, trainable=trainable,
                                    activation=tf.nn.relu, name='dense_2')
         actions_unscaled = tf.layers.dense(hidden_3, action_size,
                                            trainable=trainable, name='dense_3')
@@ -23,13 +23,13 @@ def build_actor(states, bounds, action_size, trainable, scope):
 def build_critic(states, actions, trainable, reuse, scope):
     with tf.variable_scope(scope):
         states_actions = tf.concat([states, actions], axis=1)
-        hidden = tf.layers.dense(states_actions, 8,
+        hidden = tf.layers.dense(states_actions, 64,
                                  trainable=trainable, reuse=reuse,
                                  activation=tf.nn.relu, name='dense')
-        hidden_2 = tf.layers.dense(hidden, 8,
+        hidden_2 = tf.layers.dense(hidden, 64,
                                    trainable=trainable, reuse=reuse,
                                    activation=tf.nn.relu, name='dense_1')
-        hidden_3 = tf.layers.dense(hidden_2, 8,
+        hidden_3 = tf.layers.dense(hidden_2, 64,
                                    trainable=trainable, reuse=reuse,
                                    name='dense_2')
         q_values = tf.layers.dense(hidden_3, settings.NB_ATOMS,

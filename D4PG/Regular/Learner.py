@@ -1,10 +1,14 @@
 
+import os
 import tensorflow as tf
 import numpy as np
+import time
 
 import Actor
 from Model import *
 from ExperienceBuffer import BUFFER
+
+from Displayer import DISPLAYER
 
 import settings
 
@@ -14,6 +18,7 @@ class Learner:
     def __init__(self, sess, state_size, action_size, bounds):
 
         self.sess = sess
+        self.saver = tf.train.Saver()
 
         self.state_size = state_size
         self.action_size = action_size
@@ -74,15 +79,14 @@ class Learner:
         # Compute the target value
         reward = tf.expand_dims(self.reward_ph, 1)
         not_done = tf.expand_dims(self.is_not_done_ph, 1)
-        targets = reward + not_done * settings.DISCOUNT * self.q_distrib_next
+        targets = reward + not_done * settings.DISCOUNT_N * self.q_distrib_next
 
         batch_size = tf.shape(self.reward_ph)[0]
-
-        self.tour = []
+        shape = (batch_size, settings.NB_ATOMS)
 
         m = tf.zeros([batch_size, settings.NB_ATOMS])
         for i in range(settings.NB_ATOMS):
-            Tz = tf.clip_by_value(reward + settings.DISCOUNT * self.z[i],
+            Tz = tf.clip_by_value(reward + settings.DISCOUNT_N * self.z[i],
                                   min_q,
                                   max_q)
             bi = (Tz - min_q) / delta_z
@@ -106,17 +110,13 @@ class Learner:
                 indexes = [(j, l_index[j]), (j, u_index[j])]
                 values = [self.q_distrib_next[j, i] * (u[j] - bi[j]),
                           self.q_distrib_next[j, i] * (bi[j] - l[j])]
-                shape = (batch_size, settings.NB_ATOMS)
-                scatter = tf.scatter_nd(indexes, values, shape)
-                return (j + 1, m + scatter)
+                return (j + 1, m + tf.scatter_nd(indexes, values, shape))
 
             _, m = tf.while_loop(cond, body, [j, m])
 
-            self.tour.append([self.q_distrib_next[:, i], Tz, bi, l, u, l_index, u_index, m])
-
-        critic_loss = -tf.reduce_sum(m * tf.log(self.q_distrib_of_given_actions))
 
         # Critic loss and optimization
+        critic_loss = -tf.reduce_sum(m * tf.log(self.q_distrib_of_given_actions))
         critic_loss += l2_regularization(self.critic_vars)
         critic_trainer = tf.train.AdamOptimizer(settings.CRITIC_LEARNING_RATE)
         self.critic_train_op = critic_trainer.minimize(critic_loss)
@@ -138,7 +138,8 @@ class Learner:
 
     def run(self):
 
-        total_eps = 1
+        self.total_eps = 1
+        start_time = time.time()
 
         with self.sess.as_default(), self.sess.graph.as_default():
 
@@ -162,29 +163,40 @@ class Learner:
                     self.is_not_done_ph: np.asarray([elem[4] for elem in batch])
                 }
 
-                tour, _, _ = self.sess.run([self.tour, self.critic_train_op, self.actor_train_op],
+                q, _, _ = self.sess.run([self.q_values_of_suggested_actions, self.critic_train_op, self.actor_train_op],
                                      feed_dict=feed_dict)
 
-                for i in range(settings.NB_ATOMS):
-                    print("-"*100)
-                    print("Distrib : ", tour[i][0], "\n")
-                    print("Tz : ", tour[i][1], "\n")
-                    print("bi : ", tour[i][2], "\n")
-                    print("l : ", tour[i][3], "\n")
-                    print("u : ", tour[i][4], "\n")
-                    print("l_index : ", tour[i][5], "\n")
-                    print("u_index : ", tour[i][6], "\n")
-                    print("m : ", tour[i][7], "\n")
-                1/0
+                DISPLAYER.add_q(q[0])
 
-                if total_eps % settings.UPDATE_TARGET_FREQ == 0:
-                    # print("Orig : ", *self.sess.run(self.vars), sep='\n')
-                    # print("Before : ", *self.sess.run(self.target_vars), sep='\n')
+                if self.total_eps % settings.UPDATE_TARGET_FREQ == 0:
                     self.sess.run(self.update_targets)
-                    # print("After : ", *self.sess.run(self.target_vars), sep='\n')
-                    # 1/0
 
-                if total_eps % settings.UPDATE_ACTORS_FREQ == 0:
+                if self.total_eps % settings.UPDATE_ACTORS_FREQ == 0:
                     self.sess.run(self.update_actors)
 
-                total_eps += 1
+                # print("Learning ep : ", self.total_eps)
+                self.total_eps += 1
+
+                if self.total_eps % settings.PERF_FREQ == 0:
+                    print("PERF : %i learning round in %fs" %
+                          (settings.PERF_FREQ, time.time() - start_time))
+                    start_time = time.time()
+
+    def load(self, best=False):
+        print("Loading model...")
+        try:
+            if best:
+                self.saver.restore(self.sess, "model/Model_best.ckpt")
+                print("Best model loaded !")
+            else:
+                ckpt = tf.train.get_checkpoint_state("model/")
+                self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+                print("Model loaded !")
+        except (ValueError, AttributeError):
+            print("No model is saved !")
+
+    def save(self):
+        print("Saving model...")
+        os.makedirs(os.path.dirname("model/"), exist_ok=True)
+        self.saver.save(self.sess, "model/Model_" + str(self.total_eps) + ".ckpt")
+        print("Model saved !")

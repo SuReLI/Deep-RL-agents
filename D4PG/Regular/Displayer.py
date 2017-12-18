@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 import settings
 
+plt.ion()
 
 def save(saver, fig_name):
     if settings.DISPLAY:
@@ -15,6 +16,7 @@ def save(saver, fig_name):
         os.makedirs(os.path.dirname(fig_name), exist_ok=True)
         fig.savefig(fig_name)
         plt.show(block=False)
+        plt.pause(0.05)
         fig.clf()
     else:
         for path, data in saver:
@@ -22,6 +24,10 @@ def save(saver, fig_name):
             data = " ".join(map(str, data))
             with open(path, "w") as file:
                 file.write(data)
+
+
+def mean(tab, step=10):
+    return [np.mean(tab[max(1, i - step):i]) for i in range(2, len(tab))]
 
 
 class Displayer:
@@ -48,15 +54,13 @@ class Displayer:
 
     def disp_one(self):
         reward = self.rewards[1]
-        mean_reward = [np.mean(reward[max(1, i - 25):i])
-                       for i in range(2, len(reward))]
+        mean_reward = mean(reward, 25)
         saver = [("results/One_reward", reward),
                  ("results/One_mean_reward", mean_reward)]
         save(saver, "results/One_reward.png")
 
     def disp_seq(self):
-        mean_reward = [np.mean(self.sequential_rewards[max(1, i - 100):i])
-                       for i in range(2, len(self.sequential_rewards))]
+        mean_reward = mean(self.sequential_rewards)
         saver = [("results/Seq_reward", self.sequential_rewards),
                  ("results/Seq_mean_reward", mean_reward)]
         save(saver, "results/Seq_reward.png")
@@ -70,11 +74,10 @@ class Displayer:
         self.q_buf.append(q)
 
     def disp_q(self):
-        mean_q = [np.mean(self.q_buf[max(1, i-10):i]) for i in range(1, len(self.q_buf))]
+        mean_q = mean(self.q_buf)
         saver = [("results/Q", self.q_buf),
                  ("results/Q_mean", mean_q)]
         save(saver, "results/Q.png")
-
 
 
 DISPLAYER = Displayer()

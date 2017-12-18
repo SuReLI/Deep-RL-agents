@@ -1,6 +1,7 @@
-
+    
 import tensorflow as tf
 import numpy as np
+import time
 
 import Actor
 from Model import *
@@ -87,10 +88,8 @@ class Learner:
 
         update_actors = []
         for i in range(settings.NB_ACTORS):
-            zz = get_vars('worker_actor_%i'%(i+1), False)
-            print(zz)
             op = copy_vars(self.actor_vars,
-                           zz,
+                           get_vars('worker_actor_%i'%(i+1), False),
                            1, 'update_actor_%i'%i)
             update_actors.append(op)
         self.update_actors = tf.group(*update_actors, name='update_actors')
@@ -98,6 +97,7 @@ class Learner:
     def run(self):
 
         total_eps = 1
+        start_time = time.time()
 
         with self.sess.as_default(), self.sess.graph.as_default():
 
@@ -123,13 +123,14 @@ class Learner:
                                      feed_dict=feed_dict)
 
                 if total_eps % settings.UPDATE_TARGET_FREQ == 0:
-                    # print("Orig : ", *self.sess.run(self.vars), sep='\n')
-                    # print("Before : ", *self.sess.run(self.target_vars), sep='\n')
                     self.sess.run(self.update_targets)
-                    # print("After : ", *self.sess.run(self.target_vars), sep='\n')
-                    # 1/0
 
                 if total_eps % settings.UPDATE_ACTORS_FREQ == 0:
                     self.sess.run(self.update_actors)
 
                 total_eps += 1
+
+                if total_eps % settings.PERF_FREQ == 0:
+                    print("PERF : %i learning round in %fs" %
+                          (settings.PERF_FREQ, time.time() - start_time))
+                    start_time = time.time()

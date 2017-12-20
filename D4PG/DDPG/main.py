@@ -29,8 +29,8 @@ if __name__ == '__main__':
         DISPLAYER.disp()
         DISPLAYER.disp_q()
 
-        agent.play(10)
+        # agent.play(10)
 
-        agent.play(3, "results/gif/gif_save".format(settings.ENV))
+        # agent.play(3, "results/gif/gif_save".format(settings.ENV))
 
     agent.close()

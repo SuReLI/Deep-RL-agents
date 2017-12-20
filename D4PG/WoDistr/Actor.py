@@ -54,6 +54,8 @@ class Actor:
 
     def run(self):
 
+        import time
+
         total_eps = 1
         while not STOP_REQUESTED:
 
@@ -61,7 +63,7 @@ class Actor:
             episode_step = 0
             done = False
 
-            noise_scale = settings.NOISE_SCALE * settings.NOISE_DECAY**total_eps
+            noise_scale = settings.NOISE_SCALE * settings.NOISE_DECAY**(total_eps // 10)
 
             s = self.env.reset()
 
@@ -85,15 +87,17 @@ class Actor:
                 s = s_
                 episode_step += 1
 
-            if self.n_actor == 1 and total_eps % 10 == 0:
-            	BUFFER.stats()
+            # if self.n_actor == 1 and total_eps % 100 == 0:
+                # BUFFER.stats()
+                # BUFFER.disp()
             
             if self.n_actor == 1 and total_eps % settings.EP_REW_FREQ == 0:
-                print("Episode %i : reward %i, steps %i, noise scale %f" % (total_eps, episode_reward, episode_step, noise_scale))
+                print("Episode %i : reward %7.3f, steps %i, noise scale %f" % (total_eps, episode_reward, episode_step, noise_scale))
 
             if not STOP_REQUESTED:
                 DISPLAYER.add_reward(episode_reward, self.n_actor)
             
             total_eps += 1
+            # time.sleep(0.2)
 
         self.env.close()

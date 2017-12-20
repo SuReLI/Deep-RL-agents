@@ -4,27 +4,36 @@ from collections import deque
 
 import settings
 
+
+import matplotlib.pyplot as plt
+plt.ion()
+
+
+
 class ExperienceBuffer:
 
     def __init__(self):
         self.buffer = deque(maxlen=settings.MEMORY_SIZE)
         self.processed = deque(maxlen=settings.MEMORY_SIZE)
-        self.zeros = 0
+        self.non_zeros = 0
+        self.removed = []
 
     def __len__(self):
         return len(self.buffer)
 
     def add(self, s, a, r, s_, d):
+        if len(self.buffer) == settings.MEMORY_SIZE:
+            self.non_zeros -= 1
+            self.removed.append(self.processed[0])
         self.buffer.append((s, a, r, s_, d))
         self.processed.append(0)
-        self.zeros += 1
 
     def sample(self):
         size = min(settings.BATCH_SIZE, len(self.buffer))
         idx = random.sample(range(len(self.buffer)), size)
         for i in idx:
             if self.processed[i] == 0:
-                self.zeros -= 1
+                self.non_zeros += 1
             self.processed[i] += 1
         # print("Sampling : ")
         # print(idx)
@@ -34,12 +43,12 @@ class ExperienceBuffer:
         return [self.buffer[i] for i in idx]
 
     def stats(self):
-        percent = self.zeros / len(self.buffer) * 100
+        percent = self.non_zeros / len(self.buffer) * 100
         print("Percent seen : %0.3f" % percent)
         
-        avg = sum([elt for elt in self.processed]) / self.zeros
+        avg = sum([elt for elt in self.processed]) / self.non_zeros
         print("#seen avg : %0.3f" % avg)
-        print("Zeros : ", len(self.buffer) - self.zeros)
+        print("Zeros : ", len(self.buffer) - self.non_zeros)
         try:
             i = self.processed.index(0)
             print("Buffer size : ", len(self.buffer))
@@ -50,6 +59,12 @@ class ExperienceBuffer:
         total_avg = sum(self.processed) / len(self.buffer)
         print("#seen total avg : %0.3f" % total_avg)
         print()
+
+    def disp(self):
+        plt.gcf().clear()
+        plt.plot(self.removed)
+        plt.show(block=False)
+        plt.pause(0.5)
 
 # class ExperienceBuffer:
 

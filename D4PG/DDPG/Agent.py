@@ -49,7 +49,7 @@ class Agent:
             episode_step = 0
             done = False
 
-            noise_scale = settings.NOISE_SCALE * settings.NOISE_DECAY**ep
+            noise_scale = settings.NOISE_SCALE * settings.NOISE_DECAY**(ep // 10)
 
             # Initial state
             s = self.env.reset()
@@ -77,8 +77,9 @@ class Agent:
                     minibatch = self.buffer.sample()
                     self.network.train(minibatch)
 
-                if (self.total_steps+1) % (500*settings.TRAINING_FREQ) == 0:
-                    self.buffer.stats()
+                # if (self.total_steps+1) % (500*settings.TRAINING_FREQ) == 0:
+                    # self.buffer.stats()
+                    # self.buffer.disp() 
 
                 s = s_
                 episode_step += 1

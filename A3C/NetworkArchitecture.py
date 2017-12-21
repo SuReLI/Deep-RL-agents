@@ -2,7 +2,7 @@
 import tensorflow as tf
 import numpy as np
 
-import parameters
+import settings
 
 
 class NetworkArchitecture:
@@ -17,7 +17,7 @@ class NetworkArchitecture:
 
         layers = [self.inputs]
 
-        size = parameters.LAYERS_SIZE
+        size = settings.LAYERS_SIZE
         for n in range(len(size)):
             layer = tf.layers.dense(
                 layers[n], size[n], activation=activation_fn)
@@ -57,7 +57,7 @@ class NetworkArchitecture:
 
         with tf.variable_scope('LSTM'):
             # New LSTM Network with 256 cells
-            lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(parameters.LSTM_CELLS)
+            lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(settings.LSTM_CELLS)
             c_size = lstm_cell.state_size.c
             h_size = lstm_cell.state_size.h
 
@@ -89,7 +89,7 @@ class NetworkArchitecture:
                                                         state_in)
             lstm_c, lstm_h = lstm_state
             self.state_out = (lstm_c[:1, :], lstm_h[:1, :])
-            self.output = tf.reshape(lstm_output, [-1, parameters.LSTM_CELLS])
+            self.output = tf.reshape(lstm_output, [-1, settings.LSTM_CELLS])
             return (c_in, h_in)
 
     def return_output(self, lstm):

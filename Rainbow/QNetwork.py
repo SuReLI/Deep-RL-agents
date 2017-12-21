@@ -3,7 +3,7 @@ import tensorflow as tf
 
 from NetworkArchitecture import NetworkArchitecture
 
-import parameters
+import settings
 
 
 class QNetwork:
@@ -42,5 +42,5 @@ class QNetwork:
             self.td_error = tf.square(self.Qtarget - self.Qaction)
             self.loss = tf.reduce_mean(self.td_error)
             self.trainer = tf.train.AdamOptimizer(
-                learning_rate=parameters.LEARNING_RATE)
+                learning_rate=settings.LEARNING_RATE)
             self.train = self.trainer.minimize(self.loss)

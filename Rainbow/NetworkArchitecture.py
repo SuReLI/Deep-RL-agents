@@ -3,7 +3,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 from tensorflow.contrib.layers import flatten
 
-import parameters
+import settings
 
 
 class NetworkArchitecture:
@@ -17,7 +17,7 @@ class NetworkArchitecture:
         self.inputs = tf.placeholder(tf.float32, [None, *self.state_size],
                                      name='Input_state')
 
-        if parameters.CONV:
+        if settings.CONV:
 
             with tf.variable_scope('Convolutional_Layers'):
                 self.conv1 = slim.conv2d(activation_fn=tf.nn.elu,

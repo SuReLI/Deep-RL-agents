@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 from NetworkArchitecture import NetworkArchitecture
-import parameters
+import settings
 
 
 class Network:
@@ -19,14 +19,14 @@ class Network:
             self.model = NetworkArchitecture(self.state_size)
 
             # Convolution network - or not
-            if parameters.CONV:
+            if settings.CONV:
                 self.inputs = self.model.build_conv()
 
             else:
                 self.inputs = self.model.build_regular_layers()
 
             # LSTM Network - or not
-            if parameters.LSTM:
+            if settings.LSTM:
                 # Input placeholder
                 self.state_in = self.model.build_lstm()
 
@@ -69,19 +69,19 @@ class Network:
 
             # Estimate the final loss.
             self.loss = self.policy_loss + \
-                parameters.VALUE_REG * self.value_loss - \
-                parameters.ENTROPY_REG * self.entropy
+                settings.VALUE_REG * self.value_loss - \
+                settings.ENTROPY_REG * self.entropy
 
             # Fetch and clip the gradients of the local network.
             local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
                                            scope)
             gradients = tf.gradients(self.loss, local_vars)
             clipped_gradients, self.grad_norm = tf.clip_by_global_norm(
-                gradients, parameters.MAX_GRADIENT_NORM)
+                gradients, settings.MAX_GRADIENT_NORM)
 
             # Apply gradients to global network
             global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
                                             'global')
-            optimizer = tf.train.AdamOptimizer(parameters.LEARNING_RATE)
+            optimizer = tf.train.AdamOptimizer(settings.LEARNING_RATE)
             grads_and_vars = zip(clipped_gradients, global_vars)
             self.apply_grads = optimizer.apply_gradients(grads_and_vars)

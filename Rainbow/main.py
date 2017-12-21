@@ -6,7 +6,7 @@ from Agent import Agent
 from Displayer import DISPLAYER
 from Saver import SAVER
 
-import parameters
+import settings
 
 if __name__ == '__main__':
     
@@ -29,6 +29,6 @@ if __name__ == '__main__':
 
         agent.play(10)
 
-        agent.play(3, "results/gif/{}".format(parameters.ENV))
+        agent.play(3, "results/gif/{}".format(settings.ENV))
 
     agent.stop()

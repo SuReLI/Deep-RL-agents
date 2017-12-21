@@ -1,7 +1,7 @@
 
 import os
 import gym
-from parameters import ENV, FRAME_SKIP, DISPLAY
+from settings import ENV, FRAME_SKIP, DISPLAY
 
 from PIL import Image
 import imageio

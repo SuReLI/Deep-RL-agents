@@ -4,11 +4,11 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-import parameters
+import settings
 
 
 def save(saver, fig_name):
-    if parameters.DISPLAY:
+    if settings.DISPLAY:
         for path, data in saver:
             plt.plot(data)
         fig = plt.gcf()
@@ -26,15 +26,15 @@ def save(saver, fig_name):
 class Displayer:
 
     def __init__(self):
-        self.rewards = [[] for a in range(parameters.THREADS + 1)]
+        self.rewards = [[] for a in range(settings.THREADS + 1)]
         self.sequential_rewards = []
 
     def add_reward(self, reward, n_agent):
         self.rewards[n_agent].append(reward)
         if n_agent != 0:
             self.sequential_rewards.append(reward)
-        if n_agent == 1 and len(self.rewards[1]) % parameters.PLOT_FREQ == 0:
-            if parameters.DISPLAY:
+        if n_agent == 1 and len(self.rewards[1]) % settings.PLOT_FREQ == 0:
+            if settings.DISPLAY:
                 self.disp_one()
             else:
                 print(self.rewards[1][max(0, -50):])

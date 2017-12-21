@@ -10,13 +10,13 @@ from QNetwork import QNetwork
 
 from Displayer import DISPLAYER
 from Saver import SAVER
-import parameters
+import settings
 
 
 def updateTargetGraph(tfVars):
     total_vars = len(tfVars)
     op_holder = []
-    tau = parameters.UPDATE_TARGET_RATE
+    tau = settings.UPDATE_TARGET_RATE
     for idx, var in enumerate(tfVars[0:total_vars // 2]):
         op_holder.append(tfVars[idx + total_vars // 2].assign(
             (var.value() * tau) +
@@ -48,11 +48,11 @@ class Agent:
                                        'target')
         print("Target QNetwork created !\n")
 
-        self.buffer = PrioritizedReplayBuffer(parameters.BUFFER_SIZE,
-                                              parameters.ALPHA)
+        self.buffer = PrioritizedReplayBuffer(settings.BUFFER_SIZE,
+                                              settings.ALPHA)
 
-        self.epsilon = parameters.EPSILON_START
-        self.beta = parameters.BETA_START
+        self.epsilon = settings.EPSILON_START
+        self.beta = settings.BETA_START
 
         trainables = tf.trainable_variables()
         self.update_target_ops = updateTargetGraph(trainables)
@@ -64,14 +64,14 @@ class Agent:
     def pre_train(self):
         print("Beginning of the pre-training...")
 
-        for i in range(parameters.PRE_TRAIN_STEPS):
+        for i in range(settings.PRE_TRAIN_STEPS):
 
             s = self.env.reset()
             done = False
             episode_step = 0
             episode_reward = 0
 
-            while episode_step < parameters.MAX_EPISODE_STEPS and not done:
+            while episode_step < settings.MAX_EPISODE_STEPS and not done:
 
                 a = random.randint(0, self.action_size - 1)
                 s_, r, done, info = self.env.act(a)
@@ -96,7 +96,7 @@ class Agent:
         self.total_steps = 0
         self.nb_ep = 1
 
-        while self.nb_ep < parameters.TRAINING_STEPS:
+        while self.nb_ep < settings.TRAINING_STEPS:
 
             s = self.env.reset()
             episode_reward = 0
@@ -106,13 +106,13 @@ class Agent:
             discount_R = 0
 
             episode_step = 0
-            max_step = parameters.MAX_EPISODE_STEPS + \
-                self.nb_ep // parameters.EP_ELONGATION
+            max_step = settings.MAX_EPISODE_STEPS + \
+                self.nb_ep // settings.EP_ELONGATION
 
-            # Render parameters
-            self.env.set_render(self.nb_ep % parameters.RENDER_FREQ == 0)
-            gif = (self.nb_ep % parameters.GIF_FREQ ==
-                   0) and parameters.DISPLAY
+            # Render settings
+            self.env.set_render(self.nb_ep % settings.RENDER_FREQ == 0)
+            gif = (self.nb_ep % settings.GIF_FREQ ==
+                   0) and settings.DISPLAY
 
             while episode_step < max_step and not done:
 
@@ -128,20 +128,20 @@ class Agent:
 
                 memory.append((s, a, r, s_, done))
 
-                if len(memory) > parameters.N_STEP_RETURN:
+                if len(memory) > settings.N_STEP_RETURN:
                     s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
                     discount_R = r_mem
                     for i, (si, ai, ri, s_i, di) in enumerate(memory):
-                        discount_R += ri * parameters.DISCOUNT ** (i + 1)
+                        discount_R += ri * settings.DISCOUNT ** (i + 1)
                     self.buffer.add(s_mem, a_mem, discount_R, s_, done)
 
-                if episode_step % parameters.TRAINING_FREQ == 0:
+                if episode_step % settings.TRAINING_FREQ == 0:
 
-                    train_batch = self.buffer.sample(parameters.BATCH_SIZE,
+                    train_batch = self.buffer.sample(settings.BATCH_SIZE,
                                                      self.beta)
                     # Incr beta
-                    if self.beta <= parameters.BETA_STOP:
-                        self.beta += parameters.BETA_INCR
+                    if self.beta <= settings.BETA_STOP:
+                        self.beta += settings.BETA_INCR
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
                     mainQaction = self.sess.run(self.mainQNetwork.predict,
@@ -155,10 +155,10 @@ class Agent:
                     # equals 0 if the episode was done
                     # equals 1 else
                     done_multiplier = (1 - train_batch[4])
-                    doubleQ = targetQvalues[range(parameters.BATCH_SIZE),
+                    doubleQ = targetQvalues[range(settings.BATCH_SIZE),
                                             mainQaction]
                     targetQvalues = train_batch[2] + \
-                        parameters.DISCOUNT * doubleQ * done_multiplier
+                        settings.DISCOUNT * doubleQ * done_multiplier
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[0],
                                  self.mainQNetwork.Qtarget: targetQvalues,
@@ -178,12 +178,12 @@ class Agent:
             self.nb_ep += 1
 
             # Decay epsilon
-            if self.epsilon > parameters.EPSILON_STOP:
-                self.epsilon -= parameters.EPSILON_DECAY
+            if self.epsilon > settings.EPSILON_STOP:
+                self.epsilon -= settings.EPSILON_DECAY
 
             DISPLAYER.add_reward(episode_reward)
             if episode_reward > self.best_run and \
-                    self.nb_ep > 50 + parameters.PRE_TRAIN_STEPS:
+                    self.nb_ep > 50 + settings.PRE_TRAIN_STEPS:
                 self.best_run = episode_reward
                 print("Save best", episode_reward)
                 SAVER.save('best')
@@ -191,18 +191,18 @@ class Agent:
 
             if gif:
                 self.env.save_gif('results/gif/gif_save', self.n_gif)
-                self.n_gif = (self.n_gif + 1) % parameters.MAX_NB_GIF
+                self.n_gif = (self.n_gif + 1) % settings.MAX_NB_GIF
 
             self.total_steps += 1
 
-            if self.nb_ep % parameters.DISP_EP_REWARD_FREQ == 0:
+            if self.nb_ep % settings.DISP_EP_REWARD_FREQ == 0:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %i'
                       ', Max steps: %i' % (self.nb_ep, episode_reward,
                                            episode_step, self.epsilon,
                                            max_step))
 
             # Save the model
-            if self.nb_ep % parameters.SAVE_FREQ == 0:
+            if self.nb_ep % settings.SAVE_FREQ == 0:
                 SAVER.save(self.nb_ep)
 
     def play(self, number_run, path=''):

@@ -11,7 +11,7 @@ from Network import Network
 from Displayer import DISPLAYER
 from Saver import SAVER
 
-import parameters
+import settings
 
 
 # Discounting function used to calculate discounted returns.
@@ -23,7 +23,7 @@ def discount(x, gamma):
 
 
 # Copies one set of variables to another.
-# Used to set worker network parameters to those of global network.
+# Used to set worker network settings to those of global network.
 def update_target_graph(from_scope, to_scope):
     from_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, from_scope)
     to_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, to_scope)
@@ -54,7 +54,7 @@ class Agent:
         self.update_local_vars = update_target_graph('global', self.name)
 
         self.starting_time = 0
-        self.epsilon = parameters.EPSILON_START
+        self.epsilon = settings.EPSILON_START
 
         if self.name != 'global':
             self.summary_writer = tf.summary.FileWriter("results/" + self.name,
@@ -86,15 +86,15 @@ class Agent:
         # Add the bootstrap value to our experience
         self.rewards_plus = np.asarray(self.rewards_buffer + [bootstrap_value])
         discounted_reward = discount(
-            self.rewards_plus, parameters.DISCOUNT)[:-1]
+            self.rewards_plus, settings.DISCOUNT)[:-1]
 
         self.next_values = np.asarray(self.values_buffer[1:] +
                                       [bootstrap_value])
         advantages = self.rewards_buffer + \
-            parameters.DISCOUNT * self.next_values - \
+            settings.DISCOUNT * self.next_values - \
             self.values_buffer
         advantages = discount(
-            advantages, parameters.GENERALIZED_LAMBDA * parameters.DISCOUNT)
+            advantages, settings.GENERALIZED_LAMBDA * settings.DISCOUNT)
 
 
         # Update the global network
@@ -147,15 +147,15 @@ class Agent:
 
                     s = self.env.reset()
                     done = False
-                    render = (self.nb_ep % parameters.RENDER_FREQ == 0)
-                    if self.worker_index == 1 and render and parameters.DISPLAY:
+                    render = (self.nb_ep % settings.RENDER_FREQ == 0)
+                    if self.worker_index == 1 and render and settings.DISPLAY:
                         self.env.set_render(True)
 
                     self.lstm_state = self.network.lstm_state_init
                     self.initial_lstm_state = self.lstm_state
 
                     while not coord.should_stop() and not done and \
-                            episode_step < parameters.MAX_EPISODE_STEP:
+                            episode_step < settings.MAX_EPISODE_STEP:
 
 
                         # Prediction of the policy and the value
@@ -193,7 +193,7 @@ class Agent:
                         # If we have more than MAX_LEN_BUFFER experiences, we
                         # apply the gradients and update the global network,
                         # then we empty the episode buffers
-                        if len(self.states_buffer) == parameters.MAX_LEN_BUFFER \
+                        if len(self.states_buffer) == settings.MAX_LEN_BUFFER \
                                 and not done:
 
                             feed_dict = {self.network.inputs: [s],
@@ -217,8 +217,8 @@ class Agent:
                                 feed_dict=feed_dict)
                         self.train(sess, bootstrap_value)
 
-                    if self.epsilon > parameters.EPSILON_STOP:
-                        self.epsilon -= parameters.EPSILON_DECAY
+                    if self.epsilon > settings.EPSILON_STOP:
+                        self.epsilon -= settings.EPSILON_DECAY
 
                     self.nb_ep += 1
 
@@ -226,17 +226,17 @@ class Agent:
                         DISPLAYER.add_reward(episode_reward, self.worker_index)
 
                     if (self.worker_index == 1 and
-                            self.nb_ep % parameters.DISP_EP_REWARD_FREQ == 0):
+                            self.nb_ep % settings.DISP_EP_REWARD_FREQ == 0):
                         print('Episode %2i, Reward: %i, Steps: %i, '
                               'Epsilon: %7.3f' %
                               (self.nb_ep, episode_reward, episode_step,
                                self.epsilon))
 
                     if (self.worker_index == 1 and
-                            self.nb_ep % parameters.SAVE_FREQ == 0):
+                            self.nb_ep % settings.SAVE_FREQ == 0):
                         self.save(self.total_steps)
 
-                    if time() - self.starting_time > parameters.LIMIT_RUN_TIME:
+                    if time() - self.starting_time > settings.LIMIT_RUN_TIME:
                         coord.request_stop()
 
                     self.env.set_render(False)

@@ -1,6 +1,6 @@
 
 import tensorflow as tf
-import parameters
+import settings
 import threading
 from time import sleep
 
@@ -18,12 +18,12 @@ if __name__ == '__main__':
         with tf.device("/cpu:0"):
 
             # Create the global network
-            render = parameters.DISPLAY
+            render = settings.DISPLAY
             master_agent = Agent(0, sess, render=render, master=True)
 
             # Create all the workers
             workers = []
-            for i in range(parameters.THREADS):
+            for i in range(settings.THREADS):
                 workers.append(Agent(i + 1, sess, render=False))
 
         coord = tf.train.Coordinator()
@@ -56,4 +56,4 @@ if __name__ == '__main__':
         DISPLAYER.disp_one()
         DISPLAYER.disp_seq()
         master_agent.play(sess, 10)
-        master_agent.play(sess, 1, "results/gif/{}_1.gif".format(parameters.ENV))
+        master_agent.play(sess, 1, "results/gif/{}_1.gif".format(settings.ENV))

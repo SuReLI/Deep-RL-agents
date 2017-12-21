@@ -4,11 +4,11 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-import parameters
+import settings
 
 
 def save(saver, fig_name):
-    if parameters.DISPLAY:
+    if settings.DISPLAY:
         for path, data in saver:
             plt.plot(data)
         fig = plt.gcf()
@@ -30,8 +30,8 @@ class Displayer:
 
     def add_reward(self, reward):
         self.rewards.append(reward)
-        if len(self.rewards) % parameters.PLOT_FREQ == 0:
-            if parameters.DISPLAY:
+        if len(self.rewards) % settings.PLOT_FREQ == 0:
+            if settings.DISPLAY:
                 self.disp()
             else:
                 print(self.rewards[-50:])

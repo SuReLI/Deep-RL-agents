@@ -1,8 +1,5 @@
 
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
-from tensorflow.contrib.layers import flatten
-
 import settings
 
 
@@ -20,48 +17,43 @@ class NetworkArchitecture:
         if settings.CONV:
 
             with tf.variable_scope('Convolutional_Layers'):
-                self.conv1 = slim.conv2d(activation_fn=tf.nn.elu,
-                                         inputs=self.inputs,
-                                         num_outputs=32,
-                                         kernel_size=[8, 8],
-                                         stride=[4, 4],
-                                         padding='VALID')
-                self.conv2 = slim.conv2d(activation_fn=tf.nn.elu,
-                                         inputs=self.conv1,
-                                         num_outputs=64,
-                                         kernel_size=[4, 4],
-                                         stride=[2, 2],
-                                         padding='VALID')
-                self.conv3 = slim.conv2d(activation_fn=tf.nn.elu,
-                                         inputs=self.conv2,
-                                         num_outputs=64,
-                                         kernel_size=[3, 3],
-                                         stride=[1, 1],
-                                         padding='VALID')
+
+                self.conv1 = tf.layers.conv2d(inputs=self.inputs,
+                                              filters=32,
+                                              kernel_size=[8, 8],
+                                              stride=[4, 4],
+                                              padding='VALID',
+                                              activation=tf.nn.relu)
+                self.conv2 = tf.layers.conv2d(inputs=self.conv1,
+                                              filters=64,
+                                              kernel_size=[4, 4],
+                                              stride=[2, 2],
+                                              padding='VALID',
+                                              activation=tf.nn.relu)
+                self.conv3 = tf.layers.conv2d(inputs=self.conv2,
+                                              filters=64,
+                                              kernel_size=[3, 3],
+                                              stride=[1, 1],
+                                              padding='VALID',
+                                              activation=tf.nn.relu)
 
             # Flatten the output
-            self.hidden = flatten(self.conv3)
+            self.hidden = tf.layers.flatten(self.conv3)
 
         else:
-            self.hidden = slim.fully_connected(self.inputs,
-                                               64,
-                                               activation_fn=tf.nn.elu)
+            self.hidden = tf.layers.dense(self.inputs, 64,
+                                          activation=tf.nn.relu)
 
         return self.inputs
 
     def dueling(self):
 
-        self.advantage_stream = slim.fully_connected(self.hidden,
-                                                     32,
-                                                     activation_fn=tf.nn.elu)
-        self.value_stream = slim.fully_connected(self.hidden,
-                                                 32,
-                                                 activation_fn=tf.nn.elu)
+        self.adv_stream = tf.layers.dense(self.hidden, 32,
+                                          activation=tf.nn.relu)
+        self.value_stream = tf.layers.dense(self.hidden, 32,
+                                            activation=tf.nn.relu)
 
-        self.advantage = slim.fully_connected(self.advantage_stream,
-                                              self.action_size,
-                                              activation_fn=None)
-        self.value = slim.fully_connected(self.value_stream,
-                                          1,
-                                          activation_fn=None)
+        self.advantage = tf.layers.dense(self.adv_stream, self.action_size)
+        self.value = tf.layers.dense(self.value_stream, 1)
+
         return self.value, self.advantage

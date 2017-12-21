@@ -10,7 +10,6 @@ LEARNING_RATE = 7.5e-4
 
 DISCOUNT = 0.99
 N_STEP_RETURN = 3
-DISCOUNT_N = DISCOUNT**(N_STEP_RETURN-1)
 
 FRAME_SKIP = 0
 BUFFER_SIZE = 100000
@@ -21,7 +20,7 @@ TRAINING_STEPS = 10000
 PRE_TRAIN_STEPS = 500
 
 # Maximal number of steps during one episode
-MAX_EPISODE_STEPS = 50
+MAX_EPISODE_STEPS = 2000
 TRAINING_FREQ = 4
 
 # Rate to update target network toward primary network

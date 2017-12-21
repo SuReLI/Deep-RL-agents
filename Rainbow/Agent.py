@@ -119,14 +119,13 @@ class Agent:
                 if random.random() < self.epsilon:
                     a = random.randint(0, self.action_size - 1)
                 else:
-                    a = self.sess.run(self.mainQNetwork.predict,
-                                      feed_dict={self.mainQNetwork.inputs: [s]})
-                    a = a[0]
+                    a, = self.sess.run(self.mainQNetwork.predict,
+                                       feed_dict={self.mainQNetwork.inputs: [s]})
 
                 s_, r, done, info = self.env.act(a, gif)
                 episode_reward += r
 
-                memory.append((s, a, r, s_, done))
+                memory.append((s, a, r, s_, 0 if done else 1))
 
                 if len(memory) > settings.N_STEP_RETURN:
                     s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
@@ -151,14 +150,10 @@ class Agent:
                     targetQvalues = self.sess.run(self.targetQNetwork.Qvalues,
                                                   feed_dict=feed_dict)
 
-                    # Done multiplier :
-                    # equals 0 if the episode was done
-                    # equals 1 else
-                    done_multiplier = (1 - train_batch[4])
                     doubleQ = targetQvalues[range(settings.BATCH_SIZE),
                                             mainQaction]
                     targetQvalues = train_batch[2] + \
-                        settings.DISCOUNT * doubleQ * done_multiplier
+                        settings.DISCOUNT * doubleQ * train_batch[4]
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[0],
                                  self.mainQNetwork.Qtarget: targetQvalues,

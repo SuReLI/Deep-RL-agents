@@ -2,7 +2,6 @@
 import tensorflow as tf
 
 from NetworkArchitecture import NetworkArchitecture
-
 import settings
 
 

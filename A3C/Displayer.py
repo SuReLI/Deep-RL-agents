@@ -15,6 +15,7 @@ def save(saver, fig_name):
         os.makedirs(os.path.dirname(fig_name), exist_ok=True)
         fig.savefig(fig_name)
         plt.show(block=False)
+        fig.clf()
     else:
         for path, data in saver:
             os.makedirs(os.path.dirname(path), exist_ok=True)

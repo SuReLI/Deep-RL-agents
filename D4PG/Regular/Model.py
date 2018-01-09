@@ -31,7 +31,7 @@ def build_critic(states, actions, trainable, reuse, scope):
                                    activation=tf.nn.relu, name='dense_1')
         hidden_3 = tf.layers.dense(hidden_2, 64,
                                    trainable=trainable, reuse=reuse,
-                                   name='dense_2')
+                                   activation=tf.nn.relu, name='dense_2')
         q_values = tf.layers.dense(hidden_3, settings.NB_ATOMS,
                                    trainable=trainable, reuse=reuse,
                                    activation=tf.nn.softmax, name='dense_3')

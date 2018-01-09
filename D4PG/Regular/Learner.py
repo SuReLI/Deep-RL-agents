@@ -78,13 +78,11 @@ class Learner:
 
         # Compute the target value
         reward = tf.expand_dims(self.reward_ph, 1)
-        not_done = tf.expand_dims(self.is_not_done_ph, 1)
-        targets = reward + not_done * settings.DISCOUNT_N * self.q_distrib_next
 
         batch_size = tf.shape(self.reward_ph)[0]
         shape = (batch_size, settings.NB_ATOMS)
 
-        m = tf.zeros([batch_size, settings.NB_ATOMS])
+        m = tf.zeros(shape)
         for i in range(settings.NB_ATOMS):
             Tz = tf.clip_by_value(reward + settings.DISCOUNT_N * self.z[i],
                                   min_q,

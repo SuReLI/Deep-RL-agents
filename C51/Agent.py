@@ -102,7 +102,7 @@ class Agent:
             episode_reward = 0
             done = False
 
-            episode_step = 0
+            episode_step = 1
             max_step = settings.MAX_EPISODE_STEPS + self.nb_ep // settings.EP_ELONGATION
 
             # Render settings
@@ -115,20 +115,17 @@ class Agent:
                     a = random.randint(0, self.action_size - 1)
                 else:
                     a, = self.sess.run(self.mainQNetwork.actions,
-                                       feed_dict={self.mainQNetwork.inputs: [s]})
+                                       feed_dict={self.mainQNetwork.state_ph: [s]})
 
                 s_, r, done, info = self.env.act(a, gif)
                 episode_reward += r
 
-                self.buffer.add((s, a, r, s_, done))
-
-                print("Act")
+                self.buffer.add((s, a, r, s_, True if not done else False))
 
                 if episode_step % settings.TRAINING_FREQ == 0:
 
                     batch = self.buffer.sample()
-                    print(self.mainQNetwork)
-                    self.mainQNetwork.train_minibatch(batch)
+                    self.mainQNetwork.train_minibatch(np.asarray(batch))
 
                     # feed_dict = {self.mainQNetwork.inputs: batch[0]}
                     # QValues = self.sess.run(self.mainQNetwork.)
@@ -181,7 +178,7 @@ class Agent:
             self.total_steps += 1
 
             if self.nb_ep % settings.DISP_EP_REWARD_FREQ == 0:
-                print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %i'
+                print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %f'
                       ', Max steps: %i' % (self.nb_ep, episode_reward,
                                            episode_step, self.epsilon,
                                            max_step))
@@ -202,7 +199,7 @@ class Agent:
 
                 while not done:
                     a = self.sess.run(self.mainQNetwork.actions,
-                                      feed_dict={self.mainQNetwork.inputs: [s]})
+                                      feed_dict={self.mainQNetwork.state_ph: [s]})
                     a = a[0]
                     s, r, done, info = self.env.act(a, path != '')
 

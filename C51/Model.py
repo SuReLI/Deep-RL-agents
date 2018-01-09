@@ -2,10 +2,7 @@
 import tensorflow as tf
 import settings
 
-def build_model(state_size, action_size):
-
-    inputs = tf.placeholder(tf.float32, [None, *state_size],
-                            name='state_ph')
+def build_model(inputs, action_size):
 
     if settings.CONV:
         with tf.variable_scope('Convolutional_Layers'):
@@ -32,6 +29,4 @@ def build_model(state_size, action_size):
         output.append(tf.layers.dense(hidden, settings.NB_ATOMS,
                                       activation=tf.nn.softmax,
                                       name='hidden3_' + str(i+1)))
-    output = tf.stack(output, axis=1)
-
-    return inputs, output
+    return tf.stack(output, axis=1)

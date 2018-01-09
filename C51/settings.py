@@ -1,5 +1,5 @@
 
-ENV = "Acrobot-v1"
+ENV = "CartPole-v0"
 
 LOAD = False
 DISPLAY = True
@@ -7,7 +7,7 @@ DISPLAY = True
 CONV = False
 
 DISCOUNT = 0.99
-NB_ATOMS = 51
+NB_ATOMS = 5
 MIN_VALUE = -10
 MAX_VALUE = 10
 
@@ -16,11 +16,11 @@ LEARNING_RATE = 7.5e-4
 
 FRAME_SKIP = 0
 BUFFER_SIZE = 100000
-BATCH_SIZE = 32
+BATCH_SIZE = 2
 
 # Number of episodes of game environment to train with
 TRAINING_STEPS = 10000
-PRE_TRAIN_STEPS = 500
+PRE_TRAIN_STEPS = 00
 
 # Maximal number of steps during one episode
 MAX_EPISODE_STEPS = 50

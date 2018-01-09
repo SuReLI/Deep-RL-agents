@@ -18,4 +18,5 @@ class ExperienceBuffer:
         self.buffer.append(experience)
 
     def sample(self):
-        return random.sample(self.buffer, settings.BATCH_SIZE)
+        batch_size = min(settings.BATCH_SIZE, len(self.buffer))
+        return random.sample(self.buffer, batch_size)

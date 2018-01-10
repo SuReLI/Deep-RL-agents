@@ -114,13 +114,13 @@ class Agent:
                 if random.random() < self.epsilon:
                     a = random.randint(0, self.action_size - 1)
                 else:
-                    a, = self.sess.run(self.mainQNetwork.actions,
+                    a, = self.sess.run(self.mainQNetwork.action,
                                        feed_dict={self.mainQNetwork.state_ph: [s]})
 
                 s_, r, done, info = self.env.act(a, gif)
                 episode_reward += r
 
-                self.buffer.add((s, a, r, s_, True if not done else False))
+                self.buffer.add((s, a, r, s_, 1 if not done else 0))
 
                 if episode_step % settings.TRAINING_FREQ == 0:
 
@@ -146,7 +146,7 @@ class Agent:
 
                     # feed_dict = {self.mainQNetwork.inputs: batch[0],
                     #              self.mainQNetwork.Qtarget: targetQvalues,
-                    #              self.mainQNetwork.actions: batch[1]}
+                    #              self.mainQNetwork.action: batch[1]}
                     # td_error, _ = self.sess.run([self.mainQNetwork.td_error,
                     #                              self.mainQNetwork.train],
                     #                             feed_dict=feed_dict)
@@ -198,7 +198,7 @@ class Agent:
                 done = False
 
                 while not done:
-                    a = self.sess.run(self.mainQNetwork.actions,
+                    a = self.sess.run(self.mainQNetwork.action,
                                       feed_dict={self.mainQNetwork.state_ph: [s]})
                     a = a[0]
                     s, r, done, info = self.env.act(a, path != '')

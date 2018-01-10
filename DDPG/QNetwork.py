@@ -75,6 +75,12 @@ class Network:
         self.critic_train_op = critic_trainer.minimize(critic_loss)
 
         # Actor loss and optimization
+        # self.action_grad = tf.gradients(self.q_values_of_suggested_actions, self.actions)[0]
+        # self.actor_grad = tf.gradients(self.actions, self.actor_vars, -self.action_grad)
+        # actor_trainer = tf.train.AdamOptimizer(settings.ACTOR_LEARNING_RATE)
+        # self.actor_train_op = actor_trainer.apply_gradients(zip(self.actor_grad, self.actor_vars))
+
+        # Actor loss and optimization
         actor_loss = -1 * tf.reduce_mean(self.q_values_of_suggested_actions)
         actor_loss += l2_regularization(self.actor_vars)
         actor_trainer = tf.train.AdamOptimizer(settings.ACTOR_LEARNING_RATE)

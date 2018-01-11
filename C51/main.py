@@ -29,6 +29,6 @@ if __name__ == '__main__':
 
         agent.play(10)
 
-        agent.play(3, "results/gif/{}".format(settings.ENV))
+        # agent.play(3, "results/gif/{}".format(settings.ENV))
 
     agent.stop()

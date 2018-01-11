@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 import settings
 
+plt.ion()
 
 def save(saver, fig_name):
     if settings.DISPLAY:
@@ -15,6 +16,7 @@ def save(saver, fig_name):
         os.makedirs(os.path.dirname(fig_name), exist_ok=True)
         fig.savefig(fig_name)
         plt.show(block=False)
+        plt.pause(0.05)
         fig.clf()
     else:
         for path, data in saver:

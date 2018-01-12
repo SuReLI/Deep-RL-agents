@@ -3,7 +3,7 @@ import tensorflow as tf
 import settings
 
 
-def build_model(inputs, action_size, trainable, scope):
+def build_model(inputs, action_size, trainable, scope, reuse):
 
     with tf.variable_scope(scope):
         if settings.CONV:
@@ -14,29 +14,35 @@ def build_model(inputs, action_size, trainable, scope):
                                          strides=[4, 4],
                                          padding='valid',
                                          activation=tf.nn.relu,
-                                         trainable=trainable)
+                                         trainable=trainable,
+                                         reuse=reuse)
                 conv2 = tf.layers.conv2d(conv1, 64, [4, 4], [2, 2], 'valid',
                                          activation=tf.nn.relu,
-                                         trainable=trainable)
+                                         trainable=trainable,
+                                         reuse=reuse)
                 conv3 = tf.layers.conv2d(conv2, 64, [3, 3], [1, 1], 'valid',
                                          activation=tf.nn.relu,
-                                         trainable=trainable)
+                                         trainable=trainable,
+                                         reuse=reuse)
 
             # Flatten the output
             hidden = tf.layers.flatten(conv3)
 
         else:
             hidden = tf.layers.dense(inputs, 8, tf.nn.relu,
-                                     name='hidden1', trainable=trainable)
+                                     name='hidden1', trainable=trainable,
+                                     reuse=reuse)
             hidden = tf.layers.dense(hidden, 8, tf.nn.relu,
-                                     name='hidden2', trainable=trainable)
+                                     name='hidden2', trainable=trainable,
+                                     reuse=reuse)
 
         output = []
         for i in range(action_size):
             output.append(tf.layers.dense(hidden, settings.NB_ATOMS,
                                           activation=tf.nn.softmax,
                                           name='hidden3_' + str(i + 1),
-                                          trainable=trainable))
+                                          trainable=trainable,
+                                          reuse=reuse))
         return tf.stack(output, axis=1)
 
 

@@ -81,9 +81,8 @@ class Agent:
 
 
 
-        z = self.sess.run(self.mainQNetwork.z)
+        z, delta_z = self.sess.run(self.mainQNetwork.z), self.mainQNetwork.delta_z
         import matplotlib.pyplot as plt
-        plt.ion()
         self.env.set_render(True)
 
 
@@ -111,23 +110,30 @@ class Agent:
                 if random.random() < self.epsilon:
                     a = random.randint(0, self.action_size - 1)
                 else:
-                    a, distr = self.sess.run([self.mainQNetwork.action, self.mainQNetwork.Q_distrib],
+                    a, = self.sess.run(self.mainQNetwork.action,
                                        feed_dict={self.mainQNetwork.state_ph: [s]})
-                    a = a[0]
-
+                    # a, distr, value = self.sess.run([self.mainQNetwork.action, self.mainQNetwork.Q_distrib, self.mainQNetwork.Q_value],
+                                       # feed_dict={self.mainQNetwork.state_ph: [s]})
+                    # a = a[0]
+                    # distr = distr[0]
+                    # value = value[0]
+ 
                     # print(distr[0])
-
-                    if self.nb_ep % 250 == 0:
-                        self.env.set_render(True)
-                        plt.clf()
-                        plt.subplot(2, 1, 1)
-                        plt.bar(z, distr[0][0], label="left")
-                        plt.legend()
-                        plt.subplot(2, 1, 2)
-                        plt.bar(z, distr[0][1], label="right")
-                        plt.legend()
-                        plt.show()
-                        plt.pause(0.05)
+ 
+                    # if self.nb_ep % 250 == 0:
+                        # p = plt.subplot(3, 1, 2)
+                        # plt.cla()
+                        # plt.bar(z, distr[0], delta_z, label="left")
+                        # p.axvline(value[0], color='red', linewidth=0.7)
+                        # print(distr[0])
+                        # plt.legend()
+                        # p = plt.subplot(3, 1, 3)
+                        # plt.cla()
+                        # plt.bar(z, distr[1], delta_z, label="right")
+                        # p.axvline(value[1], color='red', linewidth=0.7)
+                        # plt.legend()
+                        # plt.show(block=False)
+                        # plt.pause(0.05)
 
 
                 s_, r, done, info = self.env.act(a, gif)
@@ -187,9 +193,7 @@ class Agent:
                 while not done:
                     a, = self.sess.run(self.mainQNetwork.action,
                                       feed_dict={self.mainQNetwork.state_ph: [s]})
-                    a = a[0]
                     s, r, done, info = self.env.act(a, path != '')
-
 
                     episode_reward += r
 

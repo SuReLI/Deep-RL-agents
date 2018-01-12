@@ -10,6 +10,8 @@ plt.ion()
 
 def save(saver, fig_name):
     if settings.DISPLAY:
+        f = plt.subplot(1, 1, 1)
+        f.cla()
         for path, data in saver:
             plt.plot(data)
         fig = plt.gcf()
@@ -17,7 +19,6 @@ def save(saver, fig_name):
         fig.savefig(fig_name)
         plt.show(block=False)
         plt.pause(0.05)
-        fig.clf()
     else:
         for path, data in saver:
             os.makedirs(os.path.dirname(path), exist_ok=True)

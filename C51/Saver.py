@@ -7,9 +7,6 @@ import settings
 
 class Saver:
 
-    def __init__(self):
-        pass
-
     def set_sess(self, sess):
         self.saver = tf.train.Saver()
         self.sess = sess

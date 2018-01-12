@@ -12,56 +12,67 @@ MAX_Q = settings.MAX_VALUE
 
 class QNetwork:
 
-    def __init__(self, sess, state_size, action_size, trainable, scope):
+    def __init__(self, sess, state_size, action_size):
 
         self.sess = sess
 
         self.state_size = state_size
         self.action_size = action_size
 
-        # Support of the distribution
-        self.delta_z = (MAX_Q - MIN_Q) / (settings.NB_ATOMS - 1)
-        self.z = tf.range(MIN_Q, MAX_Q + self.delta_z, self.delta_z)
-
-        self.build_action_prediction(trainable, scope)
-        if 'target' not in scope:
-            self.build_train_operation()
-        self.vars = get_vars(scope, trainable)
-
-    def build_action_prediction(self, trainable, scope):
-        
         # Placeholders
         self.state_ph = tf.placeholder(tf.float32, [None, *self.state_size], name='state')
         self.action_ph = tf.placeholder(tf.int32, [None], name='action')
         self.reward_ph = tf.placeholder(tf.float32, [None], name='reward')
         self.next_state_ph = tf.placeholder(tf.float32, [None, *self.state_size], name='next_state')
         self.not_done_ph = tf.placeholder(tf.float32, [None], name='not_done')
-
+        
         # Turn these in column vector to add them to the distribution z
         self.reward = self.reward_ph[:, None]
         self.not_done = self.not_done_ph[:, None]
-
         self.batch_size = tf.shape(self.reward_ph)[0]
-        
+
+        # Support of the distribution
+        self.delta_z = (MAX_Q - MIN_Q) / (settings.NB_ATOMS - 1)
+        self.z = tf.range(MIN_Q, MAX_Q + self.delta_z, self.delta_z)
+
+        # Build the networks
+        self.build_model()
+        self.build_target()
+        self.build_train_operation()
+
+        self.main_vars = get_vars('main_network', trainable=True)
+        self.target_vars = get_vars('target_network', trainable=False)
+
+        self.init_target_update = copy_vars(self.main_vars, self.target_vars,
+                                            1, 'init_target_update')
+
+        self.target_update = copy_vars(self.main_vars, self.target_vars,
+                                       settings.UPDATE_TARGET_RATE,
+                                       'target_update')
+
+    def build_model(self):
+                
         # Computation of Q(s, a) and argmax to get the next action to perform
         self.Q_distrib = build_model(self.state_ph, self.action_size,
-                                     trainable, scope, reuse=False)
+                                     trainable=True, scope='main_network')
+
         self.Q_value = tf.reduce_sum(self.z * self.Q_distrib, axis=2)
         self.action = tf.argmax(self.Q_value, 1, output_type=tf.int32)
 
         ind = tf.stack((tf.range(self.batch_size), self.action_ph), axis=1)
         self.Q_distrib_taken_action = tf.gather_nd(self.Q_distrib, ind)
 
+    def build_target(self):
         
         # Computation of Q(s', a), argmax to get a* and extraction of Q(s', a*)
-        self.next_Q_distrib = build_model(self.next_state_ph, self.action_size,
-                                          trainable, scope, reuse=True)
+        self.target_Q_distrib = build_model(self.next_state_ph, self.action_size,
+                                            trainable=False, scope='target_network')
         
-        self.next_Q_value = tf.reduce_sum(self.z * self.next_Q_distrib, axis=2)
-        self.next_action = tf.argmax(self.next_Q_value, 1, output_type=tf.int32)
+        self.target_Q_value = tf.reduce_sum(self.z * self.target_Q_distrib, axis=2)
+        self.target_action = tf.argmax(self.target_Q_value, 1, output_type=tf.int32)
 
-        ind = tf.stack((tf.range(self.batch_size), self.next_action), axis=1)
-        self.next_Q_distrib_optimal_action = tf.gather_nd(self.next_Q_distrib, ind)
+        ind = tf.stack((tf.range(self.batch_size), self.target_action), axis=1)
+        self.target_Q_distrib_optimal_action = tf.gather_nd(self.target_Q_distrib, ind)
 
 
     def build_train_operation(self):
@@ -86,7 +97,7 @@ class QNetwork:
             main_Q_distrib_l = tf.clip_by_value(main_Q_distrib_l, 1e-10, 1.0)
             main_Q_distrib_u = tf.clip_by_value(main_Q_distrib_u, 1e-10, 1.0)
 
-            self.loss += self.next_Q_distrib_optimal_action[:, j] * (
+            self.loss += self.target_Q_distrib_optimal_action[:, j] * (
                 (u[:, j] - bj[:, j]) * tf.log(main_Q_distrib_l) +
                 (bj[:, j] - l[:, j]) * tf.log(main_Q_distrib_u))
 
@@ -95,14 +106,6 @@ class QNetwork:
 
         self.trainer = tf.train.AdamOptimizer(settings.LEARNING_RATE)
         self.train = self.trainer.minimize(self.loss)
-
-    def build_target_update(self, target_vars):
-        self.init_target_update = copy_vars(self.vars, target_vars,
-                                            1, 'init_target_update')
-
-        self.target_update = copy_vars(self.vars, target_vars,
-                                       settings.UPDATE_TARGET_RATE,
-                                       'target_update')
 
     def init_update_target(self):
         _ = self.sess.run(self.init_target_update)

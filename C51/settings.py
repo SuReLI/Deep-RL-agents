@@ -9,7 +9,7 @@ CONV = False
 DISCOUNT = 0.99
 NB_ATOMS = 51
 MIN_VALUE = 0
-MAX_VALUE = 8
+MAX_VALUE = 10
 
 LEARNING_RATE = 7.5e-4
 
@@ -20,11 +20,11 @@ BATCH_SIZE = 64
 
 # Number of episodes of game environment to train with
 TRAINING_STEPS = 100000
-PRE_TRAIN_STEPS = 10000
+PRE_TRAIN_STEPS = 50000
 
 # Maximal number of steps during one episode
 MAX_EPISODE_STEPS = 200
-TRAINING_FREQ = 10
+TRAINING_FREQ = 4
 
 # Rate to update target network toward primary network
 UPDATE_TARGET_RATE = 0.05
@@ -40,7 +40,7 @@ DISP_EP_REWARD_FREQ = 250
 PLOT_FREQ = 500
 RENDER_FREQ = 2500
 
-SAVE_FREQ = 20000
-GIF_FREQ = 10000
+SAVE_FREQ = 0
+GIF_FREQ = 0
 MAX_NB_GIF = 5
-EP_ELONGATION = 50
+EP_ELONGATION = 0

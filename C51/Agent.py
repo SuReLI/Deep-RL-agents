@@ -41,7 +41,6 @@ class Agent:
         if settings.GUI:
             if request:
                 output = True
-                request = False
             elif auto and freq > 0:
                 output = self.nb_ep % freq == 0
             else:

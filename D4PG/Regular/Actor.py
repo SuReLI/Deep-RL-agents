@@ -8,13 +8,14 @@ from ExperienceBuffer import BUFFER
 from Environment import Environment
 
 from Displayer import DISPLAYER
+import GUI
 import settings
 
 
 STOP_REQUESTED = False
 
 
-def request_stop(signal, frame):
+def request_stop():
     global STOP_REQUESTED
     print('End of training')
     STOP_REQUESTED = True
@@ -65,8 +66,10 @@ class Actor:
 
             s = self.env.reset()
 
-            render = (self.n_actor == 1 and settings.DISPLAY and
-                      total_eps % settings.RENDER_FREQ == 0)
+            render = False
+            if self.n_actor == 1:
+                render = GUI.render_display(total_eps)
+                GUI.REQUEST_RENDER = False
             self.env.set_render(render)
 
             max_steps = settings.MAX_STEPS + total_eps // 5
@@ -94,9 +97,18 @@ class Actor:
                 episode_step += 1
             
             if not STOP_REQUESTED:
-                if self.n_actor == 1 and total_eps % settings.EP_REW_FREQ == 0:
+                display = False
+                if self.n_actor == 1:
+                    display = GUI.ep_reward_dislay(total_eps)
+                    GUI.REQUEST_EP_REWARD = False
+                if display:
                     print("Episode %i : reward %i, steps %i, noise scale %f" % (total_eps, episode_reward, episode_step, noise_scale))
-                DISPLAYER.add_reward(episode_reward, self.n_actor)
+
+                plot = False
+                if self.n_actor == 1:
+                    plot = GUI.plot_display(total_eps)
+                    GUI.REQUEST_PLOT = False
+                DISPLAYER.add_reward(episode_reward, self.n_actor, plot)
             
                 total_eps += 1
 

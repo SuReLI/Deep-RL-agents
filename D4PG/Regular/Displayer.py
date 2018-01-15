@@ -37,11 +37,11 @@ class Displayer:
         self.sequential_rewards = []
         self.q_buf = []
 
-    def add_reward(self, reward, n_agent):
+    def add_reward(self, reward, n_agent, plot=False):
         self.rewards[n_agent].append(reward)
         if n_agent != 0:
             self.sequential_rewards.append(reward)
-        if n_agent == 1 and len(self.rewards[1]) % settings.PLOT_FREQ == 0:
+        if plot:
             if settings.DISPLAY:
                 self.disp_one()
             else:

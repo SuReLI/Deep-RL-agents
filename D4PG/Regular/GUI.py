@@ -3,8 +3,6 @@ from tkinter import *
 import settings
 
 
-STOP = False
-
 REQUEST_RENDER = False
 REQUEST_PLOT = False
 REQUEST_EP_REWARD = False
@@ -17,21 +15,53 @@ FREQ_RENDER = settings.RENDER_FREQ
 FREQ_PLOT = settings.PLOT_FREQ
 FREQ_EP_REWARD = settings.EP_REWARD_FREQ
 
+
+def render_display(nb_ep):
+    return display(REQUEST_RENDER, AUTO_RENDER,
+                   FREQ_RENDER, settings.RENDER_FREQ, nb_ep)
+
+
+def plot_display(nb_ep):
+    return display(REQUEST_PLOT, AUTO_PLOT,
+                   FREQ_PLOT, settings.PLOT_FREQ, nb_ep)
+
+
+def ep_reward_dislay(nb_ep):
+    return display(REQUEST_EP_REWARD, AUTO_EP_REWARD,
+                   FREQ_EP_REWARD, settings.EP_REWARD_FREQ, nb_ep)
+
+
+def display(request, auto, freq, settings_freq, nb_ep):
+    if not settings.DISPLAY:
+        return False
+
+    if settings.GUI:
+        if request:
+            return True
+        elif auto and freq > 0:
+            return nb_ep % freq == 0
+        return False
+    return settings_freq > 0 and nb_ep % settings_freq == 0
+
+
 def main():
-    
+
+    from Actor import request_stop
+
     window = Tk()
     window.title("Control Panel")
     window.attributes('-topmost', 1)
 
     def stop_run():
-        global STOP
-        STOP = True
+        request_stop()
         window.destroy()
 
     def set_render_freq(event):
         global FREQ_RENDER
-        try:FREQ_RENDER = int(render_freq.get())
-        except:pass
+        try:
+            FREQ_RENDER = int(render_freq.get())
+        except:
+            pass
 
     def update_render():
         global REQUEST_RENDER
@@ -43,11 +73,12 @@ def main():
         on_off = ("On" if AUTO_RENDER else "Off")
         render_switch.config(text='Set auto update ' + on_off)
 
-
     def set_plot_freq(event):
         global FREQ_PLOT
-        try:FREQ_PLOT = int(plot_freq.get())
-        except:pass
+        try:
+            FREQ_PLOT = int(plot_freq.get())
+        except:
+            pass
 
     def update_plot():
         global REQUEST_PLOT
@@ -59,11 +90,12 @@ def main():
         on_off = ("On" if AUTO_PLOT else "Off")
         plot_switch.config(text='Set auto update ' + on_off)
 
-
     def set_ep_reward_freq(event):
         global FREQ_EP_REWARD
-        try:FREQ_EP_REWARD = int(ep_reward_freq.get())
-        except:pass
+        try:
+            FREQ_EP_REWARD = int(ep_reward_freq.get())
+        except:
+            pass
 
     def update_ep_reward():
         global REQUEST_EP_REWARD
@@ -74,7 +106,6 @@ def main():
         AUTO_EP_REWARD = not AUTO_EP_REWARD
         on_off = ("On" if AUTO_EP_REWARD else "Off")
         ep_reward_switch.config(text='Set auto update ' + on_off)
-
 
     render_label = Label(window, text='RENDER')
     render_update = Button(window, text='Render', command=update_render)

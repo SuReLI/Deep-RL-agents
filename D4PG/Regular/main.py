@@ -1,12 +1,19 @@
 
 import tensorflow as tf
 import threading
-import signal
+import time
 
-from Actor import Actor, request_stop
+import Actor
+# from Actor import Actor, request_stop, STOP_REQUESTED
 from Learner import Learner
 from Displayer import DISPLAYER
 import settings
+
+
+def run_gui():
+    print("Running GUI")
+    import GUI
+    GUI.main()
 
 
 def main():
@@ -17,7 +24,7 @@ def main():
 
         workers = []
         for i in range(settings.NB_ACTORS):
-            workers.append(Actor(sess, i + 1))
+            workers.append(Actor.Actor(sess, i + 1))
 
         # with tf.device('/device:GPU:0'):
         print("Initializing learner...")
@@ -33,14 +40,20 @@ def main():
 
         threads.append(threading.Thread(target=learner.run))
 
+        GUI_thread = threading.Thread(target=run_gui)
+
         sess.run(tf.global_variables_initializer())
 
         for t in threads:
             t.start()
+        GUI_thread.start()
         print("Running...")
 
-        signal.signal(signal.SIGINT, request_stop)
-        signal.pause()
+        try:
+            while not Actor.STOP_REQUESTED:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            Actor.request_stop()
 
         for t in threads:
             t.join()
@@ -49,6 +62,8 @@ def main():
 
         DISPLAYER.disp()
         DISPLAYER.disp_q()
+
+        GUI_thread.join()
 
 
 if __name__ == '__main__':

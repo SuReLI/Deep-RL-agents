@@ -32,10 +32,10 @@ def build_critic(states, actions, trainable, reuse, scope):
         hidden_3 = tf.layers.dense(hidden_2, 64,
                                    trainable=trainable, reuse=reuse,
                                    activation=tf.nn.relu, name='dense_2')
-        q_values = tf.layers.dense(hidden_3, settings.NB_ATOMS,
+        Q_values = tf.layers.dense(hidden_3, settings.NB_ATOMS,
                                    trainable=trainable, reuse=reuse,
                                    activation=tf.nn.softmax, name='dense_3')
-    return q_values
+    return Q_values
 
 
 def get_vars(scope, trainable):

@@ -22,6 +22,8 @@ class Environment:
         return self.env.action_space.low, self.env.action_space.high
 
     def set_render(self, render):
+        if not render:
+            self.env.render(close=True)
         # if render != self.render:
         #     self.env = RunEnv(visualize=render)
         #     self.env.reset(difficulty=0)

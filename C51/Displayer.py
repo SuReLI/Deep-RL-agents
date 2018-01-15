@@ -32,9 +32,9 @@ class Displayer:
     def __init__(self):
         self.rewards = []
 
-    def add_reward(self, reward):
+    def add_reward(self, reward, plot=False):
         self.rewards.append(reward)
-        if len(self.rewards) % settings.PLOT_FREQ == 0:
+        if plot:
             if settings.DISPLAY:
                 self.disp()
             else:

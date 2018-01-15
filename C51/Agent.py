@@ -9,6 +9,7 @@ from QNetwork import QNetwork
 from ExperienceBuffer import ExperienceBuffer
 from Environment import Environment
 
+import GUI
 from Displayer import DISPLAYER
 from Saver import SAVER
 import settings
@@ -35,6 +36,20 @@ class Agent:
         self.nb_ep = 1
         self.best_run = -1e10
         self.n_gif = 0
+
+    def display(self, request, auto, freq, settings_freq):
+        if settings.GUI:
+            if request:
+                output = True
+                request = False
+            elif auto and freq > 0:
+                output = self.nb_ep % freq == 0
+            else:
+                output = False
+        else:
+            output = (settings_freq > 0 and
+                      self.nb_ep % settings_freq == 0)
+        return output
 
     def pre_train(self):
         print("Beginning of the pre-training...")
@@ -75,7 +90,7 @@ class Agent:
         self.total_steps = 0
         self.nb_ep = 1
 
-        while self.nb_ep < settings.TRAINING_STEPS:
+        while self.nb_ep < settings.TRAINING_STEPS and not GUI.STOP:
 
             s = self.env.reset()
             episode_reward = 0
@@ -87,25 +102,28 @@ class Agent:
                 max_step += self.nb_ep // settings.EP_ELONGATION
 
             # Render settings
-            self.env.set_render(settings.RENDER_FREQ > 0 and
-                                self.nb_ep % settings.RENDER_FREQ == 0)
+            render = self.display(GUI.REQUEST_RENDER, GUI.AUTO_RENDER,
+                                  GUI.FREQ_RENDER, settings.RENDER_FREQ)
+            GUI.REQUEST_RENDER = False
+
+            self.env.set_render(render)
             gif = (settings.GIF_FREQ > 0 and
                    self.nb_ep % settings.GIF_FREQ == 0) and settings.DISPLAY
 
-            while episode_step < max_step and not done:
+            while episode_step <= max_step and not done:
 
                 if random.random() < self.epsilon:
                     a = random.randint(0, self.action_size - 1)
                 else:
                     a, = self.sess.run(self.QNetwork.action,
                                        feed_dict={self.QNetwork.state_ph: [s]})
- 
+
                     # a, distr, value = self.sess.run([self.QNetwork.action, self.QNetwork.Q_distrib, self.QNetwork.Q_value],
                     #                                 feed_dict={self.QNetwork.state_ph: [s]})
                     # a = a[0]
                     # distr = distr[0]
                     # value = value[0]
- 
+
                     # if self.nb_ep % 250 == 0:
                     #     p = plt.subplot(3, 1, 2)
                     #     plt.cla()
@@ -140,7 +158,12 @@ class Agent:
             if self.epsilon > settings.EPSILON_STOP:
                 self.epsilon -= settings.EPSILON_DECAY
 
-            DISPLAYER.add_reward(episode_reward)
+            # Plotting setting
+            plot = self.display(GUI.REQUEST_PLOT, GUI.AUTO_PLOT,
+                                  GUI.FREQ_PLOT, settings.PLOT_FREQ)
+            GUI.REQUEST_PLOT = False
+
+            DISPLAYER.add_reward(episode_reward, plot)
             # if episode_reward > self.best_run and \
             #         self.nb_ep > 50 + settings.PRE_TRAIN_STEPS:
             #     self.best_run = episode_reward
@@ -154,7 +177,11 @@ class Agent:
 
             self.total_steps += 1
 
-            if self.nb_ep % settings.DISP_EP_REWARD_FREQ == 0:
+            # Episode display setting
+            ep_reward = self.display(GUI.REQUEST_EP_REWARD, GUI.AUTO_EP_REWARD,
+                                  GUI.FREQ_EP_REWARD, settings.EP_REWARD_FREQ)
+            GUI.REQUEST_EP_REWARD = False
+            if ep_reward:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %f'
                       ', Max steps: %i' % (self.nb_ep, episode_reward,
                                            episode_step, self.epsilon,

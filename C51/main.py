@@ -1,4 +1,5 @@
 
+import threading
 import tensorflow as tf
 
 from Agent import Agent
@@ -7,6 +8,11 @@ from Displayer import DISPLAYER
 from Saver import SAVER
 
 import settings
+
+def run_gui():
+    print("Running gui")
+    import GUI
+    GUI.main()
 
 if __name__ == '__main__':
     
@@ -19,6 +25,9 @@ if __name__ == '__main__':
 
         SAVER.load(agent)
 
+        gui = threading.Thread(target=run_gui)
+        gui.start()
+
         try:
             agent.run()
         except KeyboardInterrupt:
@@ -29,6 +38,7 @@ if __name__ == '__main__':
 
         agent.play(10)
 
+        gui.join()
         # agent.play(3, "results/gif/{}".format(settings.ENV))
 
     agent.stop()

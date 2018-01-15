@@ -3,6 +3,7 @@ ENV = "CartPole-v0"
 
 LOAD = False
 DISPLAY = True
+GUI = True
 
 CONV = False
 
@@ -20,23 +21,23 @@ BATCH_SIZE = 64
 
 # Number of episodes of game environment to train with
 TRAINING_STEPS = 100000
-PRE_TRAIN_STEPS = 50000
+PRE_TRAIN_STEPS = 50#000
 
 # Maximal number of steps during one episode
 MAX_EPISODE_STEPS = 200
 TRAINING_FREQ = 4
 
 # Rate to update target network toward primary network
-UPDATE_TARGET_RATE = 0.05
+UPDATE_TARGET_RATE = 0.1
 
 
 EPSILON_START = 0.8
 EPSILON_STOP = 0.01
-EPSILON_STEPS = 10000
+EPSILON_STEPS = 5000
 EPSILON_DECAY = (EPSILON_START - EPSILON_STOP) / EPSILON_STEPS
 
 # Display Frequencies
-DISP_EP_REWARD_FREQ = 250
+EP_REWARD_FREQ = 50
 PLOT_FREQ = 500
 RENDER_FREQ = 2500
 

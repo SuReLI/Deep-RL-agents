@@ -10,11 +10,10 @@ plt.ion()
 
 def save(saver, fig_name):
     if settings.DISPLAY:
-        f = plt.subplot(1, 1, 1)
-        f.cla()
+        fig = plt.figure(1)
+        fig.clf()
         for path, data in saver:
             plt.plot(data)
-        fig = plt.gcf()
         os.makedirs(os.path.dirname(fig_name), exist_ok=True)
         fig.savefig(fig_name)
         plt.show(block=False)
@@ -38,10 +37,10 @@ class Displayer:
             if settings.DISPLAY:
                 self.disp()
             else:
-                print(self.rewards[-50:])
+                print(self.rewards[-10:])
 
     def disp(self):
-        mean_reward = [np.mean(self.rewards[max(1, i - 100):i])
+        mean_reward = [np.mean(self.rewards[max(1, i - 10):i])
                        for i in range(2, len(self.rewards))]
         saver = [("results/Reward", self.rewards),
                  ("results/Mean_reward", mean_reward)]

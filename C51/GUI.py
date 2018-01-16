@@ -4,6 +4,7 @@ import settings
 
 
 class Feature:
+    nb_column = 0
 
     def __init__(self, name, settings_freq, text):
         self.name = name
@@ -13,17 +14,18 @@ class Feature:
         self.settings_freq = settings_freq
         self.freq = settings_freq
 
-    def build(self, window, column):
+    def build(self, window):
         self.label = Label(window, text=self.name.upper())
         self.update = Button(window, text=self.text.capitalize(), command=self.update_cmd)
         self.switch = Button(window, text='Set auto {} Off'.format(self.text), command=self.switch_cmd)
         self.freq_entry = Entry(window, justify='center')
         self.freq_entry.bind("<Return>", self.set_freq)
 
-        self.label.grid(column=column, row=1)
-        self.update.grid(column=column, row=2)
-        self.switch.grid(column=column, row=3)
-        self.freq_entry.grid(column=column, row=4)
+        self.label.grid(column=Feature.nb_column, row=0)
+        self.update.grid(column=Feature.nb_column, row=1)
+        self.switch.grid(column=Feature.nb_column, row=2)
+        self.freq_entry.grid(column=Feature.nb_column, row=3)
+        Feature.nb_column += 1
 
     def update_cmd(self):
         self.request = True
@@ -37,7 +39,7 @@ class Feature:
         try:self.freq = int(self.freq_entry.get())
         except:pass
 
-    def display(self, nb_ep):
+    def get(self, nb_ep):
         if not settings.DISPLAY:
             return False
 
@@ -55,8 +57,10 @@ STOP = False
 
 ep_reward = Feature('EP REWARD', settings.EP_REWARD_FREQ, 'display')
 plot = Feature('PLOT', settings.PLOT_FREQ, 'update')
+plot_distrib = Feature('PLOT DISTRIB', 0, 'update')
 render = Feature('RENDER', settings.RENDER_FREQ, 'render')
 gif = Feature('GIF SAVER', settings.GIF_FREQ, 'snap')
+save = Feature('MODEL SAVER', settings.SAVE_FREQ, 'save')
 
 
 
@@ -72,12 +76,14 @@ def main():
         STOP = True
         window.destroy()
 
-    ep_reward.build(window, 1)
-    plot.build(window, 2)
-    render.build(window, 3)
-    gif.build(window, 4)
+    ep_reward.build(window)
+    plot.build(window)
+    plot_distrib.build(window)
+    render.build(window)
+    gif.build(window)
+    save.build(window)
 
     stop_button = Button(window, text='Stop the Run', command=stop_run)
-    stop_button.grid(column=1, row=5, columnspan=3)
+    stop_button.grid(column=0, row=4, columnspan=Feature.nb_column, sticky='NSEW')
 
     window.mainloop()

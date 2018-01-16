@@ -38,16 +38,13 @@ class Agent:
         self.n_gif = 0
 
     def print_distrib(self, distrib, value):
-        p = plt.subplot(3, 1, 2)
-        plt.cla()
-        plt.bar(z, distr[0], delta_z, label="left")
-        p.axvline(value[0], color='red', linewidth=0.7)
-        plt.legend()
-        p = plt.subplot(3, 1, 3)
-        plt.cla()
-        plt.bar(z, distr[1], delta_z, label="right")
-        p.axvline(value[1], color='red', linewidth=0.7)
-        plt.legend()
+        fig = plt.figure(2)
+        fig.clf()
+        for i in range(self.action_size):
+            p = plt.subplot(self.action_size, 1, i+1)
+            plt.bar(self.z, distrib[i], self.delta_z, label="left")
+            p.axvline(value[i], color='red', linewidth=0.7)
+            plt.legend()
         plt.show(block=False)
         plt.pause(0.05)
 
@@ -85,7 +82,8 @@ class Agent:
         self.pre_train()
         self.QNetwork.init_update_target()
 
-        z, delta_z = self.sess.run(self.QNetwork.z), self.QNetwork.delta_z
+        self.delta_z = self.QNetwork.delta_z
+        self.z = self.sess.run(self.QNetwork.z)
 
         self.total_steps = 0
         self.nb_ep = 1
@@ -102,24 +100,25 @@ class Agent:
                 max_step += self.nb_ep // settings.EP_ELONGATION
 
             # Render settings
-            render = GUI.render.display(self.nb_ep)
-            gif = GUI.gif.display(self.nb_ep)
-            self.env.set_render(render)
-            self.env.set_gif(gif)
+            self.env.set_render(GUI.render.get(self.nb_ep))
+            self.env.set_gif(GUI.gif.get(self.nb_ep))
+            plot_distrib = GUI.plot_distrib.get(self.nb_ep)
 
             while episode_step <= max_step and not done:
 
                 if random.random() < self.epsilon:
                     a = random.randint(0, self.action_size - 1)
                 else:
-                    a, = self.sess.run(self.QNetwork.action,
-                                       feed_dict={self.QNetwork.state_ph: [s]})
+                    if plot_distrib:
+                        a, distr, value = self.sess.run([self.QNetwork.action, self.QNetwork.Q_distrib, self.QNetwork.Q_value],
+                                                        feed_dict={self.QNetwork.state_ph: [s]})
+                        a, distr, value = a[0], distr[0], value[0]
+                        self.print_distrib(distr, value)
 
-                    # a, distr, value = self.sess.run([self.QNetwork.action, self.QNetwork.Q_distrib, self.QNetwork.Q_value],
-                    #                                 feed_dict={self.QNetwork.state_ph: [s]})
-                    # a = a[0]
-                    # distr = distr[0]
-                    # value = value[0]
+                    else:
+                        a, = self.sess.run(self.QNetwork.action,
+                                           feed_dict={self.QNetwork.state_ph: [s]})
+
 
                 s_, r, done, info = self.env.act(a)
                 episode_reward += r
@@ -141,9 +140,7 @@ class Agent:
             if self.epsilon > settings.EPSILON_STOP:
                 self.epsilon -= settings.EPSILON_DECAY
 
-            # Plotting setting
-            plot = GUI.plot.display(self.nb_ep)
-            DISPLAYER.add_reward(episode_reward, plot)
+            DISPLAYER.add_reward(episode_reward, GUI.plot.get(self.nb_ep))
             # if episode_reward > self.best_run and \
             #         self.nb_ep > 50 + settings.PRE_TRAIN_STEPS:
             #     self.best_run = episode_reward
@@ -151,18 +148,13 @@ class Agent:
             #     SAVER.save('best')
             #     self.play(1, 'results/gif/best.gif')
 
-            self.total_steps += 1
-
             # Episode display setting
-            ep_reward = GUI.ep_reward.display(self.nb_ep)
-            if ep_reward:
-                print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %f'
-                      ', Max steps: %i' % (self.nb_ep, episode_reward,
-                                           episode_step, self.epsilon,
-                                           max_step))
+            if GUI.ep_reward.get(self.nb_ep):
+                print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %f, Max steps: %i' % (
+                    self.nb_ep, episode_reward, episode_step, self.epsilon, max_step))
 
             # Save the model
-            if settings.SAVE_FREQ > 0 and self.nb_ep % settings.SAVE_FREQ == 0:
+            if GUI.save.get(self.nb_ep):
                 SAVER.save(self.nb_ep)
 
         self.env.close()

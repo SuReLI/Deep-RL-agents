@@ -35,5 +35,7 @@ if __name__ == '__main__':
 
         if settings.GUI:
             gui.join()
+        else:
+            agent.play(5)
 
     agent.stop()

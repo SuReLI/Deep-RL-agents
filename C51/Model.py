@@ -26,9 +26,9 @@ def build_model(inputs, action_size, trainable, scope):
             hidden = tf.layers.flatten(conv3)
 
         else:
-            hidden = tf.layers.dense(inputs, 8, tf.nn.relu,
+            hidden = tf.layers.dense(inputs, 64, tf.nn.relu,
                                      name='hidden1', trainable=trainable)
-            hidden = tf.layers.dense(hidden, 8, tf.nn.relu,
+            hidden = tf.layers.dense(hidden, 64, tf.nn.relu,
                                      name='hidden2', trainable=trainable)
 
         output = []

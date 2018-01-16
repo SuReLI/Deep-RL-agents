@@ -37,18 +37,19 @@ class Agent:
         self.best_run = -1e10
         self.n_gif = 0
 
-    def display(self, request, auto, freq, settings_freq):
-        if settings.GUI:
-            if request:
-                output = True
-            elif auto and freq > 0:
-                output = self.nb_ep % freq == 0
-            else:
-                output = False
-        else:
-            output = (settings_freq > 0 and
-                      self.nb_ep % settings_freq == 0)
-        return output
+    def print_distrib(self, distrib, value):
+        p = plt.subplot(3, 1, 2)
+        plt.cla()
+        plt.bar(z, distr[0], delta_z, label="left")
+        p.axvline(value[0], color='red', linewidth=0.7)
+        plt.legend()
+        p = plt.subplot(3, 1, 3)
+        plt.cla()
+        plt.bar(z, distr[1], delta_z, label="right")
+        p.axvline(value[1], color='red', linewidth=0.7)
+        plt.legend()
+        plt.show(block=False)
+        plt.pause(0.05)
 
     def pre_train(self):
         print("Beginning of the pre-training...")
@@ -58,7 +59,6 @@ class Agent:
             s = self.env.reset()
             done = False
             episode_step = 0
-            episode_reward = 0
 
             while episode_step < settings.MAX_EPISODE_STEPS and not done:
 
@@ -67,7 +67,6 @@ class Agent:
                 self.buffer.add((s, a, r, s_, done))
 
                 s = s_
-                episode_reward += r
                 episode_step += 1
 
             if i % (settings.PRE_TRAIN_STEPS // 5) == 0:
@@ -101,10 +100,7 @@ class Agent:
                 max_step += self.nb_ep // settings.EP_ELONGATION
 
             # Render settings
-            render = self.display(GUI.REQUEST_RENDER, GUI.AUTO_RENDER,
-                                  GUI.FREQ_RENDER, settings.RENDER_FREQ)
-            GUI.REQUEST_RENDER = False
-
+            render = GUI.render_display(self.nb_ep)
             self.env.set_render(render)
             gif = (settings.GIF_FREQ > 0 and
                    self.nb_ep % settings.GIF_FREQ == 0) and settings.DISPLAY
@@ -122,20 +118,6 @@ class Agent:
                     # a = a[0]
                     # distr = distr[0]
                     # value = value[0]
-
-                    # if self.nb_ep % 250 == 0:
-                    #     p = plt.subplot(3, 1, 2)
-                    #     plt.cla()
-                    #     plt.bar(z, distr[0], delta_z, label="left")
-                    #     p.axvline(value[0], color='red', linewidth=0.7)
-                    #     plt.legend()
-                    #     p = plt.subplot(3, 1, 3)
-                    #     plt.cla()
-                    #     plt.bar(z, distr[1], delta_z, label="right")
-                    #     p.axvline(value[1], color='red', linewidth=0.7)
-                    #     plt.legend()
-                    #     plt.show(block=False)
-                    #     plt.pause(0.05)
 
                 s_, r, done, info = self.env.act(a, gif)
                 episode_reward += r
@@ -158,10 +140,7 @@ class Agent:
                 self.epsilon -= settings.EPSILON_DECAY
 
             # Plotting setting
-            plot = self.display(GUI.REQUEST_PLOT, GUI.AUTO_PLOT,
-                                  GUI.FREQ_PLOT, settings.PLOT_FREQ)
-            GUI.REQUEST_PLOT = False
-
+            plot = GUI.plot_display(self.nb_ep)
             DISPLAYER.add_reward(episode_reward, plot)
             # if episode_reward > self.best_run and \
             #         self.nb_ep > 50 + settings.PRE_TRAIN_STEPS:
@@ -177,9 +156,7 @@ class Agent:
             self.total_steps += 1
 
             # Episode display setting
-            ep_reward = self.display(GUI.REQUEST_EP_REWARD, GUI.AUTO_EP_REWARD,
-                                  GUI.FREQ_EP_REWARD, settings.EP_REWARD_FREQ)
-            GUI.REQUEST_EP_REWARD = False
+            ep_reward = GUI.ep_reward_display(self.nb_ep)
             if ep_reward:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %f'
                       ', Max steps: %i' % (self.nb_ep, episode_reward,

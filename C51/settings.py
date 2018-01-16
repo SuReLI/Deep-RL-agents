@@ -1,5 +1,5 @@
 
-ENV = "CartPole-v0"
+ENV = "LunarLander-v2"
 
 LOAD = False
 DISPLAY = True
@@ -9,8 +9,8 @@ CONV = False
 
 DISCOUNT = 0.99
 NB_ATOMS = 51
-MIN_VALUE = -10
-MAX_VALUE = 10
+MIN_VALUE = -100
+MAX_VALUE = 100
 
 LEARNING_RATE = 7.5e-4
 
@@ -21,7 +21,7 @@ BATCH_SIZE = 64
 
 # Number of episodes of game environment to train with
 TRAINING_STEPS = 100000
-PRE_TRAIN_STEPS = 50#000
+PRE_TRAIN_STEPS = 1000
 
 # Maximal number of steps during one episode
 MAX_EPISODE_STEPS = 200

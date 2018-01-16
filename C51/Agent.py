@@ -58,6 +58,7 @@ class Agent:
 
             s = self.env.reset()
             done = False
+            episode_reward = 0
             episode_step = 0
 
             while episode_step < settings.MAX_EPISODE_STEPS and not done:
@@ -67,9 +68,10 @@ class Agent:
                 self.buffer.add((s, a, r, s_, done))
 
                 s = s_
+                episode_reward += r
                 episode_step += 1
 
-            if i % (settings.PRE_TRAIN_STEPS // 5) == 0:
+            if settings.PRE_TRAIN_STEPS > 5 and i % (settings.PRE_TRAIN_STEPS // 5) == 0:
                 print("Pre-train step n", i)
 
             self.best_run = max(self.best_run, episode_reward)
@@ -100,10 +102,10 @@ class Agent:
                 max_step += self.nb_ep // settings.EP_ELONGATION
 
             # Render settings
-            render = GUI.render_display(self.nb_ep)
+            render = GUI.render.display(self.nb_ep)
+            gif = GUI.gif.display(self.nb_ep)
             self.env.set_render(render)
-            gif = (settings.GIF_FREQ > 0 and
-                   self.nb_ep % settings.GIF_FREQ == 0) and settings.DISPLAY
+            self.env.set_gif(gif)
 
             while episode_step <= max_step and not done:
 
@@ -119,7 +121,7 @@ class Agent:
                     # distr = distr[0]
                     # value = value[0]
 
-                s_, r, done, info = self.env.act(a, gif)
+                s_, r, done, info = self.env.act(a)
                 episode_reward += r
 
                 self.buffer.add((s, a, r, s_, 1 if not done else 0))
@@ -140,7 +142,7 @@ class Agent:
                 self.epsilon -= settings.EPSILON_DECAY
 
             # Plotting setting
-            plot = GUI.plot_display(self.nb_ep)
+            plot = GUI.plot.display(self.nb_ep)
             DISPLAYER.add_reward(episode_reward, plot)
             # if episode_reward > self.best_run and \
             #         self.nb_ep > 50 + settings.PRE_TRAIN_STEPS:
@@ -149,14 +151,10 @@ class Agent:
             #     SAVER.save('best')
             #     self.play(1, 'results/gif/best.gif')
 
-            if gif:
-                self.env.save_gif('results/gif/gif_save', self.n_gif)
-                self.n_gif = (self.n_gif + 1) % settings.MAX_NB_GIF
-
             self.total_steps += 1
 
             # Episode display setting
-            ep_reward = GUI.ep_reward_display(self.nb_ep)
+            ep_reward = GUI.ep_reward.display(self.nb_ep)
             if ep_reward:
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %f'
                       ', Max steps: %i' % (self.nb_ep, episode_reward,
@@ -167,6 +165,8 @@ class Agent:
             if settings.SAVE_FREQ > 0 and self.nb_ep % settings.SAVE_FREQ == 0:
                 SAVER.save(self.nb_ep)
 
+        self.env.close()
+
     def play(self, number_run, path=''):
         print("Playing for", number_run, "runs")
 
@@ -176,18 +176,16 @@ class Agent:
                 s = self.env.reset()
                 episode_reward = 0
                 done = False
+                self.env.set_gif(True, path != '')
 
                 while not done:
                     a, = self.sess.run(self.QNetwork.action,
                                        feed_dict={self.QNetwork.state_ph: [s]})
-                    s, r, done, info = self.env.act(a, path != '')
+                    s, r, done, info = self.env.act(a)
 
                     episode_reward += r
 
                 print("Episode reward :", episode_reward)
-
-                if path != '':
-                    self.env.save_gif(path, i)
 
         except KeyboardInterrupt as e:
             pass
@@ -196,7 +194,6 @@ class Agent:
             print("Exception :", e)
 
         finally:
-            self.env.set_render(False)
             print("End of the demo")
             self.env.close()
 

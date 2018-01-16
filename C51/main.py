@@ -4,15 +4,11 @@ import tensorflow as tf
 
 from Agent import Agent
 
+import GUI
 from Displayer import DISPLAYER
 from Saver import SAVER
 
 import settings
-
-def run_gui():
-    print("Running gui")
-    import GUI
-    GUI.main()
 
 if __name__ == '__main__':
     
@@ -25,8 +21,9 @@ if __name__ == '__main__':
 
         SAVER.load(agent)
 
-        gui = threading.Thread(target=run_gui)
-        gui.start()
+        if settings.GUI:
+            gui = threading.Thread(target=GUI.main)
+            gui.start()
 
         try:
             agent.run()
@@ -36,9 +33,7 @@ if __name__ == '__main__':
         SAVER.save(agent.nb_ep)
         DISPLAYER.disp()
 
-        agent.play(10)
-
-        gui.join()
-        # agent.play(3, "results/gif/{}".format(settings.ENV))
+        if settings.GUI:
+            gui.join()
 
     agent.stop()

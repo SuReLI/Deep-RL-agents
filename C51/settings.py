@@ -21,7 +21,7 @@ BATCH_SIZE = 64
 
 # Number of episodes of game environment to train with
 TRAINING_STEPS = 100000
-PRE_TRAIN_STEPS = 1000
+PRE_TRAIN_STEPS = 1
 
 # Maximal number of steps during one episode
 MAX_EPISODE_STEPS = 200
@@ -37,11 +37,12 @@ EPSILON_STEPS = 5000
 EPSILON_DECAY = (EPSILON_START - EPSILON_STOP) / EPSILON_STEPS
 
 # Display Frequencies
-EP_REWARD_FREQ = 50
-PLOT_FREQ = 500
-RENDER_FREQ = 2500
-
+EP_REWARD_FREQ = 10
+PLOT_FREQ = 25
+RENDER_FREQ = 50
+GIF_FREQ = 75
 SAVE_FREQ = 0
-GIF_FREQ = 0
+
 MAX_NB_GIF = 5
+GIF_PATH = 'results/gif/'
 EP_ELONGATION = 0

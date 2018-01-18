@@ -19,6 +19,9 @@ class QNetwork:
         self.state_size = state_size
         self.action_size = action_size
 
+        self.learning_rate = settings.LEARNING_RATE
+        self.delta_lr = settings.LEARNING_RATE / settings.TRAINING_STEPS
+
         # Placeholders
         self.state_ph = tf.placeholder(tf.float32, [None, *self.state_size], name='state')
         self.action_ph = tf.placeholder(tf.int32, [None], name='action')
@@ -104,7 +107,7 @@ class QNetwork:
         self.loss = tf.negative(self.loss)
         self.loss = tf.reduce_mean(self.loss)
 
-        self.trainer = tf.train.AdamOptimizer(settings.LEARNING_RATE)
+        self.trainer = tf.train.AdamOptimizer(self.learning_rate*1e-4)
         self.train = self.trainer.minimize(self.loss)
 
     def init_update_target(self):
@@ -112,6 +115,10 @@ class QNetwork:
 
     def update_target(self):
         _ = self.sess.run(self.target_update)
+
+    def decrease_lr(self):
+        if self.learning_rate > self.delta_lr:
+            self.learning_rate -= self.delta_lr
 
     def train_minibatch(self, batch):
 

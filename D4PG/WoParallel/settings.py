@@ -3,8 +3,9 @@ ENV = "Pendulum-v0"
 
 LOAD = False
 DISPLAY = True
+GUI = True
 
-NB_ATOMS = 12
+NB_ATOMS = 51
 MIN_VALUE = -2000
 MAX_VALUE = 0
 
@@ -33,7 +34,6 @@ NOISE_DECAY = 0.99
 
 
 # Display Frequencies
-DISP_EP_REWARD_FREQ = 1
+EP_REWARD_FREQ = 50
 PLOT_FREQ = 5000
 RENDER_FREQ = 50
-GIF_FREQ = 1000

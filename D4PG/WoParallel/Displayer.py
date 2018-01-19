@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import settings
 
 
+plt.ion()
+
 def save(saver, fig_name):
     if settings.DISPLAY:
         for path, data in saver:
@@ -15,6 +17,7 @@ def save(saver, fig_name):
         os.makedirs(os.path.dirname(fig_name), exist_ok=True)
         fig.savefig(fig_name)
         plt.show(block=False)
+        plt.pause(0.05)
         fig.clf()
     else:
         for path, data in saver:
@@ -30,9 +33,9 @@ class Displayer:
         self.rewards = []
         self.q_buf = []
 
-    def add_reward(self, reward):
+    def add_reward(self, reward, plot=False):
         self.rewards.append(reward)
-        if len(self.rewards) % settings.PLOT_FREQ == 0:
+        if plot:
             if settings.DISPLAY:
                 self.disp()
             else:

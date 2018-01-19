@@ -11,7 +11,8 @@ from Environment import Environment
 from ExperienceBuffer import BUFFER
 
 from Displayer import DISPLAYER
-from Saver import SAVER
+
+import GUI
 import settings
 
 
@@ -39,10 +40,11 @@ class Agent:
 
     def run(self):
 
-        self.total_steps = 0
-        self.sess.run(self.network.target_init)
+        self.total_steps = 1
+        self.sess.run(self.network.target_init)        
 
-        for ep in range(1, settings.TRAINING_EPS + 1):
+        ep = 1
+        while ep < settings.TRAINING_EPS + 1 and not GUI.STOP:
 
             episode_reward = 0
             episode_step = 0
@@ -54,8 +56,7 @@ class Agent:
 
             # Initial state
             s = self.env.reset()
-            render = ep % settings.RENDER_FREQ == 0 and settings.DISPLAY
-            self.env.set_render(render)
+            self.env.set_render(GUI.render.get(ep))
 
             while episode_step < settings.MAX_EPISODE_STEPS and not done:
 
@@ -78,10 +79,13 @@ class Agent:
                 episode_step += 1
                 self.total_steps += 1
 
-            if ep % settings.DISP_EP_REWARD_FREQ == 0:
+            if GUI.ep_reward.get(ep):
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Final noise scale: %7.3f' %
                       (ep, episode_reward, episode_step, noise_scale))
-            DISPLAYER.add_reward(episode_reward)
+
+            plot = GUI.plot.get(ep)
+            DISPLAYER.add_reward(episode_reward, plot)
+            ep += 1
 
     def play(self, number_run):
         print("Playing for", number_run, "runs")

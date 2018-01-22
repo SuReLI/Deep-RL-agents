@@ -1,14 +1,14 @@
 
 import os
 import gym
-from osim.env import RunEnv
+# from osim.env import RunEnv
 
 
 class Environment:
 
     def __init__(self):
         # self.env = RunEnv(visualize=False)
-        self.env = gym.make("BipedalWalker-v2")
+        self.env = gym.make("Pendulum-v0")
         print()
         self.render = False
 

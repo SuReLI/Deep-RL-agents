@@ -66,10 +66,7 @@ class Actor:
 
             s = self.env.reset()
 
-            render = False
-            if self.n_actor == 1:
-                render = GUI.render_display(total_eps)
-                GUI.REQUEST_RENDER = False
+            render = (self.n_actor == 1 and GUI.render.get(total_eps))
             self.env.set_render(render)
 
             max_steps = settings.MAX_STEPS + total_eps // 5
@@ -97,17 +94,10 @@ class Actor:
                 episode_step += 1
             
             if not STOP_REQUESTED:
-                display = False
-                if self.n_actor == 1:
-                    display = GUI.ep_reward_dislay(total_eps)
-                    GUI.REQUEST_EP_REWARD = False
-                if display:
+                if self.n_actor == 1 and GUI.ep_reward.get(total_eps):
                     print("Episode %i : reward %i, steps %i, noise scale %f" % (total_eps, episode_reward, episode_step, noise_scale))
 
-                plot = False
-                if self.n_actor == 1:
-                    plot = GUI.plot_display(total_eps)
-                    GUI.REQUEST_PLOT = False
+                plot = (self.n_actor == 1 and GUI.plot.get(total_eps))
                 DISPLAYER.add_reward(episode_reward, self.n_actor, plot)
             
                 total_eps += 1

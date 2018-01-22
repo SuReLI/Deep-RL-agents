@@ -2,150 +2,84 @@
 from tkinter import *
 import settings
 
+class Feature:
+    nb_column = 0
 
-REQUEST_RENDER = False
-REQUEST_PLOT = False
-REQUEST_EP_REWARD = False
+    def __init__(self, name, settings_freq, text):
+        self.name = name
+        self.text = text.lower()
+        self.request = False
+        self.auto = True
+        self.settings_freq = settings_freq
+        self.freq = settings_freq
 
-AUTO_RENDER = True
-AUTO_PLOT = True
-AUTO_EP_REWARD = True
+    def build(self, window):
+        self.label = Label(window, text=self.name.upper())
+        self.update = Button(window, text=self.text.capitalize(), command=self.update_cmd)
+        self.switch = Button(window, text='Set auto {} Off'.format(self.text), command=self.switch_cmd)
+        self.freq_entry = Entry(window, justify='center')
+        self.freq_entry.bind("<Return>", self.set_freq)
 
-FREQ_RENDER = settings.RENDER_FREQ
-FREQ_PLOT = settings.PLOT_FREQ
-FREQ_EP_REWARD = settings.EP_REWARD_FREQ
+        self.label.grid(column=Feature.nb_column, row=0)
+        self.update.grid(column=Feature.nb_column, row=1)
+        self.switch.grid(column=Feature.nb_column, row=2)
+        self.freq_entry.grid(column=Feature.nb_column, row=3)
+        Feature.nb_column += 1
+
+    def update_cmd(self):
+        self.request = True
+
+    def switch_cmd(self):
+        self.auto = not self.auto
+        on_off = ('Off' if self.auto else 'On')
+        self.switch.config(text='Set auto {} {}'.format(self.text, on_off))
+
+    def set_freq(self, event):
+        try:self.freq = int(self.freq_entry.get())
+        except:pass
+
+    def get(self, nb_ep):
+        if not settings.DISPLAY:
+            return False
+
+        if settings.GUI:
+            if self.request:
+                self.request = False
+                return True
+            elif self.auto and self.freq > 0:
+                return nb_ep % self.freq == 0
+            return False
+        return self.settings_freq > 0 and nb_ep % self.settings_freq == 0
 
 
-def render_display(nb_ep):
-    return display(REQUEST_RENDER, AUTO_RENDER,
-                   FREQ_RENDER, settings.RENDER_FREQ, nb_ep)
+STOP = False
 
+ep_reward = Feature('EP REWARD', settings.EP_REWARD_FREQ, 'display')
+plot = Feature('PLOT', settings.PLOT_FREQ, 'update')
+render = Feature('RENDER', settings.RENDER_FREQ, 'render')
+save = Feature('MODEL SAVER', settings.SAVE_FREQ, 'save')
 
-def plot_display(nb_ep):
-    return display(REQUEST_PLOT, AUTO_PLOT,
-                   FREQ_PLOT, settings.PLOT_FREQ, nb_ep)
-
-
-def ep_reward_dislay(nb_ep):
-    return display(REQUEST_EP_REWARD, AUTO_EP_REWARD,
-                   FREQ_EP_REWARD, settings.EP_REWARD_FREQ, nb_ep)
-
-
-def display(request, auto, freq, settings_freq, nb_ep):
-    if not settings.DISPLAY:
-        return False
-
-    if settings.GUI:
-        if request:
-            return True
-        elif auto and freq > 0:
-            return nb_ep % freq == 0
-        return False
-    return settings_freq > 0 and nb_ep % settings_freq == 0
 
 
 def main():
-
+    global ep_reward, plot, render, save
     from Actor import request_stop
+
 
     window = Tk()
     window.title("Control Panel")
     window.attributes('-topmost', 1)
 
     def stop_run():
-        request_stop()
         window.destroy()
+        request_stop()
 
-    def set_render_freq(event):
-        global FREQ_RENDER
-        try:
-            FREQ_RENDER = int(render_freq.get())
-        except:
-            pass
-
-    def update_render():
-        global REQUEST_RENDER
-        REQUEST_RENDER = True
-
-    def switch_render():
-        global AUTO_RENDER
-        AUTO_RENDER = not AUTO_RENDER
-        on_off = ("On" if AUTO_RENDER else "Off")
-        render_switch.config(text='Set auto update ' + on_off)
-
-    def set_plot_freq(event):
-        global FREQ_PLOT
-        try:
-            FREQ_PLOT = int(plot_freq.get())
-        except:
-            pass
-
-    def update_plot():
-        global REQUEST_PLOT
-        REQUEST_PLOT = True
-
-    def switch_plot():
-        global AUTO_PLOT
-        AUTO_PLOT = not AUTO_PLOT
-        on_off = ("On" if AUTO_PLOT else "Off")
-        plot_switch.config(text='Set auto update ' + on_off)
-
-    def set_ep_reward_freq(event):
-        global FREQ_EP_REWARD
-        try:
-            FREQ_EP_REWARD = int(ep_reward_freq.get())
-        except:
-            pass
-
-    def update_ep_reward():
-        global REQUEST_EP_REWARD
-        REQUEST_EP_REWARD = True
-
-    def switch_ep_reward():
-        global AUTO_EP_REWARD
-        AUTO_EP_REWARD = not AUTO_EP_REWARD
-        on_off = ("On" if AUTO_EP_REWARD else "Off")
-        ep_reward_switch.config(text='Set auto update ' + on_off)
-
-    render_label = Label(window, text='RENDER')
-    render_update = Button(window, text='Render', command=update_render)
-    render_switch = Button(window, text='Set auto render On', command=switch_render)
-    render_freq = Entry(window, justify='center')
-    render_freq.bind("<Return>", set_render_freq)
-
-    plot_label = Label(window, text='PLOT')
-    plot_update = Button(window, text='Update', command=update_plot)
-    plot_switch = Button(window, text='Set auto update On', command=switch_plot)
-    plot_freq = Entry(window, justify='center')
-    plot_freq.bind("<Return>", set_plot_freq)
-
-    ep_reward_label = Label(window, text="Ep reward")
-    ep_reward_update = Button(window, text='Display', command=update_ep_reward)
-    ep_reward_switch = Button(window, text='Set auto display On', command=switch_ep_reward)
-    ep_reward_freq = Entry(window, justify='center')
-    ep_reward_freq.bind("<Return>", set_ep_reward_freq)
+    ep_reward.build(window)
+    plot.build(window)
+    render.build(window)
+    save.build(window)
 
     stop_button = Button(window, text='Stop the Run', command=stop_run)
-
-    render_label.grid(column=1, row=1)
-    render_update.grid(column=1, row=2)
-    render_switch.grid(column=1, row=3)
-    render_freq.grid(column=1, row=4)
-
-    plot_label.grid(column=2, row=1)
-    plot_update.grid(column=2, row=2)
-    plot_switch.grid(column=2, row=3)
-    plot_freq.grid(column=2, row=4)
-
-    ep_reward_label.grid(column=3, row=1)
-    ep_reward_update.grid(column=3, row=2)
-    ep_reward_switch.grid(column=3, row=3)
-    ep_reward_freq.grid(column=3, row=4)
-
-    stop_button.grid(column=1, row=5, columnspan=3)
+    stop_button.grid(column=0, row=4, columnspan=Feature.nb_column, sticky='NSEW')
 
     window.mainloop()
-
-
-if __name__ == '__main__':
-    main()

@@ -5,6 +5,7 @@ import numpy as np
 import time
 
 import Actor
+import GUI
 from Model import *
 from ExperienceBuffer import BUFFER
 
@@ -151,6 +152,12 @@ class Learner:
         self.actor_train_op = actor_trainer.minimize(actor_loss,
                                                      var_list=self.actor_vars)
 
+        # # Actor loss and optimization
+        # self.action_grad = tf.gradients(self.q_values_of_suggested_actions, self.actions)[0]
+        # self.actor_grad = tf.gradients(self.actions, self.actor_vars, -self.action_grad)
+        # actor_trainer = tf.train.AdamOptimizer(settings.ACTOR_LEARNING_RATE)
+        # self.actor_train_op = actor_trainer.apply_gradients(zip(self.actor_grad, self.actor_vars))
+
     def run(self):
 
         self.total_eps = 1
@@ -188,6 +195,9 @@ class Learner:
 
                 if self.total_eps % settings.UPDATE_ACTORS_FREQ == 0:
                     self.sess.run(self.update_actors)
+
+                if GUI.save.get(self.total_eps):
+                    self.save()
 
                 # print("Learning ep : ", self.total_eps)
                 self.total_eps += 1

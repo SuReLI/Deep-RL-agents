@@ -4,19 +4,14 @@ import threading
 import time
 
 import Actor
-# from Actor import Actor, request_stop, STOP_REQUESTED
+import GUI
 from Learner import Learner
 from Displayer import DISPLAYER
 import settings
 
 
-def run_gui():
-    print("Running GUI")
-    import GUI
-    GUI.main()
+if __name__ == '__main__':
 
-
-def main():
 
     tf.reset_default_graph()
 
@@ -40,13 +35,14 @@ def main():
 
         threads.append(threading.Thread(target=learner.run))
 
-        GUI_thread = threading.Thread(target=run_gui)
+        if settings.GUI:
+            GUI_thread = threading.Thread(target=GUI.main)
+            GUI_thread.start()
 
         sess.run(tf.global_variables_initializer())
 
         for t in threads:
             t.start()
-        GUI_thread.start()
         print("Running...")
 
         try:
@@ -63,8 +59,5 @@ def main():
         DISPLAYER.disp()
         DISPLAYER.disp_q()
 
-        GUI_thread.join()
-
-
-if __name__ == '__main__':
-    main()
+        if settings.GUI:
+            GUI_thread.join()

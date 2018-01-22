@@ -1,6 +1,7 @@
 
 import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
 
 import gym
 import random
@@ -34,7 +35,21 @@ class Agent:
 
         self.sess.run(tf.global_variables_initializer())
 
-    def predict_action(self, s):
+    def predict_action(self, s, plot_distrib):
+        if plot_distrib:
+            action, distrib, value = self.sess.run([self.network.actions,
+                                                    self.network.Q_distrib_suggested_actions,
+                                                    self.network.Q_values_suggested_actions],
+                                                    feed_dict={self.network.state_ph: s[None]})
+            action, distrib, value = action[0], distrib[0], value[0]
+            fig = plt.figure(2)
+            fig.clf()
+            plt.bar(self.z, distrib, self.delta_z)
+            plt.axvline(value, color='red', linewidth=0.7)
+            plt.show(block=False)
+            plt.pause(0.001)
+            return action
+
         return self.sess.run(self.network.actions,
                              feed_dict={self.network.state_ph: s[None]})[0]
 
@@ -42,6 +57,8 @@ class Agent:
 
         self.total_steps = 1
         self.sess.run(self.network.target_init)        
+        self.z = self.sess.run(self.network.z)
+        self.delta_z = self.network.delta_z
 
         ep = 1
         while ep < settings.TRAINING_EPS + 1 and not GUI.STOP:
@@ -57,13 +74,14 @@ class Agent:
             # Initial state
             s = self.env.reset()
             self.env.set_render(GUI.render.get(ep))
+            plot_distrib = GUI.plot_distrib.get(ep)
 
             while episode_step < settings.MAX_EPISODE_STEPS and not done:
 
                 noise = np.random.normal(size=self.action_size)
                 scaled_noise = noise_scale * noise
 
-                a = np.clip(self.predict_action(s) +
+                a = np.clip(self.predict_action(s, plot_distrib) +
                             scaled_noise, *self.bounds)
 
                 s_, r, done, info = self.env.act(a)

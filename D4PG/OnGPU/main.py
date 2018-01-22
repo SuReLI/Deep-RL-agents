@@ -3,6 +3,8 @@ import tensorflow as tf
 import threading
 import time
 
+from tensorflow.python.client import timeline
+
 import Actor
 import GUI
 from Learner import Learner
@@ -10,20 +12,35 @@ from Displayer import DISPLAYER
 import settings
 
 
+class Sess(tf.Session):
+    def __init__(self, options, meta, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.op = options
+        self.meta = meta
+    def run(self, *args, **kwargs):
+        return super().run(options=self.op, run_metadata=self.meta, *args, **kwargs)
+
+
 if __name__ == '__main__':
 
 
     tf.reset_default_graph()
 
-    with tf.Session() as sess:
+    options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+    meta = tf.RunMetadata()
+    config = tf.ConfigProto(log_device_placement=True,
+                            device_count={"CPU":10, "GPU":1},
+                            inter_op_parallelism_threads=10)
+    with Sess(options, meta, config=config) as sess:
 
         workers = []
         for i in range(settings.NB_ACTORS):
-            workers.append(Actor.Actor(sess, i + 1))
+            with tf.device("/device:CPU:"+str(i)):
+                workers.append(Actor(sess, i + 1))
 
-        # with tf.device('/device:GPU:0'):
         print("Initializing learner...")
-        learner = Learner(sess, *workers[0].get_env_features())
+        with tf.device("/device:GPU:0"):
+            learner = Learner(sess, *workers[0].get_env_features())
         print("Learner initialized !\n")
         if settings.LOAD:
             learner.load()
@@ -58,6 +75,10 @@ if __name__ == '__main__':
 
         DISPLAYER.disp()
         DISPLAYER.disp_q()
+        f_t = timeline.Timeline(meta.step_stats)
+        chrome_trace = f_t.generate_chrome_trace_format()
+        with open("timeline.json", 'w') as f:
+            f.write(chrome_trace)
 
         if settings.GUI:
             GUI_thread.join()

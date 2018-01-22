@@ -1,9 +1,9 @@
 
 from multiprocessing import cpu_count
 
-DISPLAY = True
+DISPLAY = False
 LOAD = False
-GUI = True
+GUI = False
 
 NB_ACTORS = cpu_count() - 2
 NB_ATOMS = 51
@@ -15,7 +15,7 @@ DISCOUNT = 0.99
 DISCOUNT_N = DISCOUNT ** N_STEP_RETURN
 
 MEMORY_SIZE = 1000000
-BATCH_SIZE = 64
+BATCH_SIZE = 1024
 
 
 CRITIC_LEARNING_RATE = 5e-4

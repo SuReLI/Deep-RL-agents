@@ -36,7 +36,7 @@ if __name__ == '__main__':
         workers = []
         for i in range(settings.NB_ACTORS):
             with tf.device("/device:CPU:"+str(i)):
-                workers.append(Actor(sess, i + 1))
+                workers.append(Actor.Actor(sess, i + 1))
 
         print("Initializing learner...")
         with tf.device("/device:GPU:0"):

@@ -22,7 +22,8 @@ class Learner:
     def __init__(self, sess, state_size, action_size, bounds):
 
         self.sess = sess
-        self.saver = tf.train.Saver()
+        with tf.device("CPU:0"):
+            self.saver = tf.train.Saver()
 
         self.state_size = state_size
         self.action_size = action_size

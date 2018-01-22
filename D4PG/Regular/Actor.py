@@ -88,7 +88,7 @@ class Actor:
                     s_mem, a_mem, discount_r, ss_mem, done_mem = memory.popleft()
                     for i, (si, ai, ri, s_i, di) in enumerate(memory):
                         discount_r += ri * settings.DISCOUNT ** (i + 1)
-                    BUFFER.add(s_mem, a_mem, discount_r, s_, done)
+                    BUFFER.add(s_mem, a_mem, discount_r, s_, 0 if done else 1)
 
                 s = s_
                 episode_step += 1

@@ -1,19 +1,21 @@
 
 import tensorflow as tf
 import numpy as np
+from collections import deque
 
-from Model import build_actor, get_vars
+from Model import build_actor
 from ExperienceBuffer import BUFFER
 from Environment import Environment
 
 from Displayer import DISPLAYER
+import GUI
 import settings
 
 
 STOP_REQUESTED = False
 
 
-def request_stop(signal, frame):
+def request_stop():
     global STOP_REQUESTED
     print('End of training')
     STOP_REQUESTED = True
@@ -47,14 +49,10 @@ class Actor:
         self.policy = build_actor(self.state_ph, self.bounds, self.action_size,
                                   trainable=False, scope=scope)
 
-        self.vars = get_vars(scope, trainable=False)
-
     def predict_action(self, s):
         return self.sess.run(self.policy, feed_dict={self.state_ph: s[None]})[0]
 
     def run(self):
-
-        import time
 
         total_eps = 1
         while not STOP_REQUESTED:
@@ -62,16 +60,18 @@ class Actor:
             episode_reward = 0
             episode_step = 0
             done = False
+            memory = deque()
 
-            noise_scale = settings.NOISE_SCALE * settings.NOISE_DECAY**(total_eps // 10)
+            noise_scale = settings.NOISE_SCALE * settings.NOISE_DECAY**(total_eps//20)
 
             s = self.env.reset()
 
-            render = (self.n_actor == 1 and settings.DISPLAY and
-                      total_eps % settings.RENDER_FREQ == 0)
+            render = (self.n_actor == 1 and GUI.render.get(total_eps))
             self.env.set_render(render)
 
-            while not done and not STOP_REQUESTED:
+            max_steps = settings.MAX_STEPS + total_eps // 5
+
+            while episode_step < max_steps and not done and not STOP_REQUESTED:
 
                 noise = np.random.normal(size=self.action_size)
                 scaled_noise = noise_scale * noise
@@ -82,22 +82,24 @@ class Actor:
 
                 episode_reward += r
 
-                BUFFER.add(s, a, r, s_, 0 if done else 1)
+                memory.append((s, a, r, s_, 0 if done else 1))
+
+                if len(memory) >= settings.N_STEP_RETURN:
+                    s_mem, a_mem, discount_r, ss_mem, done_mem = memory.popleft()
+                    for i, (si, ai, ri, s_i, di) in enumerate(memory):
+                        discount_r += ri * settings.DISCOUNT ** (i + 1)
+                    BUFFER.add(s_mem, a_mem, discount_r, s_, 0 if done else 1)
 
                 s = s_
                 episode_step += 1
-
-            # if self.n_actor == 1 and total_eps % 100 == 0:
-                # BUFFER.stats()
-                # BUFFER.disp()
             
-            if self.n_actor == 1 and total_eps % settings.EP_REW_FREQ == 0:
-                print("Episode %i : reward %7.3f, steps %i, noise scale %f" % (total_eps, episode_reward, episode_step, noise_scale))
-
             if not STOP_REQUESTED:
-                DISPLAYER.add_reward(episode_reward, self.n_actor)
+                if self.n_actor == 1 and GUI.ep_reward.get(total_eps):
+                    print("Episode %i : reward %i, steps %i, noise scale %f" % (total_eps, episode_reward, episode_step, noise_scale))
+
+                plot = (self.n_actor == 1 and GUI.plot.get(total_eps))
+                DISPLAYER.add_reward(episode_reward, self.n_actor, plot)
             
-            total_eps += 1
-            # time.sleep(0.2)
+                total_eps += 1
 
         self.env.close()

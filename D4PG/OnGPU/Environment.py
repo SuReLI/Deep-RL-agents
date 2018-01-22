@@ -1,7 +1,7 @@
 
 import os
 import gym
-from osim.env import RunEnv
+# from osim.env import RunEnv
 
 
 class Environment:
@@ -22,6 +22,8 @@ class Environment:
         return self.env.action_space.low, self.env.action_space.high
 
     def set_render(self, render):
+        if not render:
+            self.env.render(close=True)
         # if render != self.render:
         #     self.env = RunEnv(visualize=render)
         #     self.env.reset(difficulty=0)
@@ -34,7 +36,9 @@ class Environment:
         return self.env.action_space.sample()
 
     def act(self, action):
-        assert self.env.action_space.contains(action)
+        if not self.env.action_space.contains(action):
+            print(action)
+            assert self.env.action_space.contains(action)
         if self.render:
             self.env.render()
         return self.env.step(action)

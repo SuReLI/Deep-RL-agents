@@ -95,7 +95,7 @@ class Network:
     def build_train_operation(self):
 
         zz = tf.tile(self.z[None], [self.batch_size, 1])
-        Tz = tf.clip_by_value(self.reward + settings.DISCOUNT * self.not_done * zz,
+        Tz = tf.clip_by_value(self.reward + settings.DISCOUNT_N * self.not_done * zz,
                               MIN_Q, MAX_Q - 1e-4)
         bj = (Tz - MIN_Q) / self.delta_z
         l = tf.floor(bj)

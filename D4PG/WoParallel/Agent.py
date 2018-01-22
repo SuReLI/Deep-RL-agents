@@ -2,18 +2,14 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-
-import gym
-import random
+from collections import deque
 
 from QNetwork import Network
-
 from Environment import Environment
 from ExperienceBuffer import BUFFER
 
-from Displayer import DISPLAYER
-
 import GUI
+from Displayer import DISPLAYER
 import settings
 
 
@@ -66,9 +62,9 @@ class Agent:
             episode_reward = 0
             episode_step = 0
             done = False
+            memory = deque()
 
             # Initialize exploration noise process
-            noise_process = np.zeros(self.action_size)
             noise_scale = settings.NOISE_SCALE * settings.NOISE_DECAY**ep
 
             # Initial state
@@ -88,9 +84,15 @@ class Agent:
 
                 episode_reward += r
 
-                BUFFER.add(s, a, r, s_, 0.0 if done else 1.0)
+                memory.append((s, a, r, s_, 0 if done else 1))
 
-                if self.total_steps % settings.TRAINING_FREQ == 0:
+                if len(memory) >= settings.N_STEP_RETURN:
+                    s_mem, a_mem, discount_r, ss_mem, done_mem = memory.popleft()
+                    for i, (si, ai, ri, s_i, di) in enumerate(memory):
+                        discount_r += ri * settings.DISCOUNT ** (i + 1)
+                    BUFFER.add(s_mem, a_mem, discount_r, s_, 0 if done else 1)
+
+                if len(BUFFER) > 0 and self.total_steps % settings.TRAINING_FREQ == 0:
                     self.network.train(BUFFER.sample())
 
                 s = s_

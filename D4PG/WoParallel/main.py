@@ -1,10 +1,11 @@
 
 import tensorflow as tf
+import threading
 
 from Agent import Agent
 
 from Displayer import DISPLAYER
-from Saver import SAVER
+import GUI
 
 import settings
 
@@ -15,19 +16,19 @@ if __name__ == '__main__':
     with tf.Session() as sess:
 
         agent = Agent(sess)
-        SAVER.set_sess(sess)
+        GUI_thread = threading.Thread(target=GUI.main)
 
-        SAVER.load()
+        sess.run(tf.global_variables_initializer())
 
+        GUI_thread.start()
         print("Beginning of the run")
         try:
             agent.run()
         except KeyboardInterrupt:
             pass
         print("End of the run")
-        SAVER.save(agent.total_steps)
         DISPLAYER.disp()
 
-        agent.play(10)
+        GUI_thread.join()
 
     agent.close()

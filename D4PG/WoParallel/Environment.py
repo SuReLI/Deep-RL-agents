@@ -19,6 +19,8 @@ class Environment:
         return self.env.action_space.low, self.env.action_space.high
 
     def set_render(self, render):
+        if not render:
+            self.env.render(close=True)
         self.render = render
 
     def reset(self):

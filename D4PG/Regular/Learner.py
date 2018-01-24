@@ -16,6 +16,7 @@ import settings
 MIN_Q = settings.MIN_VALUE
 MAX_Q = settings.MAX_VALUE
 
+TOTAL_EPS = 0
 
 class Learner:
 
@@ -152,6 +153,7 @@ class Learner:
         self.actor_train_op = actor_trainer.apply_gradients(zip(self.actor_grad, self.actor_vars))
 
     def run(self):
+        global TOTAL_EPS
 
         self.total_eps = 1
         start_time = time.time()
@@ -163,12 +165,10 @@ class Learner:
 
             while not Actor.STOP_REQUESTED:
                 
-                batch = BUFFER.sample()
-
-                if batch == []:
+                if not BUFFER.buffer:
                     continue
 
-                batch = batch[:8]
+                batch = BUFFER.sample()
 
                 feed_dict = {
                     self.state_ph: np.asarray([elem[0] for elem in batch]),
@@ -194,6 +194,7 @@ class Learner:
 
                 # print("Learning ep : ", self.total_eps)
                 self.total_eps += 1
+                TOTAL_EPS += 1
 
                 if self.total_eps % settings.PERF_FREQ == 0:
                     print("PERF : %i learning round in %fs" %

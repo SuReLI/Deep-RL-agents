@@ -36,9 +36,7 @@ class Environment:
         return self.env.action_space.sample()
 
     def act(self, action):
-        if not self.env.action_space.contains(action):
-            print(action)
-            assert self.env.action_space.contains(action)
+        assert self.env.action_space.contains(action)
         if self.render:
             self.env.render()
         return self.env.step(action)

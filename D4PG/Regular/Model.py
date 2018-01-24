@@ -9,10 +9,8 @@ def build_actor(states, bounds, action_size, trainable, scope):
                                  activation=tf.nn.relu, name='dense')
         hidden_2 = tf.layers.dense(hidden, 8, trainable=trainable,
                                    activation=tf.nn.relu, name='dense_1')
-        hidden_3 = tf.layers.dense(hidden_2, 8, trainable=trainable,
-                                   activation=tf.nn.relu, name='dense_2')
-        actions_unscaled = tf.layers.dense(hidden_3, action_size,
-                                           trainable=trainable, name='dense_3')
+        actions_unscaled = tf.layers.dense(hidden_2, action_size,
+                                           trainable=trainable, name='dense_2')
         # bound the actions to the valid range
         low_bound, high_bound = bounds
         valid_range = high_bound - low_bound
@@ -29,12 +27,9 @@ def build_critic(states, actions, trainable, reuse, scope):
         hidden_2 = tf.layers.dense(hidden, 8,
                                    trainable=trainable, reuse=reuse,
                                    activation=tf.nn.relu, name='dense_1')
-        hidden_3 = tf.layers.dense(hidden_2, 8,
+        Q_values = tf.layers.dense(hidden_2, settings.NB_ATOMS,
                                    trainable=trainable, reuse=reuse,
-                                   activation=tf.nn.relu, name='dense_2')
-        Q_values = tf.layers.dense(hidden_3, settings.NB_ATOMS,
-                                   trainable=trainable, reuse=reuse,
-                                   activation=tf.nn.softmax, name='dense_3')
+                                   activation=tf.nn.softmax, name='dense_2')
     return Q_values
 
 

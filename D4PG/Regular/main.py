@@ -12,7 +12,6 @@ import settings
 
 if __name__ == '__main__':
 
-
     tf.reset_default_graph()
 
     with tf.Session() as sess:

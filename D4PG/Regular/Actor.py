@@ -54,6 +54,8 @@ class Actor:
 
     def run(self):
 
+        import Learner
+
         total_eps = 1
         while not STOP_REQUESTED:
 
@@ -70,6 +72,8 @@ class Actor:
             self.env.set_render(render)
 
             max_steps = settings.MAX_STEPS + total_eps // 5
+
+            n = Learner.TOTAL_EPS
 
             while episode_step < max_steps and not done and not STOP_REQUESTED:
 
@@ -92,6 +96,11 @@ class Actor:
 
                 s = s_
                 episode_step += 1
+
+            from time import sleep
+            sleep(1)
+
+            print(Learner.TOTAL_EPS - n)
             
             if not STOP_REQUESTED:
                 if self.n_actor == 1 and GUI.ep_reward.get(total_eps):

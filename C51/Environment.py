@@ -70,7 +70,7 @@ class Environment:
         return s_, r, done, info
 
     def save_gif(self):
-        if self.images == []:
+        if not self.images:
             return
 
         print("Saving gif in ", GIF_PATH, "...", sep='')

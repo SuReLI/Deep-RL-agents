@@ -58,12 +58,12 @@ STOP = False
 ep_reward = Feature('EP REWARD', settings.EP_REWARD_FREQ, 'display')
 plot = Feature('PLOT', settings.PLOT_FREQ, 'update')
 plot_distrib = Feature('PLOT DISTRIB', 0, 'update')
+gif = Feature('GIF SAVER', settings.GIF_FREQ, 'snap')
 render = Feature('RENDER', settings.RENDER_FREQ, 'render')
-
+save = Feature('MODEL SAVER', settings.SAVE_FREQ, 'save')
 
 
 def main():
-    global ep_reward, plot, plot_distrib, render
 
     window = Tk()
     window.title("Control Panel")
@@ -78,6 +78,8 @@ def main():
     plot.build(window)
     plot_distrib.build(window)
     render.build(window)
+    gif.build(window)
+    save.build(window)
 
     stop_button = Button(window, text='Stop the Run', command=stop_run)
     stop_button.grid(column=0, row=4, columnspan=Feature.nb_column, sticky='NSEW')

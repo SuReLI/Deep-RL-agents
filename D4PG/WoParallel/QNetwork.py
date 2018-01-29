@@ -121,18 +121,22 @@ class Network:
         critic_loss = tf.negative(critic_loss)
         critic_loss = tf.reduce_mean(critic_loss)
 
+        # Learning rate placeholders
+        self.critic_lr = tf.placeholder(dtype=tf.float32, name='critic_lr')
+        self.actor_lr = tf.placeholder(dtype=tf.float32, name='actor_lr')
+
         # Critic loss and optimization
         critic_loss += l2_regularization(self.critic_vars)
-        critic_trainer = tf.train.AdamOptimizer(settings.CRITIC_LEARNING_RATE)
+        critic_trainer = tf.train.AdamOptimizer(self.critic_lr * 1e-4)
         self.critic_train_op = critic_trainer.minimize(critic_loss)
 
         # Actor loss and optimization
         self.action_grad = tf.gradients(self.Q_values_suggested_actions, self.actions)[0]
         self.actor_grad = tf.gradients(self.actions, self.actor_vars, -self.action_grad)
-        actor_trainer = tf.train.AdamOptimizer(settings.ACTOR_LEARNING_RATE)
+        actor_trainer = tf.train.AdamOptimizer(self.actor_lr * 1e-4)
         self.actor_train_op = actor_trainer.apply_gradients(zip(self.actor_grad, self.actor_vars))
 
-    def train(self, batch):
+    def train(self, batch, critic_lr, actor_lr):
 
         states = np.asarray([elem[0] for elem in batch])
         actions = np.asarray([elem[1] for elem in batch])
@@ -146,7 +150,9 @@ class Network:
                          self.action_ph: actions,
                          self.reward_ph: rewards,
                          self.next_state_ph: next_states,
-                         self.not_done_ph: not_done}
+                         self.not_done_ph: not_done,
+                         self.critic_lr: critic_lr,
+                         self.actor_lr: actor_lr}
             
             _, _ = self.sess.run([self.critic_train_op, self.actor_train_op],
                                   feed_dict=feed_dict)

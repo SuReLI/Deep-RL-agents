@@ -65,7 +65,6 @@ save = Feature('MODEL SAVER', settings.SAVE_FREQ, 'save')
 
 
 def main():
-    global ep_reward, plot, render, gif
 
     window = Tk()
     window.title("Control Panel")

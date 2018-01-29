@@ -10,6 +10,7 @@ from ExperienceBuffer import BUFFER
 
 import GUI
 from Displayer import DISPLAYER
+from Saver import SAVER
 import settings
 
 
@@ -28,6 +29,12 @@ class Agent:
         self.network = Network(self.sess,
                                self.state_size, self.action_size,
                                self.bounds)
+
+        self.critic_lr = settings.CRITIC_LEARNING_RATE
+        self.actor_lr = settings.ACTOR_LEARNING_RATE
+
+        self.delta_critic_lr = self.critic_lr / settings.TRAINING_EPS
+        self.delta_actor_lr = self.actor_lr / settings.TRAINING_EPS
 
         self.sess.run(tf.global_variables_initializer())
 
@@ -59,6 +66,7 @@ class Agent:
         ep = 1
         while ep < settings.TRAINING_EPS + 1 and not GUI.STOP:
 
+            s = self.env.reset()
             episode_reward = 0
             episode_step = 0
             done = False
@@ -68,11 +76,13 @@ class Agent:
             noise_scale = settings.NOISE_SCALE * settings.NOISE_DECAY**ep
 
             # Initial state
-            s = self.env.reset()
             self.env.set_render(GUI.render.get(ep))
+            self.env.set_gif(GUI.gif.get(ep))
             plot_distrib = GUI.plot_distrib.get(ep)
 
-            while episode_step < settings.MAX_EPISODE_STEPS and not done:
+            max_eps = settings.MAX_EPISODE_STEPS + (ep // 50)
+
+            while episode_step < max_eps and not done:
 
                 noise = np.random.normal(size=self.action_size)
                 scaled_noise = noise_scale * noise
@@ -93,18 +103,28 @@ class Agent:
                     BUFFER.add(s_mem, a_mem, discount_r, s_, 0 if done else 1)
 
                 if len(BUFFER) > 0 and self.total_steps % settings.TRAINING_FREQ == 0:
-                    self.network.train(BUFFER.sample())
+                    self.network.train(BUFFER.sample(), self.critic_lr, self.actor_lr)
 
                 s = s_
                 episode_step += 1
                 self.total_steps += 1
 
-            if GUI.ep_reward.get(ep):
-                print('Episode %2i, Reward: %7.3f, Steps: %i, Final noise scale: %7.3f' %
-                      (ep, episode_reward, episode_step, noise_scale))
+            self.critic_lr -= self.delta_critic_lr
+            self.actor_lr -= self.delta_actor_lr
 
+            # Plot reward
             plot = GUI.plot.get(ep)
             DISPLAYER.add_reward(episode_reward, plot)
+
+            # Print episode reward
+            if GUI.ep_reward.get(ep):
+                print('Episode %2i, Reward: %7.3f, Steps: %i, Final noise scale: %7.3f, Critic LR: %f, Actor LR: %f' %
+                      (ep, episode_reward, episode_step, noise_scale, self.critic_lr, self.actor_lr))
+
+            # Save the model
+            if GUI.save.get(ep):
+                SAVER.save(ep)
+
             ep += 1
 
     def play(self, number_run):

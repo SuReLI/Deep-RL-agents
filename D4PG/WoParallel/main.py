@@ -4,8 +4,9 @@ import threading
 
 from Agent import Agent
 
-from Displayer import DISPLAYER
 import GUI
+from Displayer import DISPLAYER
+from Saver import SAVER
 
 import settings
 
@@ -16,19 +17,25 @@ if __name__ == '__main__':
     with tf.Session() as sess:
 
         agent = Agent(sess)
-        GUI_thread = threading.Thread(target=GUI.main)
+        SAVER.set_sess(sess)
 
-        sess.run(tf.global_variables_initializer())
+        SAVER.load(agent)
 
-        GUI_thread.start()
-        print("Beginning of the run")
+        if settings.GUI:
+            gui = threading.Thread(target=GUI.main)
+            gui.start()
+
         try:
             agent.run()
         except KeyboardInterrupt:
             pass
         print("End of the run")
+        SAVER.save('last')
         DISPLAYER.disp()
 
-        GUI_thread.join()
+        if settings.GUI:
+            gui.join()
+        else:
+            agent.play(5)
 
     agent.close()

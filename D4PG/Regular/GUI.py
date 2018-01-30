@@ -43,7 +43,7 @@ class Feature:
         if not settings.DISPLAY:
             return False
 
-        if settings.GUI:
+        if settings.INTERFACE:
             if self.request:
                 self.request = False
                 return True

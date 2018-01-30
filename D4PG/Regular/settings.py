@@ -1,9 +1,20 @@
 
 from multiprocessing import cpu_count
+import gym
+
+ENV = "Pendulum-v0"
+
+setting_env = gym.make(ENV)
+
+ACTION_SIZE = setting_env.action_space.shape[0]
+STATE_SIZE = list(setting_env.observation_space.shape)
+BOUNDS = (setting_env.action_space.low, setting_env.action_space.high)
+
+del setting_env
 
 DISPLAY = True
 LOAD = False
-GUI = True
+INTERFACE = True
 
 NB_ACTORS = 1  # cpu_count() - 2
 NB_ATOMS = 51
@@ -15,7 +26,7 @@ DISCOUNT = 0.99
 DISCOUNT_N = DISCOUNT ** N_STEP_RETURN
 
 MEMORY_SIZE = 1000000
-BATCH_SIZE = 64
+BATCH_SIZE = 1
 
 
 CRITIC_LEARNING_RATE = 5e-4

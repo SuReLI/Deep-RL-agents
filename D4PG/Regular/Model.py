@@ -1,18 +1,18 @@
 
 import tensorflow as tf
-import settings
+from settings import *
 
 
-def build_actor(states, bounds, action_size, trainable, scope):
+def build_actor(states, trainable, scope):
     with tf.variable_scope(scope):
         hidden = tf.layers.dense(states, 8, trainable=trainable,
                                  activation=tf.nn.relu, name='dense')
         hidden_2 = tf.layers.dense(hidden, 8, trainable=trainable,
                                    activation=tf.nn.relu, name='dense_1')
-        actions_unscaled = tf.layers.dense(hidden_2, action_size,
+        actions_unscaled = tf.layers.dense(hidden_2, ACTION_SIZE,
                                            trainable=trainable, name='dense_2')
         # bound the actions to the valid range
-        low_bound, high_bound = bounds
+        low_bound, high_bound = BOUNDS
         valid_range = high_bound - low_bound
         actions = low_bound + tf.nn.sigmoid(actions_unscaled) * valid_range
     return actions
@@ -27,7 +27,7 @@ def build_critic(states, actions, trainable, reuse, scope):
         hidden_2 = tf.layers.dense(hidden, 8,
                                    trainable=trainable, reuse=reuse,
                                    activation=tf.nn.relu, name='dense_1')
-        Q_values = tf.layers.dense(hidden_2, settings.NB_ATOMS,
+        Q_values = tf.layers.dense(hidden_2, NB_ATOMS,
                                    trainable=trainable, reuse=reuse,
                                    activation=tf.nn.softmax, name='dense_2')
     return Q_values

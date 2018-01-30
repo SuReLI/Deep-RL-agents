@@ -4,12 +4,11 @@ import numpy as np
 from collections import deque
 
 from Model import build_actor, get_vars, copy_vars
-from ExperienceBuffer import BUFFER
 from Environment import Environment
 
 from Displayer import DISPLAYER
 import GUI
-import settings
+from settings import *
 
 
 STOP_REQUESTED = False
@@ -23,31 +22,25 @@ def request_stop():
 
 class Actor:
 
-    def __init__(self, sess, n_actor):
+    def __init__(self, sess, n_actor, queue):
         print("Initializing actor %i..." % n_actor)
 
         self.n_actor = n_actor
         self.sess = sess
         self.env = Environment()
-        self.state_size = self.env.get_state_size()[0]
-        self.action_size = self.env.get_action_size()
-        self.bounds = self.env.get_bounds()
+        self.queue = queue
 
         self.build_actor()
-
-    def get_env_features(self):
-        return self.state_size, self.action_size, self.bounds
 
     def build_actor(self):
 
         scope = 'worker_actor_' + str(self.n_actor)
         self.state_ph = tf.placeholder(dtype=tf.float32,
-                                       shape=[None, self.state_size],
+                                       shape=[None, *STATE_SIZE],
                                        name='state_ph')
 
         # Get the policy prediction network
-        self.policy = build_actor(self.state_ph, self.bounds, self.action_size,
-                                  trainable=False, scope=scope)
+        self.policy = build_actor(self.state_ph, trainable=False, scope=scope)
         self.vars = get_vars(scope, trainable=False)
 
     def build_update(self):
@@ -64,9 +57,8 @@ class Actor:
 
     def run(self):
 
-        self.build_update()
-
         import Learner
+        zzz = 0
 
         total_eps = 1
         while not STOP_REQUESTED:
@@ -76,23 +68,23 @@ class Actor:
             done = False
             memory = deque()
 
-            noise_scale = settings.NOISE_SCALE * settings.NOISE_DECAY**(total_eps//20)
+            noise_scale = NOISE_SCALE * NOISE_DECAY**(total_eps//20)
 
             s = self.env.reset()
 
             render = (self.n_actor == 1 and GUI.render.get(total_eps))
             self.env.set_render(render)
 
-            max_steps = settings.MAX_STEPS + total_eps // 5
+            max_steps = MAX_STEPS + total_eps // 5
 
             n = Learner.TOTAL_EPS
 
             while episode_step < max_steps and not done and not STOP_REQUESTED:
 
-                noise = np.random.normal(size=self.action_size)
+                noise = np.random.normal(size=ACTION_SIZE)
                 scaled_noise = noise_scale * noise
 
-                a = np.clip(self.predict_action(s) + scaled_noise, *self.bounds)
+                a = np.clip(self.predict_action(s) + scaled_noise, *BOUNDS)
 
                 s_, r, done, _ = self.env.act(a)
 
@@ -100,17 +92,20 @@ class Actor:
 
                 memory.append((s, a, r, s_, 0 if done else 1))
 
-                if len(memory) >= settings.N_STEP_RETURN:
+                if len(memory) >= N_STEP_RETURN:
                     s_mem, a_mem, discount_r, ss_mem, done_mem = memory.popleft()
                     for i, (si, ai, ri, s_i, di) in enumerate(memory):
-                        discount_r += ri * settings.DISCOUNT ** (i + 1)
-                    BUFFER.add(s_mem, a_mem, discount_r, s_, 0 if done else 1)
+                        discount_r += ri * DISCOUNT ** (i + 1)
+
+                    print("Enqueuement", len(self.queue))
+                    zzz += 1
+                    self.queue.enqueue(s_mem, a_mem, discount_r, s_, 0 if done else 1)
 
                 s = s_
                 episode_step += 1
 
             # Periodically update actors on the network
-            if total_eps % settings.UPDATE_ACTORS_FREQ == 0:
+            if total_eps % UPDATE_ACTORS_FREQ == 0:
                 self.sess.run(self.update)
 
             if not STOP_REQUESTED:

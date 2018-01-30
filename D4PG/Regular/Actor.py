@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 from collections import deque
 
-from Model import build_actor
+from Model import build_actor, get_vars, copy_vars
 from ExperienceBuffer import BUFFER
 from Environment import Environment
 
@@ -48,11 +48,23 @@ class Actor:
         # Get the policy prediction network
         self.policy = build_actor(self.state_ph, self.bounds, self.action_size,
                                   trainable=False, scope=scope)
+        self.vars = get_vars(scope, trainable=False)
+
+    def build_update(self):
+
+        with self.sess.as_default(), self.sess.graph.as_default():
+
+            self.network_vars = get_vars('learner_actor', trainable=True)
+            self.update = copy_vars(self.network_vars, self.vars,
+                                    1, 'update_actor_'+str(self.n_actor))
+            self.sess.run(self.update)
 
     def predict_action(self, s):
         return self.sess.run(self.policy, feed_dict={self.state_ph: s[None]})[0]
 
     def run(self):
+
+        self.build_update()
 
         import Learner
 
@@ -97,11 +109,10 @@ class Actor:
                 s = s_
                 episode_step += 1
 
-            from time import sleep
-            sleep(1)
+            # Periodically update actors on the network
+            if total_eps % settings.UPDATE_ACTORS_FREQ == 0:
+                self.sess.run(self.update)
 
-            print(Learner.TOTAL_EPS - n)
-            
             if not STOP_REQUESTED:
                 if self.n_actor == 1 and GUI.ep_reward.get(total_eps):
                     print("Episode %i : reward %i, steps %i, noise scale %f" % (total_eps, episode_reward, episode_step, noise_scale))
@@ -110,5 +121,9 @@ class Actor:
                 DISPLAYER.add_reward(episode_reward, self.n_actor, plot)
             
                 total_eps += 1
+
+            import time
+            time.sleep(1)
+            print("Nb updates : ", Learner.TOTAL_EPS - n)
 
         self.env.close()

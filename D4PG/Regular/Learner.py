@@ -104,14 +104,6 @@ class Learner:
                                         settings.UPDATE_TARGET_RATE,
                                         'update_targets')
 
-        update_actors = []
-        for i in range(settings.NB_ACTORS):
-            op = copy_vars(self.actor_vars,
-                           get_vars('worker_actor_%i'%(i+1), False),
-                           1, 'update_actor_%i'%i)
-            update_actors.append(op)
-        self.update_actors = tf.group(*update_actors, name='update_actors')
-
     def build_train_operation(self):
 
         zz = tf.tile(self.z[None], [self.batch_size, 1])
@@ -161,7 +153,6 @@ class Learner:
         with self.sess.as_default(), self.sess.graph.as_default():
 
             self.sess.run(self.target_init)
-            self.sess.run(self.update_actors)
 
             while not Actor.STOP_REQUESTED:
                 
@@ -181,25 +172,22 @@ class Learner:
                 q, _, _ = self.sess.run([self.Q_values_suggested_actions, self.critic_train_op, self.actor_train_op],
                                      feed_dict=feed_dict)
 
-                DISPLAYER.add_q(q[0])
+                # DISPLAYER.add_q(q[0])
 
                 if self.total_eps % settings.UPDATE_TARGET_FREQ == 0:
                     self.sess.run(self.update_targets)
 
-                if self.total_eps % settings.UPDATE_ACTORS_FREQ == 0:
-                    self.sess.run(self.update_actors)
-
-                if GUI.save.get(self.total_eps):
-                    self.save()
+                # if GUI.save.get(self.total_eps):
+                    # self.save()
 
                 # print("Learning ep : ", self.total_eps)
                 self.total_eps += 1
                 TOTAL_EPS += 1
 
-                if self.total_eps % settings.PERF_FREQ == 0:
-                    print("PERF : %i learning round in %fs" %
-                          (settings.PERF_FREQ, time.time() - start_time))
-                    start_time = time.time()
+                # if self.total_eps % settings.PERF_FREQ == 0:
+                    # print("PERF : %i learning round in %fs" %
+                          # (settings.PERF_FREQ, time.time() - start_time))
+                    # start_time = time.time()
 
     def load(self, best=False):
         print("Loading model...")

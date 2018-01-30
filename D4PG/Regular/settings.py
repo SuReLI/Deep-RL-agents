@@ -1,9 +1,9 @@
 
 from multiprocessing import cpu_count
 
-DISPLAY = False
+DISPLAY = True
 LOAD = False
-GUI = False
+GUI = True
 
 NB_ACTORS = 1  # cpu_count() - 2
 NB_ATOMS = 51

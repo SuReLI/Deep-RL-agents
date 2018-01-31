@@ -53,8 +53,6 @@ class Feature:
         return self.settings_freq > 0 and nb_ep % self.settings_freq == 0
 
 
-STOP = False
-
 ep_reward = Feature('EP REWARD', settings.EP_REWARD_FREQ, 'display')
 plot = Feature('PLOT', settings.PLOT_FREQ, 'update')
 render = Feature('RENDER', settings.RENDER_FREQ, 'render')
@@ -62,9 +60,8 @@ save = Feature('MODEL SAVER', settings.SAVE_FREQ, 'save')
 
 
 
-def main():
+def main(coord):
     global ep_reward, plot, render, save
-    from Actor import request_stop
 
     window = Tk()
     window.title("Control Panel")
@@ -72,7 +69,7 @@ def main():
 
     def stop_run():
         window.destroy()
-        request_stop()
+        coord.request_stop()
 
     ep_reward.build(window)
     plot.build(window)

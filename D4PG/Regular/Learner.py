@@ -4,7 +4,6 @@ import tensorflow as tf
 import numpy as np
 import time
 
-import Actor
 import GUI
 from Model import *
 
@@ -17,14 +16,13 @@ TOTAL_EPS = 0
 
 class Learner:
 
-    def __init__(self, sess, queue):
+    def __init__(self, sess, coord, buffer):
+        print("Initializing learner...")
 
         self.sess = sess
+        self.coord = coord
 
-        with tf.device("cpu:0"):
-            self.saver = tf.train.Saver()
-
-        qstate, qaction, qreward, qnext_state, qnot_done = queue.dequeue
+        qstate, qaction, qreward, qnext_state, qnot_done = buffer.dequeue
 
         # placeholders
         self.state_ph = tf.placeholder_with_default(qstate , [None, *STATE_SIZE], 'state_ph')
@@ -48,6 +46,8 @@ class Learner:
         self.get_variables()
         self.build_train_operation()
         self.build_update_functions()
+
+        print("Learner initialized !\n")
 
     def build_model(self):
 
@@ -151,10 +151,10 @@ class Learner:
 
             self.sess.run(self.target_init)
 
-            while not Actor.STOP_REQUESTED:
+            while not self.coord.should_stop():
                 
                 q, _, _ = self.sess.run([self.Q_values_suggested_actions, self.critic_train_op, self.actor_train_op])
-                print("Yo")
+                print("Update")
 
                 # DISPLAYER.add_q(q[0])
 
@@ -174,6 +174,12 @@ class Learner:
                     # start_time = time.time()
 
     def load(self, best=False):
+        with tf.device("cpu:0"):
+            self.saver = tf.train.Saver()
+
+        if not LOAD:
+            return False
+
         print("Loading model...")
         try:
             if best:
@@ -183,8 +189,10 @@ class Learner:
                 ckpt = tf.train.get_checkpoint_state("model/")
                 self.saver.restore(self.sess, ckpt.model_checkpoint_path)
                 print("Model loaded !")
+            return True
         except (ValueError, AttributeError):
             print("No model is saved !")
+        return False
 
     def save(self):
         print("Saving model...")

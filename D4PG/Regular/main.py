@@ -5,7 +5,7 @@ import time
 
 import Actor
 from Learner import Learner
-from ExperienceBuffer import MemoryBuffer
+from MemoryBuffer import MemoryBuffer
 import GUI
 from Displayer import DISPLAYER
 from settings import *
@@ -15,52 +15,47 @@ if __name__ == '__main__':
 
     tf.reset_default_graph()
 
+    coord = tf.train.Coordinator()
+
     with tf.Session() as sess:
 
-        queue = MemoryBuffer(sess)
+        buffer = MemoryBuffer(sess, coord)
 
+        # Initialize learner and learner thread
+        learner = Learner(sess, coord, buffer)
+        threads = [threading.Thread(target=learner.run)]
+
+        # Initialize workers and worker threads
         workers = []
         for i in range(NB_ACTORS):
-            workers.append(Actor.Actor(sess, i + 1, queue))
+            worker = Actor.Actor(sess, coord, i + 1, buffer)
+            workers.append(worker)
+            threads.append(threading.Thread(target=worker.run))
 
-        # with tf.device('/device:GPU:0'):
-        print("Initializing learner...")
-        learner = Learner(sess, queue)
-        print("Learner initialized !\n")
-
-        sess.run(tf.global_variables_initializer())
-        for worker in workers:
-            worker.build_update()
-
-        if LOAD:
-            learner.load()
+        if not learner.load():
+            sess.run(tf.global_variables_initializer())
 
         sess.graph.finalize()
 
-        threads = []
-        for i in range(NB_ACTORS):
-            thread = threading.Thread(target=workers[i].run)
-            threads.append(thread)
-
-        threads.append(threading.Thread(target=learner.run))
-
         if INTERFACE:
-            GUI_thread = threading.Thread(target=GUI.main)
+            GUI_thread = threading.Thread(target=GUI.main, args=(coord,))
             GUI_thread.start()
-
 
         for t in threads:
             t.start()
+
         print("Running...")
 
-        try:
-            while not Actor.STOP_REQUESTED:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            Actor.request_stop()
+        time.sleep(3)
+        queue_threads = tf.train.start_queue_runners(coord=coord)
 
-        for t in threads:
-            t.join()
+        try:
+            coord.join(threads + queue_threads)
+        except Exception as e:
+            coord.request_stop(e)
+        except KeyboardInterrupt:
+            coord.request_stop()
+        print("End of the run !")
 
         learner.save()
 

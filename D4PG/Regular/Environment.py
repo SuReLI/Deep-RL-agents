@@ -9,7 +9,6 @@ class Environment:
     def __init__(self):
         # self.env = RunEnv(visualize=False)
         self.env = gym.make("Pendulum-v0")
-        print()
         self.render = False
 
     def set_render(self, render):

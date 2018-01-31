@@ -5,6 +5,7 @@ import gym
 ENV = "Pendulum-v0"
 
 setting_env = gym.make(ENV)
+print()
 
 ACTION_SIZE = setting_env.action_space.shape[0]
 STATE_SIZE = list(setting_env.observation_space.shape)
@@ -16,7 +17,7 @@ DISPLAY = True
 LOAD = False
 INTERFACE = True
 
-NB_ACTORS = 1  # cpu_count() - 2
+NB_ACTORS = cpu_count() - 2
 NB_ATOMS = 51
 MIN_VALUE = -2000
 MAX_VALUE = 0
@@ -26,7 +27,7 @@ DISCOUNT = 0.99
 DISCOUNT_N = DISCOUNT ** N_STEP_RETURN
 
 MEMORY_SIZE = 1000000
-BATCH_SIZE = 1
+BATCH_SIZE = 64
 
 
 CRITIC_LEARNING_RATE = 5e-4

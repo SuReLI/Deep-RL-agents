@@ -13,11 +13,11 @@ BOUNDS = (setting_env.action_space.low, setting_env.action_space.high)
 
 del setting_env
 
-DISPLAY = True
+DISPLAY = False
 LOAD = False
-INTERFACE = True
+INTERFACE = False
 
-NB_ACTORS = cpu_count() - 2
+NB_ACTORS = 3  # cpu_count() - 2
 NB_ATOMS = 51
 MIN_VALUE = -2000
 MAX_VALUE = 0
@@ -48,5 +48,5 @@ MAX_STEPS = 2000
 RENDER_FREQ = 1000
 EP_REWARD_FREQ = 50
 PLOT_FREQ = 100
-PERF_FREQ = 100000
+PERF_FREQ = 100
 SAVE_FREQ = 0

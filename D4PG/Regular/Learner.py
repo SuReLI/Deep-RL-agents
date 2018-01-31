@@ -23,7 +23,7 @@ class Learner:
         self.coord = coord
 
         qstate, qaction, qreward, qnext_state, qnot_done = buffer.dequeue
-
+        
         # placeholders
         self.state_ph = tf.placeholder_with_default(qstate , [None, *STATE_SIZE], 'state_ph')
         self.action_ph = tf.placeholder_with_default(qaction , [None, ACTION_SIZE], 'action_ph')
@@ -154,7 +154,6 @@ class Learner:
             while not self.coord.should_stop():
                 
                 q, _, _ = self.sess.run([self.Q_values_suggested_actions, self.critic_train_op, self.actor_train_op])
-                print("Update")
 
                 # DISPLAYER.add_q(q[0])
 
@@ -168,10 +167,10 @@ class Learner:
                 self.total_eps += 1
                 TOTAL_EPS += 1
 
-                # if self.total_eps % PERF_FREQ == 0:
-                    # print("PERF : %i learning round in %fs" %
-                          # (PERF_FREQ, time.time() - start_time))
-                    # start_time = time.time()
+                if self.total_eps % PERF_FREQ == 0:
+                    print("PERF : %i learning round in %fs" %
+                          (PERF_FREQ, time.time() - start_time))
+                    start_time = time.time()
 
     def load(self, best=False):
         with tf.device("cpu:0"):

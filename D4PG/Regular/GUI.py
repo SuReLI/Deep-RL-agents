@@ -6,13 +6,14 @@ import settings
 class Feature:
     nb_column = 0
 
-    def __init__(self, name, settings_freq, text):
+    def __init__(self, name, settings_freq, text, render_needed=False):
         self.name = name
         self.text = text.lower()
         self.request = False
         self.auto = True
         self.settings_freq = settings_freq
         self.freq = settings_freq
+        self.render_needed = render_needed
 
     def build(self, window):
         self.label = Label(window, text=self.name.upper())
@@ -40,7 +41,7 @@ class Feature:
         except:pass
 
     def get(self, nb_ep):
-        if not settings.DISPLAY:
+        if not settings.DISPLAY and self.render_needed:
             return False
 
         if settings.INTERFACE:
@@ -54,8 +55,8 @@ class Feature:
 
 
 ep_reward = Feature('EP REWARD', settings.EP_REWARD_FREQ, 'display')
-plot = Feature('PLOT', settings.PLOT_FREQ, 'update')
-render = Feature('RENDER', settings.RENDER_FREQ, 'render')
+plot = Feature('PLOT', settings.PLOT_FREQ, 'update', True)
+render = Feature('RENDER', settings.RENDER_FREQ, 'render', True)
 save = Feature('MODEL SAVER', settings.SAVE_FREQ, 'save')
 
 

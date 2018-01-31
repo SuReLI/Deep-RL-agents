@@ -15,11 +15,12 @@ class MemoryBuffer:
         self.sess = sess
         self.coord = coord
         self.buffer = deque(maxlen=MEMORY_SIZE)
+        self.idx = [0] * MEMORY_SIZE
 
         shapes = (STATE_SIZE, ACTION_SIZE, (), STATE_SIZE, ())
 
         with self.sess.as_default(), self.sess.graph.as_default():
-            queue = tf.FIFOQueue(capacity=10*BATCH_SIZE,
+            queue = tf.FIFOQueue(capacity=3*BATCH_SIZE,
                                  dtypes=[tf.float32, tf.float32, tf.float32, tf.float32, tf.float32],
                                  shapes=shapes)
 
@@ -35,17 +36,25 @@ class MemoryBuffer:
         print("MemoryBuffer initialized !\n")
 
     def get_batch(self):
-        batch = random.sample(self.buffer, min(BATCH_SIZE, len(self.buffer)))
+        idx = random.sample(range(len(self.buffer)), min(BATCH_SIZE, len(self.buffer)))
+        # batch = random.sample(self.buffer, min(BATCH_SIZE, len(self.buffer)))
 
-        qs = np.asarray([elem[0] for elem in batch], dtype=np.float32)
-        qa = np.asarray([elem[1] for elem in batch], dtype=np.float32)
-        qr = np.asarray([elem[2] for elem in batch], dtype=np.float32)
-        qs_ = np.asarray([elem[3] for elem in batch], dtype=np.float32)
-        qdone = np.asarray([elem[4] for elem in batch], dtype=np.float32)
+        for i in idx:
+            self.idx[i] += 1
 
-        print("Add : ", self.sess.run(self.size))
+        qs = np.asarray([self.buffer[i][0] for i in idx], dtype=np.float32)
+        qa = np.asarray([self.buffer[i][1] for i in idx], dtype=np.float32)
+        qr = np.asarray([self.buffer[i][2] for i in idx], dtype=np.float32)
+        qs_ = np.asarray([self.buffer[i][3] for i in idx], dtype=np.float32)
+        qdone = np.asarray([self.buffer[i][4] for i in idx], dtype=np.float32)
 
         return [qs, qa, qr, qs_, qdone]
 
     def add(self, s, a, r, s_, d):
         self.buffer.append((s, a, r, s_, d))
+
+        # n = len(self.buffer)
+        # if n % 1000 == 0:
+            # print("Buffer size : ", n)
+            # print("% seen : ", sum(self.idx[:n]) / n)
+            # print()

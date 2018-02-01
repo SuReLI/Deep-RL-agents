@@ -184,10 +184,10 @@ class Learner:
                 self.total_eps += 1
                 TOTAL_EPS += 1
 
-                # if self.total_eps % settings.PERF_FREQ == 0:
-                    # print("PERF : %i learning round in %fs" %
-                          # (settings.PERF_FREQ, time.time() - start_time))
-                    # start_time = time.time()
+                if self.total_eps % settings.PERF_FREQ == 0:
+                    print("PERF : %i learning round in %fs" %
+                          (settings.PERF_FREQ, time.time() - start_time))
+                    start_time = time.time()
 
     def load(self, best=False):
         print("Loading model...")

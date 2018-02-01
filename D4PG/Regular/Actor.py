@@ -34,6 +34,7 @@ class Actor:
         self.bounds = self.env.get_bounds()
 
         self.build_actor()
+        self.build_update()
 
     def get_env_features(self):
         return self.state_size, self.action_size, self.bounds
@@ -57,16 +58,15 @@ class Actor:
             self.network_vars = get_vars('learner_actor', trainable=True)
             self.update = copy_vars(self.network_vars, self.vars,
                                     1, 'update_actor_'+str(self.n_actor))
-            self.sess.run(self.update)
 
     def predict_action(self, s):
         return self.sess.run(self.policy, feed_dict={self.state_ph: s[None]})[0]
 
     def run(self):
 
-        self.build_update()
+        self.sess.run(self.update)
 
-        import Learner
+        # import Learner
 
         total_eps = 1
         while not STOP_REQUESTED:
@@ -85,7 +85,7 @@ class Actor:
 
             max_steps = settings.MAX_STEPS + total_eps // 5
 
-            n = Learner.TOTAL_EPS
+            # n = Learner.TOTAL_EPS
 
             while episode_step < max_steps and not done and not STOP_REQUESTED:
 
@@ -122,8 +122,8 @@ class Actor:
             
                 total_eps += 1
 
-            import time
-            time.sleep(1)
-            print("Nb updates : ", Learner.TOTAL_EPS - n)
+            # import time
+            # time.sleep(1)
+            # print("Nb updates : ", Learner.TOTAL_EPS - n)
 
         self.env.close()

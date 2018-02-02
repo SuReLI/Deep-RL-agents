@@ -1,50 +1,64 @@
 
-ENV = "Acrobot-v1"
+import gym
 
-LOAD = False
-DISPLAY = True
+class Settings:
+    
+    def __init__(self):
 
-CONV = False
+        self.ENV = "LunarLander-v2"
 
-LEARNING_RATE = 7.5e-4
+        setting_env = gym.make(self.ENV)
+        print()
 
-DISCOUNT = 0.99
-N_STEP_RETURN = 3
+        self.ACTION_SIZE = setting_env.action_space.n
+        self.STATE_SIZE = list(setting_env.observation_space.shape)
 
-FRAME_SKIP = 0
-BUFFER_SIZE = 100000
-BATCH_SIZE = 32
+        del setting_env
 
-# Number of episodes of game environment to train with
-TRAINING_STEPS = 10000
-PRE_TRAIN_STEPS = 500
+        self.LOAD = True
+        self.DISPLAY = True
+        self.GUI = True
 
-# Maximal number of steps during one episode
-MAX_EPISODE_STEPS = 2000
-TRAINING_FREQ = 4
+        self.CONV = False
 
-# Rate to update target network toward primary network
-UPDATE_TARGET_RATE = 0.001
+        self.DISCOUNT = 0.99
+        self.N_STEP_RETURN = 3
 
+        self.LEARNING_RATE = 7.5e-4
 
-EPSILON_START = 0.8
-EPSILON_STOP = 0.01
-EPSILON_STEPS = 100000
-EPSILON_DECAY = (EPSILON_START - EPSILON_STOP) / EPSILON_STEPS
+        self.FRAME_SKIP = 0
+        self.BUFFER_SIZE = 100000
+        self.BATCH_SIZE = 64
 
-ALPHA = 0.5
-BETA_START = 0.4
-BETA_STOP = 1
-BETA_STEPS = 25000
-BETA_INCR = (BETA_STOP - BETA_START) / BETA_STEPS
+        # Number of episodes of game environment to train with
+        self.TRAINING_STEPS = 100000
+        self.PRE_TRAIN_STEPS = 1000
 
+        # Maximal number of steps during one episode
+        self.MAX_EPISODE_STEPS = 200
+        self.TRAINING_FREQ = 4
 
-# Display Frequencies
-DISP_EP_REWARD_FREQ = 10
-PLOT_FREQ = 50
-RENDER_FREQ = 250
+        # Rate to update target network toward primary network
+        self.UPDATE_TARGET_RATE = 0.1
 
-SAVE_FREQ = 200
-GIF_FREQ = 100
-MAX_NB_GIF = 5
-EP_ELONGATION = 50
+        self.EPSILON_START = 0.8
+        self.EPSILON_STOP = 0.01
+        self.EPSILON_STEPS = 5000
+        self.EPSILON_DECAY = (self.EPSILON_START - self.EPSILON_STOP) / self.EPSILON_STEPS
+
+        self.ALPHA = 0.5
+        self.BETA_START = 0.4
+        self.BETA_STOP = 1
+        self.BETA_STEPS = 25000
+        self.BETA_INCR = (self.BETA_STOP - self.BETA_START) / self.BETA_STEPS
+
+        # Display Frequencies
+        self.EP_REWARD_FREQ = 50
+        self.PLOT_FREQ = 100
+        self.RENDER_FREQ = 500
+        self.GIF_FREQ = 2000
+        self.SAVE_FREQ = 1000
+
+        self.MAX_NB_GIF = 5
+        self.GIF_PATH = 'results/gif/'
+        self.EP_ELONGATION = 10

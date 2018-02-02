@@ -1,26 +1,27 @@
 
 import tensorflow as tf
 
-from NetworkArchitecture import NetworkArchitecture
+import Model
 import settings
 
 
 class QNetwork:
 
-    def __init__(self, state_size, action_size, scope):
+    def __init__(self, settings, scope):
+        print("Creation of the {} QNetwork...".format(scope))
 
         with tf.variable_scope(scope):
-            self.state_size = state_size
-            self.action_size = action_size
 
-            # Define the model
-            self.model = NetworkArchitecture(self.state_size, self.action_size)
-
+            # Input placeholder
+            self.inputs = tf.placeholder(tf.float32,
+                                         [None, *settings.STATE_SIZE],
+                                         name='Input_state')
+            
             # Convolution network
-            self.inputs = self.model.build_model()
+            hidden_layer = Model.build_model(settings, self.inputs)
 
             # Dueling DQN
-            self.value, self.advantage = self.model.dueling()
+            self.value, self.advantage = Model.dueling(settings, hidden_layer)
 
             # Aggregation of value and advantage to get the Q-value
             adv_mean = tf.reduce_mean(self.advantage, axis=1, keep_dims=True)
@@ -32,7 +33,7 @@ class QNetwork:
             self.Qtarget = tf.placeholder(shape=[None], dtype=tf.float32)
             self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
             self.actions_onehot = tf.one_hot(self.actions,
-                                             self.action_size,
+                                             settings.ACTION_SIZE,
                                              dtype=tf.float32)
 
             self.Qaction = tf.reduce_sum(
@@ -43,3 +44,7 @@ class QNetwork:
             self.trainer = tf.train.AdamOptimizer(
                 learning_rate=settings.LEARNING_RATE)
             self.train = self.trainer.minimize(self.loss)
+
+        self.vars = Model.get_vars(scope, 'target' not in scope)
+
+        print("QNetwork created !")

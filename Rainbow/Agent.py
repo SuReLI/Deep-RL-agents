@@ -7,46 +7,24 @@ from collections import deque
 from Environment import Environment
 from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
 from QNetwork import QNetwork
-
-from Displayer import DISPLAYER
-from Saver import SAVER
-import settings
-
-
-def updateTargetGraph(tfVars):
-    total_vars = len(tfVars)
-    op_holder = []
-    tau = settings.UPDATE_TARGET_RATE
-    for idx, var in enumerate(tfVars[0:total_vars // 2]):
-        op_holder.append(tfVars[idx + total_vars // 2].assign(
-            (var.value() * tau) +
-            ((1 - tau) * tfVars[idx + total_vars // 2].value())))
-    return op_holder
-
-
-def update_target(op_holder, sess):
-    for op in op_holder:
-        sess.run(op)
+from Model import copy_vars
 
 
 class Agent:
 
-    def __init__(self, sess):
+    def __init__(self, settings, sess, gui, displayer, saver):
         print("Initializing the agent...")
 
+        self.settings = settings
         self.sess = sess
-        self.env = Environment()
-        self.state_size = self.env.get_state_size()
-        self.action_size = self.env.get_action_size()
+        self.gui = gui
+        self.displayer = displayer
+        self.saver = saver
 
-        print("Creation of the main QNetwork...")
-        self.mainQNetwork = QNetwork(self.state_size, self.action_size, 'main')
-        print("Main QNetwork created !\n")
+        self.env = Environment(settings)
 
-        print("Creation of the target QNetwork...")
-        self.targetQNetwork = QNetwork(self.state_size, self.action_size,
-                                       'target')
-        print("Target QNetwork created !\n")
+        self.mainQNetwork = QNetwork(settings, 'main')
+        self.targetQNetwork = QNetwork(settings, 'target')
 
         self.buffer = PrioritizedReplayBuffer(settings.BUFFER_SIZE,
                                               settings.ALPHA)
@@ -54,8 +32,14 @@ class Agent:
         self.epsilon = settings.EPSILON_START
         self.beta = settings.BETA_START
 
-        trainables = tf.trainable_variables()
-        self.update_target_ops = updateTargetGraph(trainables)
+        self.init_update_target = copy_vars(self.mainQNetwork.vars,
+                                            self.targetQNetwork.vars,
+                                            1, 'init_update_target')
+
+        self.update_target = copy_vars(self.mainQNetwork.vars,
+                                       self.targetQNetwork.vars,
+                                       settings.UPDATE_TARGET_RATE,
+                                       'update_target')
 
         self.nb_ep = 1
         self.best_run = -1e10
@@ -64,16 +48,16 @@ class Agent:
     def pre_train(self):
         print("Beginning of the pre-training...")
 
-        for i in range(settings.PRE_TRAIN_STEPS):
+        for i in range(self.settings.PRE_TRAIN_STEPS):
 
             s = self.env.reset()
             done = False
-            episode_step = 0
             episode_reward = 0
+            episode_step = 0
 
-            while episode_step < settings.MAX_EPISODE_STEPS and not done:
+            while episode_step < self.settings.MAX_EPISODE_STEPS and not done:
 
-                a = random.randint(0, self.action_size - 1)
+                a = self.env.act_random()
                 s_, r, done, info = self.env.act(a)
                 self.buffer.add(s, a, r, s_, done)
 
@@ -81,7 +65,7 @@ class Agent:
                 episode_reward += r
                 episode_step += 1
 
-            if i % 100 == 0:
+            if self.settings.PRE_TRAIN_STEPS > 5 and i % (self.settings.PRE_TRAIN_STEPS // 5) == 0:
                 print("Pre-train step n", i)
 
             self.best_run = max(self.best_run, episode_reward)
@@ -92,55 +76,53 @@ class Agent:
         print("Beginning of the run...")
 
         self.pre_train()
+        self.sess.run(self.init_update_target)
 
         self.total_steps = 0
         self.nb_ep = 1
 
-        while self.nb_ep < settings.TRAINING_STEPS:
+        while self.nb_ep < self.settings.TRAINING_STEPS and not self.gui.STOP:
 
             s = self.env.reset()
             episode_reward = 0
             done = False
-
             memory = deque()
-            discount_R = 0
 
-            episode_step = 0
-            max_step = settings.MAX_EPISODE_STEPS + \
-                self.nb_ep // settings.EP_ELONGATION
+            episode_step = 1
+            max_step = self.settings.MAX_EPISODE_STEPS
+            if self.settings.EP_ELONGATION > 0:
+                max_step += self.nb_ep // self.settings.EP_ELONGATION
 
             # Render settings
-            self.env.set_render(self.nb_ep % settings.RENDER_FREQ == 0)
-            gif = (self.nb_ep % settings.GIF_FREQ ==
-                   0) and settings.DISPLAY
+            self.env.set_render(self.gui.render.get(self.nb_ep))
+            self.env.set_gif(self.gui.gif.get(self.nb_ep))
 
-            while episode_step < max_step and not done:
+            while episode_step <= max_step and not done:
 
                 if random.random() < self.epsilon:
-                    a = random.randint(0, self.action_size - 1)
+                    a = random.randint(0, self.settings.ACTION_SIZE - 1)
                 else:
                     a, = self.sess.run(self.mainQNetwork.predict,
                                        feed_dict={self.mainQNetwork.inputs: [s]})
 
-                s_, r, done, info = self.env.act(a, gif)
+                s_, r, done, info = self.env.act(a)
                 episode_reward += r
 
                 memory.append((s, a, r, s_, 0 if done else 1))
 
-                if len(memory) > settings.N_STEP_RETURN:
-                    s_mem, a_mem, r_mem, ss_mem, done_mem = memory.popleft()
-                    discount_R = r_mem
+                if len(memory) > self.settings.N_STEP_RETURN:
+                    s_mem, a_mem, discount_R, ss_mem, done_mem = memory.popleft()
                     for i, (si, ai, ri, s_i, di) in enumerate(memory):
-                        discount_R += ri * settings.DISCOUNT ** (i + 1)
+                        discount_R += ri * self.settings.DISCOUNT ** (i + 1)
                     self.buffer.add(s_mem, a_mem, discount_R, s_, done)
 
-                if episode_step % settings.TRAINING_FREQ == 0:
+                if episode_step % self.settings.TRAINING_FREQ == 0:
 
-                    train_batch = self.buffer.sample(settings.BATCH_SIZE,
+                    train_batch = self.buffer.sample(self.settings.BATCH_SIZE,
                                                      self.beta)
                     # Incr beta
-                    if self.beta <= settings.BETA_STOP:
-                        self.beta += settings.BETA_INCR
+                    if self.beta <= self.settings.BETA_STOP:
+                        self.beta += self.settings.BETA_INCR
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
                     mainQaction = self.sess.run(self.mainQNetwork.predict,
@@ -150,10 +132,10 @@ class Agent:
                     targetQvalues = self.sess.run(self.targetQNetwork.Qvalues,
                                                   feed_dict=feed_dict)
 
-                    doubleQ = targetQvalues[range(settings.BATCH_SIZE),
+                    doubleQ = targetQvalues[range(self.settings.BATCH_SIZE),
                                             mainQaction]
                     targetQvalues = train_batch[2] + \
-                        settings.DISCOUNT * doubleQ * train_batch[4]
+                        self.settings.DISCOUNT * doubleQ * train_batch[4]
 
                     feed_dict = {self.mainQNetwork.inputs: train_batch[0],
                                  self.mainQNetwork.Qtarget: targetQvalues,
@@ -164,7 +146,7 @@ class Agent:
 
                     self.buffer.update_priorities(train_batch[6], td_error)
 
-                    update_target(self.update_target_ops, self.sess)
+                    self.sess.run(self.update_target)
 
                 s = s_
                 episode_step += 1
@@ -173,32 +155,26 @@ class Agent:
             self.nb_ep += 1
 
             # Decay epsilon
-            if self.epsilon > settings.EPSILON_STOP:
-                self.epsilon -= settings.EPSILON_DECAY
+            if self.epsilon > self.settings.EPSILON_STOP:
+                self.epsilon -= self.settings.EPSILON_DECAY
 
-            DISPLAYER.add_reward(episode_reward)
-            if episode_reward > self.best_run and \
-                    self.nb_ep > 50 + settings.PRE_TRAIN_STEPS:
-                self.best_run = episode_reward
-                print("Save best", episode_reward)
-                SAVER.save('best')
-                self.play(1, 'results/gif/best.gif')
+            self.displayer.add_reward(episode_reward, self.gui.plot.get(self.nb_ep))
+            # if episode_reward > self.best_run and \
+            #         self.nb_ep > 50 + self.settings.PRE_TRAIN_STEPS:
+            #     self.best_run = episode_reward
+            #     print("Save best", episode_reward)
+            #     SAVER.save('best')
+            #     self.play(1, 'results/gif/best.gif')
 
-            if gif:
-                self.env.save_gif('results/gif/gif_save', self.n_gif)
-                self.n_gif = (self.n_gif + 1) % settings.MAX_NB_GIF
-
-            self.total_steps += 1
-
-            if self.nb_ep % settings.DISP_EP_REWARD_FREQ == 0:
+            if self.gui.ep_reward.get(self.nb_ep):
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %i'
                       ', Max steps: %i' % (self.nb_ep, episode_reward,
                                            episode_step, self.epsilon,
                                            max_step))
 
             # Save the model
-            if self.nb_ep % settings.SAVE_FREQ == 0:
-                SAVER.save(self.nb_ep)
+            if self.gui.save.get(self.nb_ep):
+                self.saver.save(self.nb_ep)
 
     def play(self, number_run, path=''):
         print("Playing for", number_run, "runs")
@@ -209,19 +185,16 @@ class Agent:
                 s = self.env.reset()
                 episode_reward = 0
                 done = False
+                self.env.set_gif(True, path != '')
 
                 while not done:
-                    a = self.sess.run(self.mainQNetwork.predict,
-                                      feed_dict={self.mainQNetwork.inputs: [s]})
-                    a = a[0]
-                    s, r, done, info = self.env.act(a, path != '')
+                    a, = self.sess.run(self.QNetwork.action,
+                                       feed_dict={self.QNetwork.state_ph: [s]})
+                    s, r, done, info = self.env.act(a)
 
                     episode_reward += r
 
                 print("Episode reward :", episode_reward)
-
-                if path != '':
-                    self.env.save_gif(path, i)
 
         except KeyboardInterrupt as e:
             pass
@@ -230,7 +203,6 @@ class Agent:
             print("Exception :", e)
 
         finally:
-            self.env.set_render(False)
             print("End of the demo")
             self.env.close()
 

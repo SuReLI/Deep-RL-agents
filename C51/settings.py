@@ -1,48 +1,62 @@
 
-ENV = "LunarLander-v2"
+import gym
 
-LOAD = True
-DISPLAY = True
-GUI = True
+class Settings:
+    
+    def __init__(self):
 
-CONV = False
+        self.ENV = "LunarLander-v2"
 
-DISCOUNT = 0.99
-NB_ATOMS = 51
-MIN_VALUE = -100
-MAX_VALUE = 100
+        setting_env = gym.make(self.ENV)
+        print()
 
-LEARNING_RATE = 7.5
+        self.ACTION_SIZE = setting_env.action_space.n
+        self.STATE_SIZE = list(setting_env.observation_space.shape)
 
+        del setting_env
 
-FRAME_SKIP = 0
-BUFFER_SIZE = 100000
-BATCH_SIZE = 64
+        self.LOAD = True
+        self.DISPLAY = True
+        self.GUI = True
 
-# Number of episodes of game environment to train with
-TRAINING_STEPS = 100000
-PRE_TRAIN_STEPS = 1000
+        self.CONV = False
 
-# Maximal number of steps during one episode
-MAX_EPISODE_STEPS = 200
-TRAINING_FREQ = 4
+        self.DISCOUNT = 0.99
+        self.NB_ATOMS = 51
+        self.MIN_Q = -100
+        self.MAX_Q = 100
 
-# Rate to update target network toward primary network
-UPDATE_TARGET_RATE = 0.1
+        self.LEARNING_RATE = 7.5
 
 
-EPSILON_START = 0.8
-EPSILON_STOP = 0.01
-EPSILON_STEPS = 5000
-EPSILON_DECAY = (EPSILON_START - EPSILON_STOP) / EPSILON_STEPS
+        self.FRAME_SKIP = 0
+        self.BUFFER_SIZE = 100000
+        self.BATCH_SIZE = 64
 
-# Display Frequencies
-EP_REWARD_FREQ = 50
-PLOT_FREQ = 100
-RENDER_FREQ = 500
-GIF_FREQ = 2000
-SAVE_FREQ = 1000
+        # Number of episodes of game environment to train with
+        self.TRAINING_STEPS = 100000
+        self.PRE_TRAIN_STEPS = 1000
 
-MAX_NB_GIF = 5
-GIF_PATH = 'results/gif/'
-EP_ELONGATION = 10
+        # Maximal number of steps during one episode
+        self.MAX_EPISODE_STEPS = 200
+        self.TRAINING_FREQ = 4
+
+        # Rate to update target network toward primary network
+        self.UPDATE_TARGET_RATE = 0.1
+
+
+        self.EPSILON_START = 0.8
+        self.EPSILON_STOP = 0.01
+        self.EPSILON_STEPS = 5000
+        self.EPSILON_DECAY = (self.EPSILON_START - self.EPSILON_STOP) / self.EPSILON_STEPS
+
+        # Display Frequencies
+        self.EP_REWARD_FREQ = 50
+        self.PLOT_FREQ = 100
+        self.RENDER_FREQ = 500
+        self.GIF_FREQ = 2000
+        self.SAVE_FREQ = 1000
+
+        self.MAX_NB_GIF = 5
+        self.GIF_PATH = 'results/gif/'
+        self.EP_ELONGATION = 10

@@ -2,13 +2,11 @@
 import tensorflow as tf
 import os
 
-import settings
-
 
 class Saver:
 
-    def set_sess(self, sess):
-        self.saver = tf.train.Saver()
+    def __init__(self, settings, sess):
+        self.settings = settings
         self.sess = sess
 
     def save(self, n_episode):
@@ -18,7 +16,8 @@ class Saver:
         print("Model saved !")
 
     def load(self, agent):
-        if settings.LOAD:
+        self.saver = tf.train.Saver()
+        if self.settings.LOAD:
             print("Loading model...")
             try:
                 ckpt = tf.train.get_checkpoint_state("model/")
@@ -28,6 +27,3 @@ class Saver:
                 self.sess.run(tf.global_variables_initializer())
         else:
             self.sess.run(tf.global_variables_initializer())
-
-
-SAVER = Saver()

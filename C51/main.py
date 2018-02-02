@@ -5,10 +5,10 @@ import tensorflow as tf
 from Agent import Agent
 
 import GUI
-from Displayer import DISPLAYER
-from Saver import SAVER
+import Saver
+import Displayer
 
-import settings
+from settings import Settings
 
 if __name__ == '__main__':
     
@@ -16,26 +16,28 @@ if __name__ == '__main__':
 
     with tf.Session() as sess:
 
-        agent = Agent(sess)
-        SAVER.set_sess(sess)
+        settings = Settings()
+        saver = Saver.Saver(settings, sess)
+        displayer = Displayer.Displayer(settings)
 
-        SAVER.load(agent)
+        gui = GUI.Interface(settings, ['ep_reward', 'plot', 'plot_distrib', 'render', 'gif', 'save'])
+        gui_thread = threading.Thread(target=gui.run)
 
-        if settings.GUI:
-            gui = threading.Thread(target=GUI.main)
-            gui.start()
+        agent = Agent(settings, sess, gui, displayer, saver)
 
+        saver.load(agent)
+
+        gui_thread.start()
         try:
             agent.run()
         except KeyboardInterrupt:
             pass
         print("End of the run")
-        SAVER.save(agent.nb_ep)
-        DISPLAYER.disp()
+        
+        saver.save(agent.nb_ep)
+        displayer.disp()
 
-        if settings.GUI:
-            gui.join()
-        else:
-            agent.play(5)
+        gui_thread.join()
+        # agent.play(5)
 
     agent.stop()

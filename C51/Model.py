@@ -1,9 +1,8 @@
 
 import tensorflow as tf
-import settings
 
 
-def build_model(inputs, action_size, trainable, scope):
+def build_model(settings, inputs, trainable, scope):
 
     with tf.variable_scope(scope):
         if settings.CONV:
@@ -32,7 +31,7 @@ def build_model(inputs, action_size, trainable, scope):
                                      name='hidden2', trainable=trainable)
 
         output = []
-        for i in range(action_size):
+        for i in range(settings.ACTION_SIZE):
             output.append(tf.layers.dense(hidden, settings.NB_ATOMS,
                                           activation=tf.nn.softmax,
                                           name='hidden3_' + str(i + 1),

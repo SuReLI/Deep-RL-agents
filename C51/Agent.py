@@ -9,29 +9,22 @@ from QNetwork import QNetwork
 from ExperienceBuffer import ExperienceBuffer
 from Environment import Environment
 
-import GUI
-from Displayer import DISPLAYER
-from Saver import SAVER
-import settings
-
 
 class Agent:
 
-    def __init__(self, sess):
+    def __init__(self, settings, sess, gui, displayer, saver):
         print("Initializing the agent...")
 
+        self.settings = settings
         self.sess = sess
-        self.env = Environment()
-        self.state_size = self.env.get_state_size()
-        self.action_size = self.env.get_action_size()
+        self.gui = gui
+        self.displayer = displayer
+        self.saver = saver
 
-        print("Creation of the QNetwork...")
-        self.QNetwork = QNetwork(self.sess, self.state_size,
-                                 self.action_size)
-        print("QNetwork created !\n")
-
-        self.buffer = ExperienceBuffer()
-        self.epsilon = settings.EPSILON_START
+        self.env = Environment(settings)
+        self.QNetwork = QNetwork(self.settings, self.sess)
+        self.buffer = ExperienceBuffer(self.settings)
+        self.epsilon = self.settings.EPSILON_START
 
         self.nb_ep = 1
         self.best_run = -1e10
@@ -40,8 +33,8 @@ class Agent:
     def print_distrib(self, distrib, value):
         fig = plt.figure(2)
         fig.clf()
-        for i in range(self.action_size):
-            p = plt.subplot(self.action_size, 1, i+1)
+        for i in range(self.settings.ACTION_SIZE):
+            p = plt.subplot(self.settings.ACTION_SIZE, 1, i+1)
             plt.bar(self.z, distrib[i], self.delta_z, label="left")
             p.axvline(value[i], color='red', linewidth=0.7)
             plt.legend()
@@ -51,16 +44,16 @@ class Agent:
     def pre_train(self):
         print("Beginning of the pre-training...")
 
-        for i in range(settings.PRE_TRAIN_STEPS):
+        for i in range(self.settings.PRE_TRAIN_STEPS):
 
             s = self.env.reset()
             done = False
             episode_reward = 0
             episode_step = 0
 
-            while episode_step < settings.MAX_EPISODE_STEPS and not done:
+            while episode_step < self.settings.MAX_EPISODE_STEPS and not done:
 
-                a = random.randint(0, self.action_size - 1)
+                a = self.env.act_random()
                 s_, r, done, info = self.env.act(a)
                 self.buffer.add((s, a, r, s_, done))
 
@@ -68,7 +61,7 @@ class Agent:
                 episode_reward += r
                 episode_step += 1
 
-            if settings.PRE_TRAIN_STEPS > 5 and i % (settings.PRE_TRAIN_STEPS // 5) == 0:
+            if self.settings.PRE_TRAIN_STEPS > 5 and i % (self.settings.PRE_TRAIN_STEPS // 5) == 0:
                 print("Pre-train step n", i)
 
             self.best_run = max(self.best_run, episode_reward)
@@ -88,26 +81,26 @@ class Agent:
         self.total_steps = 0
         self.nb_ep = 1
 
-        while self.nb_ep < settings.TRAINING_STEPS and not GUI.STOP:
+        while self.nb_ep < self.settings.TRAINING_STEPS and not self.gui.STOP:
 
             s = self.env.reset()
             episode_reward = 0
             done = False
 
             episode_step = 1
-            max_step = settings.MAX_EPISODE_STEPS
-            if settings.EP_ELONGATION > 0:
-                max_step += self.nb_ep // settings.EP_ELONGATION
+            max_step = self.settings.MAX_EPISODE_STEPS
+            if self.settings.EP_ELONGATION > 0:
+                max_step += self.nb_ep // self.settings.EP_ELONGATION
 
             # Render settings
-            self.env.set_render(GUI.render.get(self.nb_ep))
-            self.env.set_gif(GUI.gif.get(self.nb_ep))
-            plot_distrib = GUI.plot_distrib.get(self.nb_ep)
+            self.env.set_render(self.gui.render.get(self.nb_ep))
+            self.env.set_gif(self.gui.gif.get(self.nb_ep))
+            plot_distrib = self.gui.plot_distrib.get(self.nb_ep)
 
             while episode_step <= max_step and not done:
 
                 if random.random() < self.epsilon:
-                    a = random.randint(0, self.action_size - 1)
+                    a = random.randint(0, self.settings.ACTION_SIZE - 1)
                 else:
                     if plot_distrib:
                         a, distr, value = self.sess.run([self.QNetwork.action, self.QNetwork.Q_distrib, self.QNetwork.Q_value],
@@ -125,7 +118,7 @@ class Agent:
 
                 self.buffer.add((s, a, r, s_, 1 if not done else 0))
 
-                if episode_step % settings.TRAINING_FREQ == 0:
+                if episode_step % self.settings.TRAINING_FREQ == 0:
                     batch = self.buffer.sample()
                     self.QNetwork.train_minibatch(np.asarray(batch))
                     self.QNetwork.update_target()
@@ -137,27 +130,27 @@ class Agent:
             self.nb_ep += 1
 
             # Decay epsilon
-            if self.epsilon > settings.EPSILON_STOP:
-                self.epsilon -= settings.EPSILON_DECAY
+            if self.epsilon > self.settings.EPSILON_STOP:
+                self.epsilon -= self.settings.EPSILON_DECAY
 
             self.QNetwork.decrease_lr()
 
-            DISPLAYER.add_reward(episode_reward, GUI.plot.get(self.nb_ep))
+            self.displayer.add_reward(episode_reward, self.gui.plot.get(self.nb_ep))
             # if episode_reward > self.best_run and \
-            #         self.nb_ep > 50 + settings.PRE_TRAIN_STEPS:
+            #         self.nb_ep > 50 + self.settings.PRE_TRAIN_STEPS:
             #     self.best_run = episode_reward
             #     print("Save best", episode_reward)
-            #     SAVER.save('best')
+            #     self.saver.save('best')
             #     self.play(1, 'results/gif/best.gif')
 
             # Episode display setting
-            if GUI.ep_reward.get(self.nb_ep):
+            if self.gui.ep_reward.get(self.nb_ep):
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %f, Max steps: %i, LR: %fe-4' % (
                     self.nb_ep, episode_reward, episode_step, self.epsilon, max_step, self.QNetwork.learning_rate))
 
             # Save the model
-            if GUI.save.get(self.nb_ep):
-                SAVER.save(self.nb_ep)
+            if self.gui.save.get(self.nb_ep):
+                self.saver.save(self.nb_ep)
 
         self.env.close()
 

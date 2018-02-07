@@ -127,8 +127,6 @@ class QNetwork:
         next_state = batch[:, 3]
         not_done = batch[:, 4]
 
-        batch_size = len(reward)
-
         feed_dict = {self.state_ph: np.stack(state),
                      self.action_ph: action,
                      self.reward_ph: reward,

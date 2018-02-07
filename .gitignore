@@ -1,6 +1,6 @@
 .ipynb_checkpoints/
 __pycache__
-results/
+results*/
 *.h5
 model*
 tmp*.png

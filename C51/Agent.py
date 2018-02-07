@@ -21,7 +21,7 @@ class Agent:
         self.displayer = displayer
         self.saver = saver
 
-        self.env = Environment(settings)
+        self.env = Environment(self.settings)
         self.QNetwork = QNetwork(self.settings, self.sess)
         self.buffer = ExperienceBuffer(self.settings)
         self.epsilon = self.settings.EPSILON_START
@@ -118,7 +118,7 @@ class Agent:
 
                 self.buffer.add((s, a, r, s_, 1 if not done else 0))
 
-                if episode_step % self.settings.TRAINING_FREQ == 0:
+                if self.total_steps % self.settings.TRAINING_FREQ == 0:
                     batch = self.buffer.sample()
                     self.QNetwork.train_minibatch(np.asarray(batch))
                     self.QNetwork.update_target()
@@ -141,7 +141,7 @@ class Agent:
             #     self.best_run = episode_reward
             #     print("Save best", episode_reward)
             #     self.saver.save('best')
-            #     self.play(1, 'results/gif/best.gif')
+            #     self.play(1, 'best')
 
             # Episode display setting
             if self.gui.ep_reward.get(self.nb_ep):
@@ -154,16 +154,17 @@ class Agent:
 
         self.env.close()
 
-    def play(self, number_run, path=''):
+    def play(self, number_run, name=None):
         print("Playing for", number_run, "runs")
 
+        self.env.set_render(self.settings.DISPLAY)
         try:
             for i in range(number_run):
 
                 s = self.env.reset()
                 episode_reward = 0
                 done = False
-                self.env.set_gif(True, path != '')
+                self.env.set_gif(True, name)
 
                 while not done:
                     a, = self.sess.run(self.QNetwork.action,
@@ -182,7 +183,6 @@ class Agent:
 
         finally:
             print("End of the demo")
-            self.env.close()
 
     def stop(self):
         self.env.close()

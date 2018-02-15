@@ -5,14 +5,15 @@ import gym
 from PIL import Image
 import imageio
 
+from settings import Settings
+
 
 class Environment:
 
-    def __init__(self, settings):
+    def __init__(self):
 
-        self.settings = settings
-        self.env_no_frame_skip = gym.make(self.settings.ENV)
-        self.env = gym.wrappers.SkipWrapper(self.settings.FRAME_SKIP)(self.env_no_frame_skip)
+        self.env_no_frame_skip = gym.make(Settings.ENV)
+        self.env = gym.wrappers.SkipWrapper(Settings.FRAME_SKIP)(self.env_no_frame_skip)
         print()
         self.render = False
         self.gif = False
@@ -23,10 +24,10 @@ class Environment:
     def set_render(self, render):
         if not render:
             self.env.render(close=True)
-        self.render = render and self.settings.DISPLAY
+        self.render = render and Settings.DISPLAY
 
     def set_gif(self, gif, name=None):
-        self.gif = gif and self.settings.DISPLAY
+        self.gif = gif and Settings.DISPLAY
         if name is not None:
             self.name_gif = name
 
@@ -46,7 +47,7 @@ class Environment:
 
         r = 0
         i, done = 0, False
-        while i < (self.settings.FRAME_SKIP + 1) and not done:
+        while i < (Settings.FRAME_SKIP + 1) and not done:
             if self.render:
                 self.env_no_frame_skip.render()
 
@@ -64,16 +65,16 @@ class Environment:
         if not self.images:
             return
 
-        print("Saving gif in ", self.settings.GIF_PATH, "...", sep='')
+        print("Saving gif in ", Settings.GIF_PATH, "...", sep='')
 
         number = self.n_gif.get(self.name_gif, 0)
-        path = self.settings.GIF_PATH + self.name_gif + str(number) + ".gif"
+        path = Settings.GIF_PATH + self.name_gif + str(number) + ".gif"
 
         os.makedirs(os.path.dirname(path), exist_ok=True)
         imageio.mimsave(path, self.images, duration=1)
         self.images = []
 
-        self.n_gif[self.name_gif] = (number + 1) % self.settings.MAX_NB_GIF
+        self.n_gif[self.name_gif] = (number + 1) % Settings.MAX_NB_GIF
         self.name_gif = 'save_'
 
     def close(self):

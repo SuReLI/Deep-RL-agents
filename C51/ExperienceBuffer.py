@@ -3,12 +3,13 @@ import numpy as np
 import random
 from collections import deque
 
+from settings import Settings
+
 
 class ExperienceBuffer:
 
-    def __init__(self, settings):
-        self.settings = settings
-        self.buffer = deque(maxlen=self.settings.BUFFER_SIZE)
+    def __init__(self):
+        self.buffer = deque(maxlen=Settings.BUFFER_SIZE)
 
     def __len__(self):
         return len(self.buffer)
@@ -17,5 +18,5 @@ class ExperienceBuffer:
         self.buffer.append(experience)
 
     def sample(self):
-        batch_size = min(self.settings.BATCH_SIZE, len(self.buffer))
+        batch_size = min(Settings.BATCH_SIZE, len(self.buffer))
         return random.sample(self.buffer, batch_size)

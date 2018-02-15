@@ -6,21 +6,22 @@ from QNetwork import Network
 from ExperienceBuffer import ExperienceBuffer
 from Environment import Environment
 
+from settings import Settings
+
 
 class Agent:
 
-    def __init__(self, settings, sess, gui, displayer, saver):
+    def __init__(self, sess, gui, displayer, saver):
         print("Initializing the agent...")
 
-        self.settings = settings
         self.sess = sess
         self.gui = gui
         self.displayer = displayer
         self.saver = saver
 
-        self.env = Environment(settings)
-        self.network = Network(settings, sess)
-        self.buffer = ExperienceBuffer(settings)
+        self.env = Environment()
+        self.network = Network(sess)
+        self.buffer = ExperienceBuffer()
 
         self.best_run = -1e10
         self.n_gif = 0
@@ -31,7 +32,7 @@ class Agent:
         self.total_steps = 0
         self.nb_ep = 1
 
-        while self.nb_ep < self.settings.TRAINING_STEPS and not self.gui.STOP:
+        while self.nb_ep < Settings.TRAINING_STEPS and not self.gui.STOP:
 
             s = self.env.reset()
             episode_reward = 0
@@ -39,25 +40,25 @@ class Agent:
             done = False
 
             # Initialize exploration noise process
-            noise_process = np.zeros(self.settings.ACTION_SIZE)
-            noise_scale = (self.settings.NOISE_SCALE_INIT *
-                           self.settings.NOISE_DECAY**self.nb_ep) * \
-                (self.settings.HIGH_BOUND - self.settings.LOW_BOUND)
+            noise_process = np.zeros(Settings.ACTION_SIZE)
+            noise_scale = (Settings.NOISE_SCALE_INIT *
+                           Settings.NOISE_DECAY**self.nb_ep) * \
+                (Settings.HIGH_BOUND - Settings.LOW_BOUND)
 
             # Render settings
             self.env.set_render(self.gui.render.get(self.nb_ep))
             self.env.set_gif(self.gui.gif.get(self.nb_ep))
 
-            while episode_step < self.settings.MAX_EPISODE_STEPS and not done:
+            while episode_step < Settings.MAX_EPISODE_STEPS and not done:
 
                 # choose action based on deterministic policy
                 a, = self.sess.run(self.network.actions,
                                    feed_dict={self.network.state_ph: s[None]})
 
                 # add temporally-correlated exploration noise to action
-                noise_process = self.settings.EXPLO_THETA * \
-                    (self.settings.EXPLO_MU - noise_process) + \
-                    self.settings.EXPLO_SIGMA * np.random.randn(self.settings.ACTION_SIZE)
+                noise_process = Settings.EXPLO_THETA * \
+                    (Settings.EXPLO_MU - noise_process) + \
+                    Settings.EXPLO_SIGMA * np.random.randn(Settings.ACTION_SIZE)
 
                 a += noise_scale * noise_process
 
@@ -67,7 +68,7 @@ class Agent:
                 self.buffer.add((s, a, r, s_, 1 if not done else 0))
 
                 # update network weights to fit a minibatch of experience
-                if self.total_steps % self.settings.TRAINING_FREQ == 0:
+                if self.total_steps % Settings.TRAINING_FREQ == 0:
                     batch = self.buffer.sample()
                     self.network.train(np.asarray(batch))
                     self.network.target_update()
@@ -97,7 +98,7 @@ class Agent:
     def play(self, number_run, name=None):
         print("Playing for", number_run, "runs")
 
-        self.env.set_render(self.settings.DISPLAY)
+        self.env.set_render(Settings.DISPLAY)
         try:
             for i in range(number_run):
 

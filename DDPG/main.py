@@ -16,14 +16,13 @@ if __name__ == '__main__':
 
     with tf.Session() as sess:
 
-        settings = Settings()
-        saver = Saver.Saver(settings, sess)
-        displayer = Displayer.Displayer(settings)
+        saver = Saver.Saver(sess)
+        displayer = Displayer.Displayer()
 
-        gui = GUI.Interface(settings, ['ep_reward', 'plot', 'render', 'gif', 'save'])
+        gui = GUI.Interface(['ep_reward', 'plot', 'render', 'gif', 'save'])
         gui_thread = threading.Thread(target=gui.run)
 
-        agent = Agent(settings, sess, gui, displayer, saver)
+        agent = Agent(sess, gui, displayer, saver)
 
         saver.load(agent)
 

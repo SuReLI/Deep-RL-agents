@@ -1,11 +1,13 @@
 
 import tensorflow as tf
 
+from settings import Settings
 
-def build_model(settings, inputs, trainable, scope):
+
+def build_model(inputs, trainable, scope):
 
     with tf.variable_scope(scope):
-        if settings.CONV:
+        if Settings.CONV:
             with tf.variable_scope('Convolutional_Layers'):
                 conv1 = tf.layers.conv2d(inputs=inputs,
                                          filters=32,
@@ -31,8 +33,8 @@ def build_model(settings, inputs, trainable, scope):
                                      name='hidden2', trainable=trainable)
 
         output = []
-        for i in range(settings.ACTION_SIZE):
-            output.append(tf.layers.dense(hidden, settings.NB_ATOMS,
+        for i in range(Settings.ACTION_SIZE):
+            output.append(tf.layers.dense(hidden, Settings.NB_ATOMS,
                                           activation=tf.nn.softmax,
                                           name='hidden3_' + str(i + 1),
                                           trainable=trainable))

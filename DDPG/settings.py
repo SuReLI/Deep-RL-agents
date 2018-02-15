@@ -2,58 +2,56 @@
 import gym
 
 class Settings:
-    
-    def __init__(self):
 
-        self.ENV = "Pendulum-v0"
+    ENV = "Pendulum-v0"
 
-        setting_env = gym.make(self.ENV)
-        print()
+    setting_env = gym.make(ENV)
+    print()
 
-        self.ACTION_SIZE = setting_env.action_space.shape[0]
-        self.STATE_SIZE = list(setting_env.observation_space.shape)
-        self.LOW_BOUND = setting_env.action_space.low
-        self.HIGH_BOUND = setting_env.action_space.high
+    ACTION_SIZE = setting_env.action_space.shape[0]
+    STATE_SIZE = list(setting_env.observation_space.shape)
+    LOW_BOUND = setting_env.action_space.low
+    HIGH_BOUND = setting_env.action_space.high
 
-        del setting_env
+    del setting_env
 
-        self.LOAD = False
-        self.DISPLAY = True
-        self.GUI = True
+    LOAD = False
+    DISPLAY = True
+    GUI = True
 
-        self.DISCOUNT = 0.99
-        self.FRAME_SKIP = 0
-        self.BUFFER_SIZE = 100000
-        self.BATCH_SIZE = 1024
+    DISCOUNT = 0.99
+    FRAME_SKIP = 0
+    BUFFER_SIZE = 100000
+    BATCH_SIZE = 1024
 
-        self.ACTOR_LEARNING_RATE = 5e-4
-        self.CRITIC_LEARNING_RATE = 5e-4
+    ACTOR_LEARNING_RATE = 5e-4
+    CRITIC_LEARNING_RATE = 5e-4
 
-        # Number of episodes of game environment to train with
-        self.TRAINING_STEPS = 1000
+    # Number of episodes of game environment to train with
+    TRAINING_STEPS = 1000
 
-        # Maximal number of steps during one episode
-        self.MAX_EPISODE_STEPS = 1000
-        self.TRAINING_FREQ = 1
+    # Maximal number of steps during one episode
+    MAX_EPISODE_STEPS = 1000
+    TRAINING_FREQ = 1
 
-        # Rate to update target network toward primary network
-        self.UPDATE_TARGET_RATE = 0.05
+    # Rate to update target network toward primary network
+    UPDATE_TARGET_RATE = 0.05
 
-        self.NOISE_SCALE_INIT = 0.1
-        self.NOISE_DECAY = 0.99
+    NOISE_SCALE_INIT = 0.1
+    NOISE_DECAY = 0.99
 
-        # settings for the exploration noise process:
-        # dXt = theta*(mu-Xt)*dt + sigma*dWt
-        self.EXPLO_MU = 0.0
-        self.EXPLO_THETA = 0.15
-        self.EXPLO_SIGMA = 0.2
+    # settings for the exploration noise process:
+    # dXt = theta*(mu-Xt)*dt + sigma*dWt
+    EXPLO_MU = 0.0
+    EXPLO_THETA = 0.15
+    EXPLO_SIGMA = 0.2
 
-        # Display Frequencies
-        self.EP_REWARD_FREQ = 50
-        self.PLOT_FREQ = 100
-        self.RENDER_FREQ = 500
-        self.GIF_FREQ = 2000
-        self.SAVE_FREQ = 1000
+    # Display Frequencies
+    EP_REWARD_FREQ = 50
+    PLOT_FREQ = 100
+    RENDER_FREQ = 500
+    GIF_FREQ = 2000
+    SAVE_FREQ = 1000
 
-        self.MAX_NB_GIF = 5
-        self.GIF_PATH = 'results/gif/'
+    MAX_NB_GIF = 5
+    GIF_PATH = 'results/gif/'

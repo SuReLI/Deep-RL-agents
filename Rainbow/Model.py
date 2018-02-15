@@ -1,10 +1,11 @@
 
 import tensorflow as tf
+from settings import Settings
 
 
-def build_model(settings, inputs):
+def build_model(inputs):
 
-    if settings.CONV:
+    if Settings.CONV:
 
         with tf.variable_scope('Convolutional_Layers'):
 
@@ -29,14 +30,14 @@ def build_model(settings, inputs):
     return inputs
 
 
-def dueling(settings, hidden):
+def dueling(hidden):
 
     adv_stream = tf.layers.dense(hidden, 32,
                                  activation=tf.nn.relu)
     value_stream = tf.layers.dense(hidden, 32,
                                    activation=tf.nn.relu)
 
-    advantage = tf.layers.dense(adv_stream, settings.ACTION_SIZE)
+    advantage = tf.layers.dense(adv_stream, Settings.ACTION_SIZE)
     value = tf.layers.dense(value_stream, 1)
 
     return value, advantage

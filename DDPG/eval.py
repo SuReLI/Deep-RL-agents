@@ -6,7 +6,7 @@ from Agent import Agent
 from Displayer import DISPLAYER
 from Saver import SAVER
 
-import settings
+from settings import Settings
 
 if __name__ == '__main__':
     
@@ -18,6 +18,6 @@ if __name__ == '__main__':
         SAVER.set_sess(sess)
 
         SAVER.load()
-        agent.play(1, "results/gif/gif_save".format(settings.ENV))
+        agent.play(1, "results/gif/gif_save".format(Settings.ENV))
 
     agent.close()

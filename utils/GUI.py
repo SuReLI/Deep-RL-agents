@@ -1,12 +1,12 @@
 
 from tkinter import *
+from settings import Settings
 
 
 class Feature:
     nb_column = 0
 
-    def __init__(self, settings, name, settings_freq, text):
-        self.settings = settings
+    def __init__(self, name, settings_freq, text):
         self.name = name
         self.text = text.lower()
         self.request = False
@@ -42,10 +42,10 @@ class Feature:
         except:pass
 
     def get(self, nb_ep):
-        if not self.settings.DISPLAY:
+        if not Settings.DISPLAY:
             return False
 
-        if self.settings.GUI:
+        if Settings.GUI:
             if self.request:
                 self.request = False
                 return True
@@ -57,35 +57,33 @@ class Feature:
 
 class Interface:
 
-    def __init__(self, settings, features):
-
-        self.settings = settings
+    def __init__(self, features):
 
         features = " ".join(features).lower()
         self.list_features = []
 
         if 'ep_reward' in features:
-            self.ep_reward = Feature(settings, 'EP REWARD', settings.EP_REWARD_FREQ, 'display')
+            self.ep_reward = Feature('EP REWARD', Settings.EP_REWARD_FREQ, 'display')
             self.list_features.append(self.ep_reward)
 
         if ' plot ' in features:
-            self.plot = Feature(settings, 'PLOT', settings.PLOT_FREQ, 'update')
+            self.plot = Feature('PLOT', Settings.PLOT_FREQ, 'update')
             self.list_features.append(self.plot)
 
         if 'plot_distrib' in features:
-            self.plot_distrib = Feature(settings, 'PLOT DISTRIB', 0, 'update')
+            self.plot_distrib = Feature('PLOT DISTRIB', 0, 'update')
             self.list_features.append(self.plot_distrib)
 
         if 'render' in features:
-            self.render = Feature(settings, 'RENDER', settings.RENDER_FREQ, 'render')
+            self.render = Feature('RENDER', Settings.RENDER_FREQ, 'render')
             self.list_features.append(self.render)
 
         if 'gif' in features:
-            self.gif = Feature(settings, 'GIF SAVER', settings.GIF_FREQ, 'snap')
+            self.gif = Feature('GIF SAVER', Settings.GIF_FREQ, 'snap')
             self.list_features.append(self.gif)
 
         if 'save' in features:
-            self.save = Feature(settings, 'MODEL SAVER', settings.SAVE_FREQ, 'save')
+            self.save = Feature('MODEL SAVER', Settings.SAVE_FREQ, 'save')
             self.list_features.append(self.save)
 
 
@@ -97,7 +95,7 @@ class Interface:
 
     def run(self):
 
-        if self.settings.GUI:
+        if Settings.GUI:
             self.window = Tk()
             self.window.title("Control Panel")
             self.window.attributes('-topmost', 1)

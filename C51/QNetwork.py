@@ -3,24 +3,24 @@ import tensorflow as tf
 import numpy as np
 
 from Model import build_model, get_vars, copy_vars
+from settings import Settings
 
 
 class QNetwork:
 
-    def __init__(self, settings, sess):
+    def __init__(self, sess):
         print("Creation of the QNetwork...")
 
-        self.settings = settings
         self.sess = sess
 
-        self.learning_rate = settings.LEARNING_RATE
-        self.delta_lr = settings.LEARNING_RATE / settings.TRAINING_STEPS
+        self.learning_rate = Settings.LEARNING_RATE
+        self.delta_lr = Settings.LEARNING_RATE / Settings.TRAINING_STEPS
 
         # Placeholders
-        self.state_ph = tf.placeholder(tf.float32, [None, *self.settings.STATE_SIZE], name='state')
+        self.state_ph = tf.placeholder(tf.float32, [None, *Settings.STATE_SIZE], name='state')
         self.action_ph = tf.placeholder(tf.int32, [None], name='action')
         self.reward_ph = tf.placeholder(tf.float32, [None], name='reward')
-        self.next_state_ph = tf.placeholder(tf.float32, [None, *self.settings.STATE_SIZE], name='next_state')
+        self.next_state_ph = tf.placeholder(tf.float32, [None, *Settings.STATE_SIZE], name='next_state')
         self.not_done_ph = tf.placeholder(tf.float32, [None], name='not_done')
         
         # Turn these in column vector to add them to the distribution z
@@ -29,8 +29,8 @@ class QNetwork:
         self.batch_size = tf.shape(self.reward_ph)[0]
 
         # Support of the distribution
-        self.delta_z = (self.settings.MAX_Q - self.settings.MIN_Q) / (self.settings.NB_ATOMS - 1)
-        self.z = tf.range(self.settings.MIN_Q, self.settings.MAX_Q + self.delta_z, self.delta_z)
+        self.delta_z = (Settings.MAX_Q - Settings.MIN_Q) / (Settings.NB_ATOMS - 1)
+        self.z = tf.range(Settings.MIN_Q, Settings.MAX_Q + self.delta_z, self.delta_z)
 
         # Build the networks
         self.build_model()
@@ -43,7 +43,7 @@ class QNetwork:
     def build_model(self):
                 
         # Computation of Q(s, a) and argmax to get the next action to perform
-        self.Q_distrib = build_model(self.settings, self.state_ph,
+        self.Q_distrib = build_model(self.state_ph,
                                      trainable=True, scope='main_network')
 
         self.Q_value = tf.reduce_sum(self.z * self.Q_distrib, axis=2)
@@ -55,7 +55,7 @@ class QNetwork:
     def build_target(self):
         
         # Computation of Q(s', a), argmax to get a* and extraction of Q(s', a*)
-        self.target_Q_distrib = build_model(self.settings, self.next_state_ph,
+        self.target_Q_distrib = build_model(self.next_state_ph,
                                             trainable=False, scope='target_network')
         
         self.target_Q_value = tf.reduce_sum(self.z * self.target_Q_distrib, axis=2)
@@ -68,16 +68,16 @@ class QNetwork:
     def build_train_operation(self):
 
         zz = tf.tile(self.z[None], [self.batch_size, 1])
-        Tz = tf.clip_by_value(self.reward + self.settings.DISCOUNT * self.not_done * zz,
-                              self.settings.MIN_Q, self.settings.MAX_Q - 1e-4)
-        bj = (Tz - self.settings.MIN_Q) / self.delta_z
+        Tz = tf.clip_by_value(self.reward + Settings.DISCOUNT * self.not_done * zz,
+                              Settings.MIN_Q, Settings.MAX_Q - 1e-4)
+        bj = (Tz - Settings.MIN_Q) / self.delta_z
         l = tf.floor(bj)
         u = l + 1
         l_ind, u_ind = tf.to_int32(l), tf.to_int32(u)
 
         self.loss = tf.zeros([self.batch_size])
 
-        for j in range(self.settings.NB_ATOMS):
+        for j in range(Settings.NB_ATOMS):
             l_index = tf.stack((tf.range(self.batch_size), l_ind[:, j]), axis=1)
             u_index = tf.stack((tf.range(self.batch_size), u_ind[:, j]), axis=1)
 
@@ -105,15 +105,15 @@ class QNetwork:
                                             1, 'init_target_update')
 
         self.target_update = copy_vars(self.main_vars, self.target_vars,
-                                       self.settings.UPDATE_TARGET_RATE,
+                                       Settings.UPDATE_TARGET_RATE,
                                        'target_update')
 
 
     def init_update_target(self):
-        _ = self.sess.run(self.init_target_update)
+        self.sess.run(self.init_target_update)
 
     def update_target(self):
-        _ = self.sess.run(self.target_update)
+        self.sess.run(self.target_update)
 
     def decrease_lr(self):
         if self.learning_rate > self.delta_lr:
@@ -132,4 +132,4 @@ class QNetwork:
                      self.reward_ph: reward,
                      self.next_state_ph: np.stack(next_state),
                      self.not_done_ph: not_done}
-        _ = self.sess.run(self.train, feed_dict=feed_dict)
+        self.sess.run(self.train, feed_dict=feed_dict)

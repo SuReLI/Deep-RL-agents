@@ -3,6 +3,8 @@ import tensorflow as tf
 import threading
 import time
 
+from tensorflow.python.client import timeline
+
 import Actor
 import GUI
 from Learner import Learner
@@ -10,10 +12,29 @@ from Displayer import DISPLAYER
 import settings
 
 
+
+
+class Sess(tf.Session):
+    def __init__(self, options, meta, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.op = options
+        self.meta = meta
+    def run(self, *args, **kwargs):
+        return super().run(options=self.op, run_metadata=self.meta, *args, **kwargs)
+
+
+
 if __name__ == '__main__':
 
     tf.reset_default_graph()
 
+    # options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+    # meta = tf.RunMetadata()
+    # config = tf.ConfigProto(log_device_placement=True,
+    #                       device_count={"CPU:12", "GPU:1"},
+    #                       inter_op_parallelism_threads=10)
+
+    # with Sess(options, meta, config=config) as sess:
     with tf.Session() as sess:
 
         workers = []
@@ -57,6 +78,11 @@ if __name__ == '__main__':
 
         DISPLAYER.disp()
         DISPLAYER.disp_q()
+        
+        # f_t = timeline.Timeline(meta.step_stats)
+        # chrome_trace = f_t.generate_chrome_trace_format()
+        # with open("timeline.json", 'w') as f:
+        #     f.write(chrome_trace)
 
         if settings.GUI:
             GUI_thread.join()

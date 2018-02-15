@@ -1,8 +1,9 @@
 
 import tensorflow as tf
+from settings import Settings
 
 
-def build_actor(settings, states, trainable, scope):
+def build_actor(states, trainable, scope):
     with tf.variable_scope(scope):
         hidden = tf.layers.dense(states, 8, trainable=trainable,
                                  activation=tf.nn.relu, name='dense')
@@ -10,11 +11,11 @@ def build_actor(settings, states, trainable, scope):
                                    activation=tf.nn.relu, name='dense_1')
         hidden_3 = tf.layers.dense(hidden_2, 8, trainable=trainable,
                                    activation=tf.nn.relu, name='dense_2')
-        actions_unscaled = tf.layers.dense(hidden_3, settings.ACTION_SIZE,
+        actions_unscaled = tf.layers.dense(hidden_3, Settings.ACTION_SIZE,
                                            trainable=trainable, name='dense_3')
         # bound the actions to the valid range
-        valid_range = settings.HIGH_BOUND - settings.LOW_BOUND
-        actions = settings.LOW_BOUND + tf.nn.sigmoid(actions_unscaled) * valid_range
+        valid_range = Settings.HIGH_BOUND - Settings.LOW_BOUND
+        actions = Settings.LOW_BOUND + tf.nn.sigmoid(actions_unscaled) * valid_range
     return actions
 
 

@@ -4,6 +4,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
+from settings import Settings
+
 plt.ion()
 
 def save(display, saver, fig_name):
@@ -26,14 +28,13 @@ def save(display, saver, fig_name):
 
 class Displayer:
 
-    def __init__(self, settings):
+    def __init__(self):
         self.rewards = []
-        self.settings = settings
 
     def add_reward(self, reward, plot=False):
         self.rewards.append(reward)
         if plot:
-            if self.settings.DISPLAY:
+            if Settings.DISPLAY:
                 self.disp()
             else:
                 print(self.rewards[-10:])
@@ -43,4 +44,4 @@ class Displayer:
                        for i in range(2, len(self.rewards))]
         saver = [("results/Reward", self.rewards),
                  ("results/Mean_reward", mean_reward)]
-        save(self.settings.DISPLAY, saver, "results/Reward.png")
+        save(Settings.DISPLAY, saver, "results/Reward.png")

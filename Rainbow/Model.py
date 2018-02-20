@@ -27,7 +27,7 @@ def build_model(inputs):
         hidden = tf.layers.dense(inputs, 64,
                                  activation=tf.nn.relu)
 
-    return inputs
+    return hidden
 
 
 def dueling(hidden):
@@ -37,8 +37,10 @@ def dueling(hidden):
     value_stream = tf.layers.dense(hidden, 32,
                                    activation=tf.nn.relu)
 
-    advantage = tf.layers.dense(adv_stream, Settings.ACTION_SIZE)
-    value = tf.layers.dense(value_stream, 1)
+    advantage = tf.layers.dense(adv_stream, Settings.NB_ATOMS * Settings.ACTION_SIZE)
+    advantage = tf.reshape(advantage, [-1, Settings.ACTION_SIZE, Settings.NB_ATOMS])
+    value = tf.layers.dense(value_stream, Settings.NB_ATOMS)
+    value = tf.reshape(value, [-1, 1, Settings.NB_ATOMS])
 
     return value, advantage
 

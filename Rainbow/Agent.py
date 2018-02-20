@@ -23,8 +23,11 @@ class Agent:
 
         self.env = Environment()
 
-        self.mainQNetwork = QNetwork('main')
-        self.targetQNetwork = QNetwork('target')
+        self.mainQNetwork = QNetwork(sess, 'main')
+        self.targetQNetwork = QNetwork(sess, 'target')
+
+        self.delta_z = (Settings.MAX_Q - Settings.MIN_Q) / (Settings.NB_ATOMS - 1)
+        self.z = np.linspace(Settings.MIN_Q, Settings.MAX_Q, Settings.NB_ATOMS)
 
         self.buffer = PrioritizedReplayBuffer(Settings.BUFFER_SIZE,
                                               Settings.ALPHA)
@@ -59,7 +62,7 @@ class Agent:
 
                 a = self.env.act_random()
                 s_, r, done, info = self.env.act(a)
-                self.buffer.add(s, a, r, s_, done)
+                self.buffer.add(s, a, r, s_, 0 if done else 1)
 
                 s = s_
                 episode_reward += r
@@ -71,6 +74,31 @@ class Agent:
             self.best_run = max(self.best_run, episode_reward)
 
         print("End of the pre training !")
+
+    def learn(self):
+
+        states, actions, rewards, next_states, not_done, weights, idx = self.buffer.sample(Settings.BATCH_SIZE, self.beta)
+
+        Qdistrib = self.mainQNetwork(states)            # P(s_t, .)
+        main_action = Qdistrib[range(Settings.BATCH_SIZE), actions] # P(s_t, a_t)
+
+        Qdistrib_next = self.mainQNetwork(next_states)  # P(s_{t+n}, .)
+        Qvalue_next = np.mean(self.z * Qdistrib_next, axis=2)
+        best_action = np.argmax(Qvalue_next, axis=1)  # argmax_a Q(s_{t+n}, a)
+        Qdistrib_next_target = self.targetQNetwork(next_states)  # P_target(s_{t+n}, .)
+        Qdistrib_next_target_best_action = Qdistrib_next_target[range(Settings.BATCH_SIZE), best_action]   # P_target(s_{t+n}, best_action)
+
+        Tz = rewards[:, np.newaxis] + Settings.DISCOUNT_N * np.outer(not_done, self.z[np.newaxis])
+        Tz = np.clip(Tz, Settings.MIN_Q, Settings.MAX_Q - 1e-5)
+
+        b = (Tz - Settings.MIN_Q) / self.delta_z
+        l, u = np.floor(b), np.ceil(b)
+
+        m = np.zeros([Settings.BATCH_SIZE, Settings.NB_ATOMS])
+        
+
+        1/0
+
 
     def run(self):
         print("Beginning of the run...")
@@ -99,7 +127,7 @@ class Agent:
 
             while episode_step <= max_step and not done:
 
-                if random.random() < self.epsilon:
+                if True:#random.random() < self.epsilon:
                     a = random.randint(0, Settings.ACTION_SIZE - 1)
                 else:
                     a, = self.sess.run(self.mainQNetwork.predict,
@@ -114,39 +142,40 @@ class Agent:
                     s_mem, a_mem, discount_R, ss_mem, done_mem = memory.popleft()
                     for i, (si, ai, ri, s_i, di) in enumerate(memory):
                         discount_R += ri * Settings.DISCOUNT ** (i + 1)
-                    self.buffer.add(s_mem, a_mem, discount_R, s_, done)
+                    self.buffer.add(s_mem, a_mem, discount_R, s_, 0 if done else 1)
 
                 if episode_step % Settings.TRAINING_FREQ == 0:
+                    self.learn()
 
-                    train_batch = self.buffer.sample(Settings.BATCH_SIZE,
-                                                     self.beta)
-                    # Incr beta
-                    if self.beta <= Settings.BETA_STOP:
-                        self.beta += Settings.BETA_INCR
+                    # train_batch = self.buffer.sample(Settings.BATCH_SIZE,
+                    #                                  self.beta)
+                    # # Incr beta
+                    # if self.beta <= Settings.BETA_STOP:
+                    #     self.beta += Settings.BETA_INCR
 
-                    feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
-                    mainQaction = self.sess.run(self.mainQNetwork.predict,
-                                                feed_dict=feed_dict)
+                    # feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
+                    # mainQaction = self.sess.run(self.mainQNetwork.predict,
+                    #                             feed_dict=feed_dict)
 
-                    feed_dict = {self.targetQNetwork.inputs: train_batch[3]}
-                    targetQvalues = self.sess.run(self.targetQNetwork.Qvalues,
-                                                  feed_dict=feed_dict)
+                    # feed_dict = {self.targetQNetwork.inputs: train_batch[3]}
+                    # targetQvalues = self.sess.run(self.targetQNetwork.Qvalues,
+                    #                               feed_dict=feed_dict)
 
-                    doubleQ = targetQvalues[range(Settings.BATCH_SIZE),
-                                            mainQaction]
-                    targetQvalues = train_batch[2] + \
-                        Settings.DISCOUNT * doubleQ * train_batch[4]
+                    # doubleQ = targetQvalues[range(Settings.BATCH_SIZE),
+                    #                         mainQaction]
+                    # targetQvalues = train_batch[2] + \
+                    #     Settings.DISCOUNT * doubleQ * train_batch[4]
 
-                    feed_dict = {self.mainQNetwork.inputs: train_batch[0],
-                                 self.mainQNetwork.Qtarget: targetQvalues,
-                                 self.mainQNetwork.actions: train_batch[1]}
-                    td_error = self.sess.run([self.mainQNetwork.td_error,
-                                              self.mainQNetwork.train],
-                                             feed_dict=feed_dict)
+                    # feed_dict = {self.mainQNetwork.inputs: train_batch[0],
+                    #              self.mainQNetwork.Qtarget: targetQvalues,
+                    #              self.mainQNetwork.actions: train_batch[1]}
+                    # td_error = self.sess.run([self.mainQNetwork.td_error,
+                    #                           self.mainQNetwork.train],
+                    #                          feed_dict=feed_dict)
 
-                    self.buffer.update_priorities(train_batch[6], td_error)
+                    # self.buffer.update_priorities(train_batch[6], td_error)
 
-                    self.sess.run(self.update_target)
+                    # self.sess.run(self.update_target)
 
                 s = s_
                 episode_step += 1

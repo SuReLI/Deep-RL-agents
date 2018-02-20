@@ -21,7 +21,11 @@ class Settings:
 
     DISCOUNT = 0.99
     N_STEP_RETURN = 3
-
+    DISCOUNT_N = DISCOUNT ** N_STEP_RETURN
+    NB_ATOMS = 51
+    MIN_Q = -100
+    MAX_Q = 100
+    
     LEARNING_RATE = 7.5e-4
 
     FRAME_SKIP = 0
@@ -30,7 +34,7 @@ class Settings:
 
     # Number of episodes of game environment to train with
     TRAINING_STEPS = 100000
-    PRE_TRAIN_STEPS = 1000
+    PRE_TRAIN_STEPS = 10
 
     # Maximal number of steps during one episode
     MAX_EPISODE_STEPS = 200

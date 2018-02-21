@@ -1,3 +1,14 @@
 # Deep-RL-agents
 
 Collection of Deep RL agents
+
+# TODO
+
+main.py: add os.add_path(../utils) at the beginning.
+Model.py: create function that instantiates a model from a list of parameters (instead of having it hard-coded).
+Qnetwork.py / Rainbow: keep the numpy computation of the gradient. Maybe change in C51.
+
+New file: write a very (very) short walkthrough through the files (main -> model -> Qnetwork -> agent -> environment).
+New file: define the architecture of a super-rainbow (discrete actions) with switches and super-DDPG (continuous actions) with switches.
+
+New files: benchmarks for CPU/GPU tests.

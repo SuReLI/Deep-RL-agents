@@ -80,7 +80,7 @@ class Agent:
         states, actions, rewards, next_states, not_done, weights, idx = self.buffer.sample(Settings.BATCH_SIZE, self.beta)
 
         Qdistrib = self.mainQNetwork(states)            # P(s_t, .)
-        main_action = Qdistrib[range(Settings.BATCH_SIZE), actions] # P(s_t, a_t)
+        Qdistrib_main_action = Qdistrib[range(Settings.BATCH_SIZE), actions] # P(s_t, a_t)
 
         Qdistrib_next = self.mainQNetwork(next_states)  # P(s_{t+n}, .)
         Qvalue_next = np.mean(self.z * Qdistrib_next, axis=2)
@@ -92,13 +92,15 @@ class Agent:
         Tz = np.clip(Tz, Settings.MIN_Q, Settings.MAX_Q - 1e-5)
 
         b = (Tz - Settings.MIN_Q) / self.delta_z
-        l, u = np.floor(b), np.ceil(b)
+        l = np.floor(b).astype(int)
+        u = l + 1
 
         m = np.zeros([Settings.BATCH_SIZE, Settings.NB_ATOMS])
-        
+        for j in range(Settings.NB_ATOMS):
+            m[range(Settings.BATCH_SIZE), l[:, j]] += Qdistrib_next_target_best_action[:, j] * (u[:, j] - b[:, j])
+            m[range(Settings.BATCH_SIZE), u[:, j]] += Qdistrib_next_target_best_action[:, j] * (b[:, j] - l[:, j])
 
-        1/0
-
+        loss = -np.sum(m * np.log(Qdistrib_main_action + 1e-10), axis=1)
 
     def run(self):
         print("Beginning of the run...")
@@ -146,36 +148,7 @@ class Agent:
 
                 if episode_step % Settings.TRAINING_FREQ == 0:
                     self.learn()
-
-                    # train_batch = self.buffer.sample(Settings.BATCH_SIZE,
-                    #                                  self.beta)
-                    # # Incr beta
-                    # if self.beta <= Settings.BETA_STOP:
-                    #     self.beta += Settings.BETA_INCR
-
-                    # feed_dict = {self.mainQNetwork.inputs: train_batch[3]}
-                    # mainQaction = self.sess.run(self.mainQNetwork.predict,
-                    #                             feed_dict=feed_dict)
-
-                    # feed_dict = {self.targetQNetwork.inputs: train_batch[3]}
-                    # targetQvalues = self.sess.run(self.targetQNetwork.Qvalues,
-                    #                               feed_dict=feed_dict)
-
-                    # doubleQ = targetQvalues[range(Settings.BATCH_SIZE),
-                    #                         mainQaction]
-                    # targetQvalues = train_batch[2] + \
-                    #     Settings.DISCOUNT * doubleQ * train_batch[4]
-
-                    # feed_dict = {self.mainQNetwork.inputs: train_batch[0],
-                    #              self.mainQNetwork.Qtarget: targetQvalues,
-                    #              self.mainQNetwork.actions: train_batch[1]}
-                    # td_error = self.sess.run([self.mainQNetwork.td_error,
-                    #                           self.mainQNetwork.train],
-                    #                          feed_dict=feed_dict)
-
-                    # self.buffer.update_priorities(train_batch[6], td_error)
-
-                    # self.sess.run(self.update_target)
+                    self.sess.run(self.update_target)
 
                 s = s_
                 episode_step += 1

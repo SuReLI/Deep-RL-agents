@@ -3,7 +3,7 @@ import gym
 
 class Settings:
 
-    ENV = "LunarLander-v2"
+    ENV = "CartPole-v0"
 
     setting_env = gym.make(ENV)
     print()
@@ -34,7 +34,7 @@ class Settings:
 
     # Number of episodes of game environment to train with
     TRAINING_STEPS = 100000
-    PRE_TRAIN_STEPS = 10
+    PRE_TRAIN_STEPS = 1000
 
     # Maximal number of steps during one episode
     MAX_EPISODE_STEPS = 200

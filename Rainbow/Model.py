@@ -3,46 +3,60 @@ import tensorflow as tf
 from settings import Settings
 
 
-def build_model(inputs):
+def build_model(inputs, trainable, reuse, scope):
 
-    if Settings.CONV:
+    with tf.variable_scope(scope):
 
-        with tf.variable_scope('Convolutional_Layers'):
-
+        if Settings.CONV:
             conv1 = tf.layers.conv2d(inputs=inputs,
                                      filters=32,
                                      kernel_size=[8, 8],
                                      stride=[4, 4],
-                                     activation=tf.nn.relu)
+                                     activation=tf.nn.relu,
+                                     trainable=trainable,
+                                     reuse=reuse,
+                                     name='conv_1')
 
             conv2 = tf.layers.conv2d(conv1, 64, [4, 4], [2, 2],
-                                     activation=tf.nn.relu)
+                                     activation=tf.nn.relu,
+                                     trainable=trainable, reuse=reuse,
+                                     name='conv_2')
             conv3 = tf.layers.conv2d(conv2, 64, [3, 3], [1, 1],
-                                     activation=tf.nn.relu)
+                                     activation=tf.nn.relu,
+                                     trainable=trainable, reuse=reuse,
+                                     name='conv_3')
 
-        # Flatten the output
-        hidden = tf.layers.flatten(conv3)
+            # Flatten the output
+            hidden = tf.layers.flatten(conv3)
 
-    else:
-        hidden = tf.layers.dense(inputs, 64,
-                                 activation=tf.nn.relu)
+        else:
+            hidden = tf.layers.dense(inputs, 64,
+                                     trainable=trainable, reuse=reuse,
+                                     activation=tf.nn.relu, name='dense')
 
-    return hidden
+        adv_stream = tf.layers.dense(hidden, 32,
+                                     trainable=trainable, reuse=reuse,
+                                     activation=tf.nn.relu, name='adv_stream')
+
+        advantage = tf.layers.dense(adv_stream, Settings.NB_ATOMS * Settings.ACTION_SIZE,
+                                    trainable=trainable, reuse=reuse, name='adv')
+        advantage = tf.reshape(
+            advantage, [-1, Settings.ACTION_SIZE, Settings.NB_ATOMS])
+
+        advantage_mean = tf.reduce_mean(advantage, axis=1, keepdims=True)
 
 
-def dueling(hidden):
+        value_stream = tf.layers.dense(hidden, 32,
+                                     trainable=trainable, reuse=reuse,
+                                     activation=tf.nn.relu, name='value_stream')
+        value = tf.layers.dense(value_stream, Settings.NB_ATOMS,
+                                     trainable=trainable, reuse=reuse,
+                                     activation=tf.nn.relu, name='value')
+        value = tf.reshape(value, [-1, 1, Settings.NB_ATOMS])
 
-    adv_stream = tf.layers.dense(hidden, 32,
-                                 activation=tf.nn.relu)
-    value_stream = tf.layers.dense(hidden, 32,
-                                   activation=tf.nn.relu)
+        Qdistrib = tf.nn.softmax(value + advantage - advantage_mean, axis=2)
 
-    advantage = tf.layers.dense(adv_stream, Settings.NB_ATOMS * Settings.ACTION_SIZE)
-    advantage = tf.reshape(advantage, [-1, Settings.ACTION_SIZE, Settings.NB_ATOMS])
-    value = tf.layers.dense(value_stream, Settings.NB_ATOMS)
-    value = tf.reshape(value, [-1, 1, Settings.NB_ATOMS])
-
-    return value, advantage
+    return Qdistrib
 
 
 def get_vars(scope, trainable):

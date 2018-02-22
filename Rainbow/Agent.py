@@ -4,6 +4,8 @@ import numpy as np
 import tensorflow as tf
 from collections import deque
 
+import matplotlib.pyplot as plt
+
 from Environment import Environment
 from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
 from QNetwork import QNetwork
@@ -23,8 +25,7 @@ class Agent:
 
         self.env = Environment()
 
-        self.mainQNetwork = QNetwork(sess, 'main')
-        self.targetQNetwork = QNetwork(sess, 'target')
+        self.QNetwork = QNetwork(sess)
 
         self.delta_z = (Settings.MAX_Q - Settings.MIN_Q) / (Settings.NB_ATOMS - 1)
         self.z = np.linspace(Settings.MIN_Q, Settings.MAX_Q, Settings.NB_ATOMS)
@@ -35,18 +36,20 @@ class Agent:
         self.epsilon = Settings.EPSILON_START
         self.beta = Settings.BETA_START
 
-        self.init_update_target = copy_vars(self.mainQNetwork.vars,
-                                            self.targetQNetwork.vars,
-                                            1, 'init_update_target')
-
-        self.update_target = copy_vars(self.mainQNetwork.vars,
-                                       self.targetQNetwork.vars,
-                                       Settings.UPDATE_TARGET_RATE,
-                                       'update_target')
-
         self.nb_ep = 1
         self.best_run = -1e10
         self.n_gif = 0
+
+    def print_distrib(self, distrib, value):
+        fig = plt.figure(2)
+        fig.clf()
+        for i in range(Settings.ACTION_SIZE):
+            p = plt.subplot(Settings.ACTION_SIZE, 1, i+1)
+            plt.bar(self.z, distrib[i], self.delta_z, label="action %i" % i)
+            p.axvline(value[i], color='red', linewidth=0.7)
+            plt.legend()
+        plt.show(block=False)
+        plt.pause(0.05)
 
     def pre_train(self):
         print("Beginning of the pre-training...")
@@ -75,38 +78,11 @@ class Agent:
 
         print("End of the pre training !")
 
-    def learn(self):
-
-        states, actions, rewards, next_states, not_done, weights, idx = self.buffer.sample(Settings.BATCH_SIZE, self.beta)
-
-        Qdistrib = self.mainQNetwork(states)            # P(s_t, .)
-        Qdistrib_main_action = Qdistrib[range(Settings.BATCH_SIZE), actions] # P(s_t, a_t)
-
-        Qdistrib_next = self.mainQNetwork(next_states)  # P(s_{t+n}, .)
-        Qvalue_next = np.mean(self.z * Qdistrib_next, axis=2)
-        best_action = np.argmax(Qvalue_next, axis=1)  # argmax_a Q(s_{t+n}, a)
-        Qdistrib_next_target = self.targetQNetwork(next_states)  # P_target(s_{t+n}, .)
-        Qdistrib_next_target_best_action = Qdistrib_next_target[range(Settings.BATCH_SIZE), best_action]   # P_target(s_{t+n}, best_action)
-
-        Tz = rewards[:, np.newaxis] + Settings.DISCOUNT_N * np.outer(not_done, self.z[np.newaxis])
-        Tz = np.clip(Tz, Settings.MIN_Q, Settings.MAX_Q - 1e-5)
-
-        b = (Tz - Settings.MIN_Q) / self.delta_z
-        l = np.floor(b).astype(int)
-        u = l + 1
-
-        m = np.zeros([Settings.BATCH_SIZE, Settings.NB_ATOMS])
-        for j in range(Settings.NB_ATOMS):
-            m[range(Settings.BATCH_SIZE), l[:, j]] += Qdistrib_next_target_best_action[:, j] * (u[:, j] - b[:, j])
-            m[range(Settings.BATCH_SIZE), u[:, j]] += Qdistrib_next_target_best_action[:, j] * (b[:, j] - l[:, j])
-
-        loss = -np.sum(m * np.log(Qdistrib_main_action + 1e-10), axis=1)
-
     def run(self):
         print("Beginning of the run...")
 
         self.pre_train()
-        self.sess.run(self.init_update_target)
+        self.QNetwork.init_target()
 
         self.total_steps = 0
         self.nb_ep = 1
@@ -126,29 +102,36 @@ class Agent:
             # Render settings
             self.env.set_render(self.gui.render.get(self.nb_ep))
             self.env.set_gif(self.gui.gif.get(self.nb_ep))
+            plot_distrib = self.gui.plot_distrib.get(self.nb_ep)
 
             while episode_step <= max_step and not done:
 
-                if True:#random.random() < self.epsilon:
-                    a = random.randint(0, Settings.ACTION_SIZE - 1)
+                if random.random() < self.epsilon:
+                    a = self.env.act_random()
                 else:
-                    a, = self.sess.run(self.mainQNetwork.predict,
-                                       feed_dict={self.mainQNetwork.inputs: [s]})
+                    Qdistrib = self.QNetwork.act(s)
+                    Qvalue = np.mean(self.z * Qdistrib, axis=1)
+                    a = np.argmax(Qvalue, axis=0)
+
+                    if plot_distrib:
+                        self.print_distrib(Qdistrib, Qvalue)
+
 
                 s_, r, done, info = self.env.act(a)
                 episode_reward += r
 
-                memory.append((s, a, r, s_, 0 if done else 1))
+                memory.append((s, a, r))
 
                 if len(memory) > Settings.N_STEP_RETURN:
-                    s_mem, a_mem, discount_R, ss_mem, done_mem = memory.popleft()
-                    for i, (si, ai, ri, s_i, di) in enumerate(memory):
+                    s_mem, a_mem, discount_R = memory.popleft()
+                    for i, (si, ai, ri) in enumerate(memory):
                         discount_R += ri * Settings.DISCOUNT ** (i + 1)
                     self.buffer.add(s_mem, a_mem, discount_R, s_, 0 if done else 1)
 
                 if episode_step % Settings.TRAINING_FREQ == 0:
-                    self.learn()
-                    self.sess.run(self.update_target)
+                    batch = self.buffer.sample(Settings.BATCH_SIZE, self.beta)
+                    self.QNetwork.train(batch)
+                    self.QNetwork.update_target()
 
                 s = s_
                 episode_step += 1

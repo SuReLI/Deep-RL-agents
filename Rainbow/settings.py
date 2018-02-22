@@ -13,24 +13,24 @@ class Settings:
 
     del setting_env
 
-    LOAD = True
+    LOAD = False
     DISPLAY = True
     GUI = True
 
     CONV = False
 
     DISCOUNT = 0.99
-    N_STEP_RETURN = 3
+    N_STEP_RETURN = 5
     DISCOUNT_N = DISCOUNT ** N_STEP_RETURN
-    NB_ATOMS = 51
-    MIN_Q = -100
-    MAX_Q = 100
+    NB_ATOMS = 5
+    MIN_Q = 0
+    MAX_Q = 200
     
     LEARNING_RATE = 7.5e-4
 
     FRAME_SKIP = 0
     BUFFER_SIZE = 100000
-    BATCH_SIZE = 64
+    BATCH_SIZE = 3
 
     # Number of episodes of game environment to train with
     TRAINING_STEPS = 100000
@@ -41,9 +41,9 @@ class Settings:
     TRAINING_FREQ = 4
 
     # Rate to update target network toward primary network
-    UPDATE_TARGET_RATE = 0.1
+    UPDATE_TARGET_RATE = 0.005
 
-    EPSILON_START = 0.8
+    EPSILON_START = 0.6
     EPSILON_STOP = 0.01
     EPSILON_STEPS = 5000
     EPSILON_DECAY = (EPSILON_START - EPSILON_STOP) / EPSILON_STEPS

@@ -4,7 +4,6 @@ Collection of Deep RL agents
 
 # TODO
 
-main.py: add os.add_path(../utils) at the beginning.
 Model.py: create function that instantiates a model from a list of parameters (instead of having it hard-coded).
 Qnetwork.py / Rainbow: keep the numpy computation of the gradient. Maybe change in C51.
 

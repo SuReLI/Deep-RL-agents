@@ -1,4 +1,9 @@
 
+import os
+import sys
+s = os.getcwd()
+sys.path.append(s[:s.find('RL-Agents') + 10] + 'utils')
+
 import threading
 import tensorflow as tf
 

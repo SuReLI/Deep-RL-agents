@@ -29,10 +29,9 @@ if __name__ == '__main__':
 
         agent = Agent(sess, gui, displayer, saver)
 
-        saver.load(agent)
+        saver.load()
 
         gui_thread.start()
-        print("Beginning of the run")
         try:
             agent.run()
         except KeyboardInterrupt:

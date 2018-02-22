@@ -1,7 +1,6 @@
 
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 import random
 from collections import deque
 
@@ -31,21 +30,10 @@ class Agent:
         self.best_run = -1e10
         self.n_gif = 0
 
-    def print_distrib(self, distrib, value):
-        fig = plt.figure(2)
-        fig.clf()
-        for i in range(Settings.ACTION_SIZE):
-            p = plt.subplot(Settings.ACTION_SIZE, 1, i+1)
-            plt.bar(self.z, distrib[i], self.delta_z, label="left")
-            p.axvline(value[i], color='red', linewidth=0.7)
-            plt.legend()
-        plt.show(block=False)
-        plt.pause(0.05)
-
     def pre_train(self):
         print("Beginning of the pre-training...")
 
-        for i in range(Settings.PRE_TRAIN_STEPS):
+        for i in range(Settings.PRE_TRAIN_EPS):
 
             s = self.env.reset()
             done = False
@@ -62,7 +50,7 @@ class Agent:
                 episode_reward += r
                 episode_step += 1
 
-            if Settings.PRE_TRAIN_STEPS > 5 and i % (Settings.PRE_TRAIN_STEPS // 5) == 0:
+            if Settings.PRE_TRAIN_EPS > 5 and i % (Settings.PRE_TRAIN_EPS // 5) == 0:
                 print("Pre-train step n", i)
 
             self.best_run = max(self.best_run, episode_reward)
@@ -82,7 +70,7 @@ class Agent:
         self.total_steps = 0
         self.nb_ep = 1
 
-        while self.nb_ep < Settings.TRAINING_STEPS and not self.gui.STOP:
+        while self.nb_ep < Settings.TRAINING_EPS and not self.gui.STOP:
 
             s = self.env.reset()
             episode_reward = 0
@@ -101,18 +89,15 @@ class Agent:
             while episode_step <= max_step and not done:
 
                 if random.random() < self.epsilon:
-                    a = random.randint(0, Settings.ACTION_SIZE - 1)
+                    a = self.env.act_random()
                 else:
+                    Qdistrib = self.QNetwork.act(s)
+                    Qvalue = np.sum(self.z * Qdistrib, axis=1)
+                    a = np.argmax(Qvalue, axis=0)
+
                     if plot_distrib:
-                        a, distr, value = self.sess.run([self.QNetwork.action, self.QNetwork.Q_distrib, self.QNetwork.Q_value],
-                                                        feed_dict={self.QNetwork.state_ph: [s]})
-                        a, distr, value = a[0], distr[0], value[0]
-                        self.print_distrib(distr, value)
-
-                    else:
-                        a, = self.sess.run(self.QNetwork.action,
-                                           feed_dict={self.QNetwork.state_ph: [s]})
-
+                        self.displayer.disp_distrib(self.z, self.delta_z,
+                                                    Qdistrib, Qvalue)
 
                 s_, r, done, info = self.env.act(a)
                 episode_reward += r
@@ -138,7 +123,7 @@ class Agent:
 
             self.displayer.add_reward(episode_reward, self.gui.plot.get(self.nb_ep))
             # if episode_reward > self.best_run and \
-            #         self.nb_ep > 50 + Settings.PRE_TRAIN_STEPS:
+            #         self.nb_ep > 50 + Settings.PRE_TRAIN_EPS:
             #     self.best_run = episode_reward
             #     print("Save best", episode_reward)
             #     self.saver.save('best')

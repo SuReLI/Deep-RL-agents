@@ -10,8 +10,8 @@ import tensorflow as tf
 from Agent import Agent
 
 import GUI
-import Displayer
 import Saver
+import Displayer
 
 from settings import Settings
 
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
         agent = Agent(sess, gui, displayer, saver)
 
-        saver.load(agent)
+        saver.load()
 
         gui_thread.start()
         try:

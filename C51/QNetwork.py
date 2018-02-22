@@ -14,7 +14,7 @@ class QNetwork:
         self.sess = sess
 
         self.learning_rate = Settings.LEARNING_RATE
-        self.delta_lr = Settings.LEARNING_RATE / Settings.TRAINING_STEPS
+        self.delta_lr = Settings.LEARNING_RATE / Settings.TRAINING_EPS
 
         # Placeholders
         self.state_ph = tf.placeholder(tf.float32, [None, *Settings.STATE_SIZE], name='state')
@@ -45,9 +45,6 @@ class QNetwork:
         # Computation of Q(s, a) and argmax to get the next action to perform
         self.Q_distrib = build_model(self.state_ph,
                                      trainable=True, scope='main_network')
-
-        self.Q_value = tf.reduce_sum(self.z * self.Q_distrib, axis=2)
-        self.action = tf.argmax(self.Q_value, 1, output_type=tf.int32)
 
         ind = tf.stack((tf.range(self.batch_size), self.action_ph), axis=1)
         self.Q_distrib_taken_action = tf.gather_nd(self.Q_distrib, ind)
@@ -114,6 +111,9 @@ class QNetwork:
 
     def update_target(self):
         self.sess.run(self.target_update)
+
+    def act(self, state):
+        return self.sess.run(self.Q_distrib, feed_dict={self.state_ph: [state]})[0]
 
     def decrease_lr(self):
         if self.learning_rate > self.delta_lr:

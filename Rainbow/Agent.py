@@ -40,17 +40,6 @@ class Agent:
         self.best_run = -1e10
         self.n_gif = 0
 
-    def print_distrib(self, distrib, value):
-        fig = plt.figure(2)
-        fig.clf()
-        for i in range(Settings.ACTION_SIZE):
-            p = plt.subplot(Settings.ACTION_SIZE, 1, i+1)
-            plt.bar(self.z, distrib[i], self.delta_z, label="action %i" % i)
-            p.axvline(value[i], color='red', linewidth=0.7)
-            plt.legend()
-        plt.show(block=False)
-        plt.pause(0.05)
-
     def pre_train(self):
         print("Beginning of the pre-training...")
 
@@ -114,8 +103,8 @@ class Agent:
                     a = np.argmax(Qvalue, axis=0)
 
                     if plot_distrib:
-                        self.print_distrib(Qdistrib, Qvalue)
-
+                        self.displayer.disp_distrib(self.z, self.delta_z,
+                                                    Qdistrib, Qvalue)
 
                 s_, r, done, info = self.env.act(a)
                 episode_reward += r

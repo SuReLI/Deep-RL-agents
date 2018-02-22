@@ -5,7 +5,20 @@ from settings import Settings
 
 
 def build_model(inputs, trainable, scope):
+    """
+    Defines a deep neural network in tensorflow. The architecture of the network
+    is defined in the 'settings' file : it can have convolution layers or just
+    regular fully-connected layers. The output of the network is a tensor of
+    size (BATCH_SIZE, ACTION_SIZE, NB_ATOMS) which corresponds to the estimation
+    of the Q-value distribution of the input state over a support of NB_ATOMS
+    (usually 51) atoms for each possible actions.
 
+    Args:
+        inputs:    a tensorflow placeholder to be feeded to get the network output
+        trainable: whether the network is to be trained (main network) or to
+                    have frozen weights (target network)
+        scope :    the name of the tensorflow scope
+    """
     with tf.variable_scope(scope):
         if Settings.CONV:
             with tf.variable_scope('Convolutional_Layers'):
@@ -42,15 +55,34 @@ def build_model(inputs, trainable, scope):
 
 
 def get_vars(scope, trainable):
+    """
+    Return every tensorflow variables defined in a given scope. Used to get
+    network weights (with trainable == True for main networks and
+    trainable == False for target networks).
+    """
     if trainable:
         return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
     else:
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)
 
 
-def copy_vars(src_vars, dest_vars, tau, name):
+def copy_vars(src_vars, dest_vars, tau, name='update'):
+    """
+    Copy the value of every variable in a list src_vars into every corresponding
+    variable in a list dest_vars with the update rate tau.
+
+    Args:
+        src_vars : the list of the variables to copy
+        dest_vars: the list of the variables to modify
+        tau : the update copy rate 
+        name : the name of the operation
+    """
     update_dest = []
     for src_var, dest_var in zip(src_vars, dest_vars):
+
+        src_name, dest_name = src_var.name, dest_var.name
+        assert src_name[src_name.find("/"):] == dest_name[dest_name.find("/"):]
+
         op = dest_var.assign(tau * src_var + (1 - tau) * dest_var)
         update_dest.append(op)
     return tf.group(*update_dest, name=name)

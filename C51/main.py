@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
         agent = Agent(sess, gui, displayer, saver)
 
-        saver.load(agent)
+        saver.load()
 
         gui_thread.start()
         try:

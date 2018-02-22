@@ -22,7 +22,7 @@ class Settings:
     DISCOUNT = 0.99
     N_STEP_RETURN = 5
     DISCOUNT_N = DISCOUNT ** N_STEP_RETURN
-    NB_ATOMS = 5
+    NB_ATOMS = 51
     MIN_Q = 0
     MAX_Q = 200
     
@@ -30,7 +30,7 @@ class Settings:
 
     FRAME_SKIP = 0
     BUFFER_SIZE = 100000
-    BATCH_SIZE = 3
+    BATCH_SIZE = 64
 
     # Number of episodes of game environment to train with
     TRAINING_STEPS = 100000

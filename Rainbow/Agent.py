@@ -110,7 +110,7 @@ class Agent:
                     a = self.env.act_random()
                 else:
                     Qdistrib = self.QNetwork.act(s)
-                    Qvalue = np.mean(self.z * Qdistrib, axis=1)
+                    Qvalue = np.sum(self.z * Qdistrib, axis=1)
                     a = np.argmax(Qvalue, axis=0)
 
                     if plot_distrib:
@@ -130,7 +130,10 @@ class Agent:
 
                 if episode_step % Settings.TRAINING_FREQ == 0:
                     batch = self.buffer.sample(Settings.BATCH_SIZE, self.beta)
-                    self.QNetwork.train(batch)
+                    
+                    loss = self.QNetwork.train(batch)
+                    self.buffer.update_priorities(batch[6], loss)
+
                     self.QNetwork.update_target()
 
                 s = s_

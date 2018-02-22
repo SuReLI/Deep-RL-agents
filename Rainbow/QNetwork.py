@@ -88,7 +88,7 @@ class QNetwork:
         u = l + 1
         l_ind, u_ind = tf.to_int32(l), tf.to_int32(u)
 
-        loss = tf.zeros([Settings.BATCH_SIZE])
+        self.loss = tf.zeros([Settings.BATCH_SIZE])
 
         for j in range(Settings.NB_ATOMS):
             l_index = tf.stack((tf.range(self.batch_size), l_ind[:, j]), axis=1)
@@ -100,15 +100,17 @@ class QNetwork:
             Q_distrib_l = tf.clip_by_value(Q_distrib_l, 1e-10, 1.0)
             Q_distrib_u = tf.clip_by_value(Q_distrib_u, 1e-10, 1.0)
 
-            loss += self.Q_distrib_next_target_best_action[:, j] * (
+            self.loss += self.Q_distrib_next_target_best_action[:, j] * (
                 (u[:, j] - bj[:, j]) * tf.log(Q_distrib_l) +
                 (bj[:, j] - l[:, j]) * tf.log(Q_distrib_u))
 
-        loss = tf.negative(loss)
-        loss = tf.reduce_sum(loss)
+        self.weights = tf.placeholder(tf.float32, [None], name='weights')
+
+        self.loss = tf.negative(self.loss)
+        mean_loss = tf.reduce_mean(self.loss * self.weights)
 
         trainer = tf.train.AdamOptimizer(self.learning_rate)
-        self.train_op = trainer.minimize(loss)
+        self.train_op = trainer.minimize(mean_loss)
 
     def init_target(self):
         self.sess.run(self.init_target_op)
@@ -125,5 +127,8 @@ class QNetwork:
                      self.action_ph: batch[1],
                      self.reward_ph: batch[2],
                      self.next_state_ph: batch[3],
-                     self.not_done_ph: batch[4]}
-        self.sess.run(self.train_op, feed_dict=feed_dict)
+                     self.not_done_ph: batch[4],
+                     self.weights: batch[5]}
+        loss, _ = self.sess.run([self.loss, self.train_op], feed_dict=feed_dict)
+
+        return loss

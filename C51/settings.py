@@ -28,7 +28,7 @@ class Settings:
     HIDDEN_LAYERS = [32, 32]
 
     NB_ATOMS = 51
-    LEARNING_RATE = 7.5
+    LEARNING_RATE = 7.5e-4
 
 
     ###########################################################################
@@ -65,10 +65,12 @@ class Settings:
 
 
     ###########################################################################
-    # Gif settings
+    # Save settings
 
-    MAX_NB_GIF = 5
+    RESULTS_PATH = 'results/'
+    MODEL_PATH = 'model/'
     GIF_PATH = 'results/gif/'
+    MAX_NB_GIF = 5
 
 
     ###########################################################################

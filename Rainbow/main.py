@@ -2,7 +2,7 @@
 import os
 import sys
 s = os.getcwd()
-sys.path.append(s[:s.find('RL-Agents') + 10] + 'utils')
+sys.path.append(s[:s.find('RL-Agents') + 10] + 'utils')  # Include utils module
 
 import threading
 import tensorflow as tf
@@ -29,7 +29,8 @@ if __name__ == '__main__':
 
         agent = Agent(sess, gui, displayer, saver)
 
-        saver.load()
+        if not saver.load():
+            sess.run(tf.global_variables_initializer())
 
         gui_thread.start()
         try:

@@ -4,9 +4,9 @@ import tensorflow as tf
 from settings import Settings
 
 
-def build_model(inputs, trainable, scope):
+def build_model(states, trainable, scope):
     """
-    Defines a deep neural network in tensorflow. The architecture of the network
+    Define a deep neural network in tensorflow. The architecture of the network
     is defined in the 'settings' file : it can have convolution layers or just
     regular fully-connected layers. The output of the network is a tensor of
     size (BATCH_SIZE, ACTION_SIZE, NB_ATOMS) which corresponds to the estimation
@@ -14,15 +14,15 @@ def build_model(inputs, trainable, scope):
     (usually 51) atoms for each possible actions.
 
     Args:
-        inputs:    a tensorflow placeholder to be feeded to get the network output
+        states   : a tensorflow placeholder to be feeded to get the network output
         trainable: whether the network is to be trained (main network) or to
                     have frozen weights (target network)
-        scope :    the name of the tensorflow scope
+        scope    : the name of the tensorflow scope
     """
     with tf.variable_scope(scope):
         if Settings.CONV:
             with tf.variable_scope('Convolutional_Layers'):
-                conv1 = tf.layers.conv2d(inputs=inputs,
+                conv1 = tf.layers.conv2d(inputs=states,
                                          filters=32,
                                          kernel_size=[8, 8],
                                          strides=[4, 4],
@@ -40,11 +40,13 @@ def build_model(inputs, trainable, scope):
             hidden = tf.layers.flatten(conv3)
 
         else:
-            hidden = tf.layers.dense(inputs, 64, tf.nn.relu,
+            hidden = tf.layers.dense(states, 64, tf.nn.relu,
                                      name='hidden1', trainable=trainable)
             hidden = tf.layers.dense(hidden, 64, tf.nn.relu,
                                      name='hidden2', trainable=trainable)
 
+        # Distributional perspective : for each action, a fully-connected layer
+        # with softmax activation predicts the Q-value distribution
         output = []
         for i in range(Settings.ACTION_SIZE):
             output.append(tf.layers.dense(hidden, Settings.NB_ATOMS,
@@ -74,12 +76,13 @@ def copy_vars(src_vars, dest_vars, tau, name='update'):
     Args:
         src_vars : the list of the variables to copy
         dest_vars: the list of the variables to modify
-        tau : the update copy rate 
-        name : the name of the operation
+        tau      : the update copy rate 
+        name     : the name of the operation
     """
     update_dest = []
     for src_var, dest_var in zip(src_vars, dest_vars):
 
+        # Check if src_var and dest_var represents the same weight or bias
         src_name, dest_name = src_var.name, dest_var.name
         assert src_name[src_name.find("/"):] == dest_name[dest_name.find("/"):]
 

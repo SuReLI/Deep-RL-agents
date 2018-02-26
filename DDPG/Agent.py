@@ -10,8 +10,21 @@ from settings import Settings
 
 
 class Agent:
+    """
+    This class builds an agent with its own Network, memory buffer and
+    environment to learn a policy.
+    """
 
     def __init__(self, sess, gui, displayer, saver):
+        """
+        Build a new instance of Environment, QNetwork and ExperienceBuffer.
+
+        Args:
+            sess     : the tensorflow session in which to build the network
+            gui      : a GUI instance to manage the control of the agent
+            displayer: a Displayer instance to keep track of the episode rewards
+            saver    : a Saver instance to save periodically the network
+        """
         print("Initializing the agent...")
 
         self.sess = sess
@@ -26,18 +39,70 @@ class Agent:
         self.best_run = -1e10
         self.n_gif = 0
 
+        print("Agent initialized !")
+
+    def pre_train(self):
+        """
+        Method to run a random agent in the environment to fill the memory
+        buffer.
+        """
+        print("Beginning of the pre-training...")
+
+        for i in range(Settings.PRE_TRAIN_EPS):
+
+            s = self.env.reset()
+            done = False
+            episode_reward = 0
+            episode_step = 0
+
+            while episode_step < Settings.MAX_EPISODE_STEPS and not done:
+
+                a = self.env.act_random()
+                s_, r, done, info = self.env.act(a)
+                self.buffer.add((s, a, r, s_, 1 if not done else 0))
+
+                s = s_
+                episode_reward += r
+                episode_step += 1
+
+            if Settings.PRE_TRAIN_EPS > 5 and i % (Settings.PRE_TRAIN_EPS // 5) == 0:
+                print("Pre-train step n", i)
+
+            # Set the best score to at least the max score the random agent got
+            self.best_run = max(self.best_run, episode_reward)
+
+        print("End of the pre training !")
+
+    def save_best(self, episode_reward):
+        self.best_run = episode_reward
+        print("Save best", episode_reward)
+        self.saver.save('best')
+        # self.play(1, 'best')
+
     def run(self):
+        """
+        Method to run the agent in the environment to collect experiences and
+        learn on these experiences by gradient descent.
+        """
+        print("Beginning of the run...")
 
-        self.network.init_target_update()
-        self.total_steps = 0
+        self.pre_train()
+        self.network.init_target()
+
         self.nb_ep = 1
+        self.total_steps = 0
 
-        while self.nb_ep < Settings.TRAINING_STEPS and not self.gui.STOP:
+        while self.nb_ep < Settings.TRAINING_EPS and not self.gui.STOP:
 
             s = self.env.reset()
             episode_reward = 0
-            episode_step = 0
             done = False
+
+            episode_step = 1
+            # The more episodes the agent performs, the longer they are
+            max_step = Settings.MAX_EPISODE_STEPS
+            if Settings.EP_ELONGATION > 0:
+                max_step += self.nb_ep // Settings.EP_ELONGATION
 
             # Initialize exploration noise process
             noise_process = np.zeros(Settings.ACTION_SIZE)
@@ -49,53 +114,56 @@ class Agent:
             self.env.set_render(self.gui.render.get(self.nb_ep))
             self.env.set_gif(self.gui.gif.get(self.nb_ep))
 
-            while episode_step < Settings.MAX_EPISODE_STEPS and not done:
+            while episode_step <= max_step and not done:
 
-                # choose action based on deterministic policy
-                a, = self.sess.run(self.network.actions,
-                                   feed_dict={self.network.state_ph: s[None]})
+                # Choose action based on deterministic policy
+                a = self.network.act(s)
 
-                # add temporally-correlated exploration noise to action
+                # Add temporally-correlated exploration noise to action
                 noise_process = Settings.EXPLO_THETA * \
                     (Settings.EXPLO_MU - noise_process) + \
                     Settings.EXPLO_SIGMA * np.random.randn(Settings.ACTION_SIZE)
 
                 a += noise_scale * noise_process
-
                 s_, r, done, info = self.env.act(a)
                 episode_reward += r
 
                 self.buffer.add((s, a, r, s_, 1 if not done else 0))
 
-                # update network weights to fit a minibatch of experience
                 if self.total_steps % Settings.TRAINING_FREQ == 0:
                     batch = self.buffer.sample()
                     self.network.train(np.asarray(batch))
-                    self.network.target_update()
+                    self.network.update_target()
 
                 s = s_
                 episode_step += 1
                 self.total_steps += 1
 
-
             self.displayer.add_reward(episode_reward, self.gui.plot.get(self.nb_ep))
-#            if self.nb_ep > 50 and episode_reward > self.best_run:
-#                print("Saving best")
-#                self.play(1, 'results/gif/gif_best')
-#                self.best_run = episode_reward
+            # if episode_reward > self.best_run:
+            #     self.save_best(episode_reward)
 
             # Episode display
             if self.gui.ep_reward.get(self.nb_ep):
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Final noise scale: %7.3f' %
                       (self.nb_ep, episode_reward, episode_step, noise_scale))
 
-            # Periodically save the model
+            # Save the model
             if self.gui.save.get(self.nb_ep):
                 self.saver.save(self.nb_ep)
 
             self.nb_ep += 1
 
+        self.env.close()
+
     def play(self, number_run, name=None):
+        """
+        Method to evaluate the policy without exploration.
+
+        Args:
+            number_run: the number of episodes to perform
+            name      : the name of the gif that will be saved
+        """
         print("Playing for", number_run, "runs")
 
         self.env.set_render(Settings.DISPLAY)
@@ -108,8 +176,7 @@ class Agent:
                 self.env.set_gif(True, name)
 
                 while not done:
-                    a, = self.sess.run(self.network.actions,
-                                       feed_dict={self.network.state_ph: [s]})
+                    a = self.network.act(s)
                     s, r, done, info = self.env.act(a)
 
                     episode_reward += r
@@ -125,5 +192,5 @@ class Agent:
         finally:
             print("End of the demo")
 
-    def close(self):
+    def stop(self):
         self.env.close()

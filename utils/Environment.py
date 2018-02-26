@@ -9,11 +9,17 @@ import imageio
 
 
 class Environment:
+    """
+    Gym-environment wrapper to add the possibility to save GIFs.
+
+    If the boolean gif if True, then every time the action methods is called,
+    the environment keeps a picture of the environment in a list until the
+    method save_gif is called.
+    """
 
     def __init__(self):
 
-        self.env_no_frame_skip = gym.make(Settings.ENV)
-        self.env = gym.wrappers.SkipWrapper(Settings.FRAME_SKIP)(self.env_no_frame_skip)
+        self.env = gym.make(Settings.ENV)
         print()
         self.render = False
         self.gif = False
@@ -27,6 +33,9 @@ class Environment:
         self.render = render and Settings.DISPLAY
 
     def set_gif(self, gif, name=None):
+        """
+        Set the gif value and the name under which to save it.
+        """
         self.gif = gif and Settings.DISPLAY
         if name is not None:
             self.name_gif = name
@@ -40,28 +49,39 @@ class Environment:
         return self.env.action_space.sample()
 
     def act(self, action):
-        if not self.gif:
-            if self.render:
-                self.env.render()
-            return self.env.step(action)
-
-        r = 0
-        i, done = 0, False
+        """
+        Wrapper method to add frame skip.
+        """
+        r, i, done = 0, 0, False
         while i < (Settings.FRAME_SKIP + 1) and not done:
             if self.render:
-                self.env_no_frame_skip.render()
+                self.env.render()
 
-            #Save image
-            img = Image.fromarray(self.env.render(mode='rgb_array'))
-            img.save('tmp.png')
-            self.images.append(imageio.imread('tmp.png'))
+            if self.gif:
+                # Add image to the memory list
+                img = Image.fromarray(self.env.render(mode='rgb_array'))
+                img.save('tmp.png')
+                self.images.append(imageio.imread('tmp.png'))
 
-            s_, r_tmp, done, info = self.env_no_frame_skip.step(action)
+            s_, r_tmp, done, info = self.env.step(action)
             r += r_tmp
             i += 1
         return s_, r, done, info
 
     def save_gif(self):
+        """
+        If images have been saved in the memory list, save these images in a
+        gif. The gif will have the name given in the set_gif method (default to
+        'save_') plus a number corresponding to the number of gifs saved with
+        that name plus one.
+
+        For instance, if set_gif is called twice with name='example_gif' and
+        once with name='other_example_gif', then three gifs will be saved with
+        the names 'example_gif_0', 'example_gif_1' and 'other_example_gif_0'.
+
+        The gif number wraps to 0 after Settings.MAX_NB_GIF (which will
+        overwrite the first gif saved).
+        """
         if not self.images:
             return
 
@@ -78,6 +98,9 @@ class Environment:
         self.name_gif = 'save_'
 
     def close(self):
+        """
+        Close the environment and save gif under the name 'last_gif'
+        """
         self.env.render(close=True)
         if self.gif:
             self.name_gif = 'last_gif_'

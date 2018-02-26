@@ -1,10 +1,4 @@
 
-"""
-This class is used to display in real time and save figures of the episode
-rewards of an agent using matplotlib. It can also display the Q-value
-distribution in real time.
-"""
-
 import os
 
 import numpy as np
@@ -16,6 +10,11 @@ plt.ion()       # Set matplotlib to interactive mode (to display in real-time)
 
 
 class Displayer:
+    """
+    This class is used to display in real time and save figures of the episode
+    rewards of an agent using matplotlib. It can also display the Q-value
+    distribution in real time.
+    """
 
     def __init__(self):
         # List of the episode rewards
@@ -39,17 +38,16 @@ class Displayer:
 
     def disp(self):
         """
-        Method to display the graph of the evolution of the episode rewards
-        saved so far.
+        Method to display the graph of episode rewards saved so far.
         """
         # Display also a smoothed curve over 10 values
         mean_reward = [np.mean(self.rewards[max(1, i - 10):i])
                        for i in range(2, len(self.rewards))]
-        curves = [("results/Reward", self.rewards),
-                  ("results/Mean_reward", mean_reward)]
+        curves = [(Settings.RESULTS_PATH + "Reward", self.rewards),
+                  (Settings.RESULTS_PATH + "Mean_reward", mean_reward)]
 
         # The file where the graph must be saved
-        fig_name = "results/Reward.png"
+        fig_name = Settings.RESULTS_PATH + "Reward.png"
 
         if Settings.DISPLAY:
             fig = plt.figure(1)

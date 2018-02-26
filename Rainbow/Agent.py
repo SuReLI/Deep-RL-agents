@@ -1,21 +1,32 @@
 
-import random
-import numpy as np
 import tensorflow as tf
+import numpy as np
+import random
 from collections import deque
 
-import matplotlib.pyplot as plt
-
-from Environment import Environment
-from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
 from QNetwork import QNetwork
-from Model import copy_vars
+from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
+from Environment import Environment
+
 from settings import Settings
 
 
 class Agent:
+    """
+    This class builds an agent with its own QNetwork, memory buffer and
+    environment to learn a policy.
+    """
 
     def __init__(self, sess, gui, displayer, saver):
+        """
+        Build a new instance of Environment and QNetwork.
+
+        Args:
+            sess     : the tensorflow session in which to build the network
+            gui      : a GUI instance to manage the control of the agent
+            displayer: a Displayer instance to keep track of the episode rewards
+            saver    : a Saver instance to save periodically the network
+        """
         print("Initializing the agent...")
 
         self.sess = sess
@@ -24,23 +35,25 @@ class Agent:
         self.saver = saver
 
         self.env = Environment()
-
         self.QNetwork = QNetwork(sess)
+        self.buffer = PrioritizedReplayBuffer(Settings.BUFFER_SIZE,
+                                              Settings.ALPHA)
+        self.epsilon = Settings.EPSILON_START
+        self.beta = Settings.BETA_START
 
         self.delta_z = (Settings.MAX_Q - Settings.MIN_Q) / (Settings.NB_ATOMS - 1)
         self.z = np.linspace(Settings.MIN_Q, Settings.MAX_Q, Settings.NB_ATOMS)
 
-        self.buffer = PrioritizedReplayBuffer(Settings.BUFFER_SIZE,
-                                              Settings.ALPHA)
-
-        self.epsilon = Settings.EPSILON_START
-        self.beta = Settings.BETA_START
-
-        self.nb_ep = 1
         self.best_run = -1e10
         self.n_gif = 0
 
+        print("Agent initialized !")
+
     def pre_train(self):
+        """
+        Method to run a random agent in the environment to fill the memory
+        buffer.
+        """
         print("Beginning of the pre-training...")
 
         for i in range(Settings.PRE_TRAIN_STEPS):
@@ -54,7 +67,7 @@ class Agent:
 
                 a = self.env.act_random()
                 s_, r, done, info = self.env.act(a)
-                self.buffer.add(s, a, r, s_, 0 if done else 1)
+                self.buffer.add(s, a, r, s_, 1 if not done else 0)
 
                 s = s_
                 episode_reward += r
@@ -63,11 +76,22 @@ class Agent:
             if Settings.PRE_TRAIN_STEPS > 5 and i % (Settings.PRE_TRAIN_STEPS // 5) == 0:
                 print("Pre-train step n", i)
 
+            # Set the best score to at least the max score the random agent got
             self.best_run = max(self.best_run, episode_reward)
 
         print("End of the pre training !")
 
+    def save_best(self, episode_reward):
+        self.best_run = episode_reward
+        print("Save best", episode_reward)
+        self.saver.save('best')
+        # self.play(1, 'best')
+
     def run(self):
+        """
+        Method to run the agent in the environment to collect experiences and
+        learn on these experiences by gradient descent.
+        """
         print("Beginning of the run...")
 
         self.pre_train()
@@ -84,6 +108,7 @@ class Agent:
             memory = deque()
 
             episode_step = 1
+            # The more episodes the agent performs, the longer they are
             max_step = Settings.MAX_EPISODE_STEPS
             if Settings.EP_ELONGATION > 0:
                 max_step += self.nb_ep // Settings.EP_ELONGATION
@@ -95,6 +120,7 @@ class Agent:
 
             while episode_step <= max_step and not done:
 
+                # Exploration by epsilon-greedy policy
                 if random.random() < self.epsilon:
                     a = self.env.act_random()
                 else:
@@ -115,34 +141,29 @@ class Agent:
                     s_mem, a_mem, discount_R = memory.popleft()
                     for i, (si, ai, ri) in enumerate(memory):
                         discount_R += ri * Settings.DISCOUNT ** (i + 1)
-                    self.buffer.add(s_mem, a_mem, discount_R, s_, 0 if done else 1)
+                    self.buffer.add(s_mem, a_mem, discount_R, s_, 1 if not done else 0)
 
                 if episode_step % Settings.TRAINING_FREQ == 0:
                     batch = self.buffer.sample(Settings.BATCH_SIZE, self.beta)
-                    
                     loss = self.QNetwork.train(batch)
                     self.buffer.update_priorities(batch[6], loss)
-
                     self.QNetwork.update_target()
 
                 s = s_
                 episode_step += 1
                 self.total_steps += 1
 
-            self.nb_ep += 1
-
             # Decay epsilon
             if self.epsilon > Settings.EPSILON_STOP:
                 self.epsilon -= Settings.EPSILON_DECAY
 
-            self.displayer.add_reward(episode_reward, self.gui.plot.get(self.nb_ep))
-            # if episode_reward > self.best_run and \
-            #         self.nb_ep > 50 + Settings.PRE_TRAIN_STEPS:
-            #     self.best_run = episode_reward
-            #     print("Save best", episode_reward)
-            #     SAVER.save('best')
-            #     self.play(1, 'results/gif/best.gif')
+            self.QNetwork.decrease_lr()
 
+            self.displayer.add_reward(episode_reward, self.gui.plot.get(self.nb_ep))
+            # if episode_reward > self.best_run:
+            #     self.save_best(episode_reward)
+            
+            # Episode display
             if self.gui.ep_reward.get(self.nb_ep):
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %i'
                       ', Max steps: %i' % (self.nb_ep, episode_reward,
@@ -153,7 +174,18 @@ class Agent:
             if self.gui.save.get(self.nb_ep):
                 self.saver.save(self.nb_ep)
 
-    def play(self, number_run, path=''):
+            self.nb_ep += 1
+
+        self.env.close()
+
+    def play(self, number_run, name=None):
+        """
+        Method to evaluate the policy without exploration.
+
+        Args:
+            number_run: the number of episodes to perform
+            name      : the name of the gif that will be saved
+        """
         print("Playing for", number_run, "runs")
 
         try:
@@ -162,11 +194,12 @@ class Agent:
                 s = self.env.reset()
                 episode_reward = 0
                 done = False
-                self.env.set_gif(True, path != '')
+                self.env.set_gif(True, name)
 
                 while not done:
-                    a, = self.sess.run(self.QNetwork.action,
-                                       feed_dict={self.QNetwork.state_ph: [s]})
+                    Qdistrib = self.QNetwork.act(s)
+                    Qvalue = np.sum(self.z * Qdistrib, axis=1)
+                    a = np.argmax(Qvalue, axis=0)
                     s, r, done, info = self.env.act(a)
 
                     episode_reward += r

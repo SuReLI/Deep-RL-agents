@@ -1,6 +1,6 @@
 
 """
-This class provides an easy way to interact in real-time and graphically with a
+This module provides an easy way to interact in real-time and graphically with a
 running RL algorithm to trigger different features like saving the network
 weights or rendering an episode.
 
@@ -118,15 +118,15 @@ class Interface:
 
         Args:
             features: a list of string with the names of the features to be
-                        activated. The possible features are :
-                        - ep_reward : print informations about the current
-                                        episode
-                        - plot : plot the episode rewards graph
-                        - plot_distrib : plot the real-time evolution of the
-                                            Q-value distribution
-                        - render : render the environment during an episode
-                        - gif : save a GIF of an episode
-                        - save : save the weights of the network
+                        activated.
+                The possible features are :
+                    - ep_reward : print informations about the current episode
+                    - plot : plot the episode rewards graph
+                    - plot_distrib : plot the real-time evolution of the Q-value
+                      distribution
+                    - render : render the environment during an episode
+                    - gif : save a GIF of an episode
+                    - save : save the weights of the network
         """
 
         features = " ".join(features).lower()
@@ -179,6 +179,7 @@ class Interface:
             for feature in self.list_features:
                 feature.build(self.window)
 
+            # Build the stop button
             stop_button = Button(self.window, text='Stop the Run', command=self.stop_run)
             stop_button.grid(column=0, row=4, columnspan=Feature.nb_features, sticky='NSEW')
 

@@ -1,16 +1,15 @@
 
-"""
-This class provides an easy way to save the weights of a Network and to load
-them from a saved file on disk.
-"""
-
-import tensorflow as tf
 import os
+import tensorflow as tf
 
 from settings import Settings
 
 
 class Saver:
+    """
+    This class provides an easy way to save the weights of a Network and to load
+    them from a saved file on disk.
+    """
 
     def __init__(self, sess):
         self.sess = sess
@@ -18,7 +17,7 @@ class Saver:
     def save(self, n_episode):
         """
         Save all the tensorflow weights from a session into a file in a
-        directory "model/".
+        directory Settings.MODEL_PATH.
 
         Args:
             n_episode: the number of episodes the agent completed
@@ -26,8 +25,8 @@ class Saver:
         """
         print("Saving model", n_episode, "...")
 
-        os.makedirs(os.path.dirname("model/"), exist_ok=True)
-        self.saver.save(self.sess, "model/Model_" + str(n_episode) + ".cptk")
+        os.makedirs(os.path.dirname(Settings.MODEL_PATH), exist_ok=True)
+        self.saver.save(self.sess, Settings.MODEL_PATH + "Model_" + str(n_episode) + ".cptk")
 
         print("Model saved !")
 
@@ -42,11 +41,11 @@ class Saver:
         if Settings.LOAD:
             print("Loading model...")
             try:
-                ckpt = tf.train.get_checkpoint_state("model/")
+                ckpt = tf.train.get_checkpoint_state(Settings.MODEL_PATH)
                 self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+                return True
             except (ValueError, AttributeError):
                 print("No model is saved !")
-                self.sess.run(tf.global_variables_initializer())
-
+                return False
         else:
-            self.sess.run(tf.global_variables_initializer())
+            return False

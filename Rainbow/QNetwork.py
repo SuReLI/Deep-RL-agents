@@ -2,7 +2,7 @@
 import numpy as np
 import tensorflow as tf
 
-from Model import build_model, copy_vars, get_vars
+from Model import build_critic, copy_vars, get_vars
 from settings import Settings
 
 
@@ -45,19 +45,22 @@ class QNetwork:
         self.build_train_operation()
         self.build_update()
 
-        print("QNetwork created !")
+        print("QNetwork created !\n")
 
     def build_main_network(self):
 
         # Compute Q(s_t, .)
-        self.Q_distrib = build_model(self.state_ph, True, False, 'main_network')
+        self.Q_distrib = build_critic(self.state_ph, trainable=True,
+                                      reuse=False, scope='main_network')
 
         # Compute Q(s_t, a_t)
         ind = tf.stack((tf.range(Settings.BATCH_SIZE), self.action_ph), axis=1)
         self.Q_distrib_main_action = tf.gather_nd(self.Q_distrib, ind)
 
         # Compute Q(s_{t+1}, .)
-        self.Q_distrib_next = build_model(self.next_state_ph, True, True, 'main_network')
+        self.Q_distrib_next = build_critic(self.next_state_ph, trainable=True,
+                                           reuse=True, scope='main_network')
+
         self.Q_value_next = tf.reduce_sum(self.z * self.Q_distrib_next, axis=2)
 
         # Compute argmax_a Q(s_{t+1}, a)
@@ -66,7 +69,8 @@ class QNetwork:
     def build_target(self):
 
         # Compute Q_target(s_{t+1}, .)
-        self.Q_distrib_next_target = build_model(self.next_state_ph, False, False, 'target_network')
+        self.Q_distrib_next_target = build_critic(self.next_state_ph, trainable=False,
+                                                  reuse=False, scope='target_network')
 
         # Compute Q_target(s_{t+1}, argmax_a Q(s_{t+1}, a))
         ind = tf.stack((tf.range(Settings.BATCH_SIZE), self.best_next_action), axis=1)

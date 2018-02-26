@@ -2,7 +2,7 @@
 import tensorflow as tf
 import numpy as np
 
-from Model import build_model, get_vars, copy_vars
+from Model import build_critic, get_vars, copy_vars
 from settings import Settings
 
 
@@ -52,7 +52,7 @@ class QNetwork:
         self.build_train_operation()
         self.build_update()
 
-        print("QNetwork created !")
+        print("QNetwork created !\n")
 
     def build_main_network(self):
         """
@@ -65,7 +65,7 @@ class QNetwork:
         """
                 
         # Computate Q(s_t, .)
-        self.Q_distrib = build_model(self.state_ph,
+        self.Q_distrib = build_critic(self.state_ph,
                                      trainable=True, scope='main_network')
 
         # Select only the Q-distribution of the action given in the experience,
@@ -81,7 +81,7 @@ class QNetwork:
         """
         
         # Computate Q(s_{t+1}, .)
-        self.target_Q_distrib = build_model(self.next_state_ph,
+        self.target_Q_distrib = build_critic(self.next_state_ph,
                                             trainable=False, scope='target_network')
         
         # Distribution -> value and selection to get the action that maximizes
@@ -144,7 +144,7 @@ class QNetwork:
 
         # Gradient descent
         trainer = tf.train.AdamOptimizer(self.learning_rate)
-        self.train_op = self.trainer.minimize(self.loss)
+        self.train_op = trainer.minimize(self.loss)
 
     def build_update(self):
         """

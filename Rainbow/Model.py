@@ -1,52 +1,49 @@
 
 import tensorflow as tf
+
 from settings import Settings
 
 
-def build_model(inputs, trainable, reuse, scope):
+def build_critic(states, trainable, reuse, scope):
 
     with tf.variable_scope(scope):
 
-        if Settings.CONV:
-            conv1 = tf.layers.conv2d(inputs=inputs,
-                                     filters=32,
-                                     kernel_size=[8, 8],
-                                     stride=[4, 4],
-                                     activation=tf.nn.relu,
-                                     trainable=trainable,
-                                     reuse=reuse,
-                                     name='conv_1')
+        layer = states
+        
+        # Convolution layers
+        if hasattr(Settings, 'CONV_LAYERS') and Settings.CONV_LAYERS:
+            for i, layer_settings in enumerate(Settings.CONV_LAYERS):
+                layer = tf.layers.conv2d(inputs=layer,
+                                         activation=tf.nn.relu,
+                                         trainable=trainable,
+                                         reuse=reuse,
+                                         name='conv_'+str(i),
+                                         **layer_settings)
 
-            conv2 = tf.layers.conv2d(conv1, 64, [4, 4], [2, 2],
-                                     activation=tf.nn.relu,
-                                     trainable=trainable, reuse=reuse,
-                                     name='conv_2')
-            conv3 = tf.layers.conv2d(conv2, 64, [3, 3], [1, 1],
-                                     activation=tf.nn.relu,
-                                     trainable=trainable, reuse=reuse,
-                                     name='conv_3')
+            layer = tf.layers.flatten(layer)
 
-            # Flatten the output
-            hidden = tf.layers.flatten(conv3)
+        # Fully connected layers
+        for i, nb_neurons in enumerate(Settings.HIDDEN_LAYERS[:-1]):
+            layer = tf.layers.dense(layer, nb_neurons,
+                                    trainable=trainable, reuse=reuse,
+                                    activation=tf.nn.relu,
+                                    name='dense_'+str(i))
 
-        else:
-            hidden = tf.layers.dense(inputs, 64,
-                                     trainable=trainable, reuse=reuse,
-                                     activation=tf.nn.relu, name='dense')
+        last_nb_neurons = Settings.HIDDEN_LAYERS[-1]
 
-        adv_stream = tf.layers.dense(hidden, 32,
+        # Advantage prediction
+        adv_stream = tf.layers.dense(layer, last_nb_neurons,
                                      trainable=trainable, reuse=reuse,
                                      activation=tf.nn.relu, name='adv_stream')
 
         advantage = tf.layers.dense(adv_stream, Settings.NB_ATOMS * Settings.ACTION_SIZE,
                                     trainable=trainable, reuse=reuse, name='adv')
-        advantage = tf.reshape(
-            advantage, [-1, Settings.ACTION_SIZE, Settings.NB_ATOMS])
+        advantage = tf.reshape(advantage, [-1, Settings.ACTION_SIZE, Settings.NB_ATOMS])
 
         advantage_mean = tf.reduce_mean(advantage, axis=1, keepdims=True)
 
-
-        value_stream = tf.layers.dense(hidden, 32,
+        # Value prediction
+        value_stream = tf.layers.dense(layer, last_nb_neurons,
                                      trainable=trainable, reuse=reuse,
                                      activation=tf.nn.relu, name='value_stream')
         value = tf.layers.dense(value_stream, Settings.NB_ATOMS,

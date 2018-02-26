@@ -16,14 +16,30 @@ def build_actor(states, trainable, scope):
         scope    : the name of the tensorflow scope
     """
     with tf.variable_scope(scope):
-        hidden = tf.layers.dense(states, 8, trainable=trainable,
-                                 activation=tf.nn.relu, name='dense')
-        hidden_2 = tf.layers.dense(hidden, 8, trainable=trainable,
-                                   activation=tf.nn.relu, name='dense_1')
-        hidden_3 = tf.layers.dense(hidden_2, 8, trainable=trainable,
-                                   activation=tf.nn.relu, name='dense_2')
-        actions_unscaled = tf.layers.dense(hidden_3, Settings.ACTION_SIZE,
-                                           trainable=trainable, name='dense_3')
+
+        layer = states
+
+        # Convolution layers
+        if hasattr(Settings, 'CONV_LAYERS') and Settings.CONV_LAYERS:
+            for i, layer_settings in enumerate(Settings.CONV_LAYERS):
+                layer = tf.layers.conv2d(inputs=layer,
+                                         activation=tf.nn.relu,
+                                         trainable=trainable,
+                                         name='conv_'+str(i),
+                                         **layer_settings)
+
+            layer = tf.layers.flatten(layer)
+
+        # Fully connected layers
+        for i, nb_neurons in enumerate(Settings.HIDDEN_ACTOR_LAYERS):
+            layer = tf.layers.dense(layer, nb_neurons,
+                                    trainable=trainable,
+                                    activation=tf.nn.relu,
+                                    name='dense_'+str(i))
+
+        actions_unscaled = tf.layers.dense(layer, Settings.ACTION_SIZE,
+                                           trainable=trainable,
+                                           name='dense_last')
         # Bound the actions to the valid range
         valid_range = Settings.HIGH_BOUND - Settings.LOW_BOUND
         actions = Settings.LOW_BOUND + tf.nn.sigmoid(actions_unscaled) * valid_range
@@ -48,19 +64,32 @@ def build_critic(states, actions, trainable, reuse, scope):
         scope    : the name of the tensorflow scope
     """
     with tf.variable_scope(scope):
-        states_actions = tf.concat([states, actions], axis=1)
-        hidden = tf.layers.dense(states_actions, 8,
-                                 trainable=trainable, reuse=reuse,
-                                 activation=tf.nn.relu, name='dense')
-        hidden_2 = tf.layers.dense(hidden, 8,
+
+        layer = tf.concat([states, actions], axis=1)
+
+        # Convolution layers
+        if hasattr(Settings, 'CONV_LAYERS') and Settings.CONV_LAYERS:
+            for i, layer_settings in enumerate(Settings.CONV_LAYERS):
+                layer = tf.layers.conv2d(inputs=layer,
+                                         activation=tf.nn.relu,
+                                         trainable=trainable,
+                                         reuse=reuse,
+                                         name='conv_'+str(i),
+                                         **layer_settings)
+
+            layer = tf.layers.flatten(layer)
+
+        # Fully connected layers
+        for i, nb_neurons in enumerate(Settings.HIDDEN_CRITIC_LAYERS):
+            layer = tf.layers.dense(layer, nb_neurons,
+                                    trainable=trainable,
+                                    reuse=reuse,
+                                    activation=tf.nn.relu,
+                                    name='dense_'+str(i))
+
+        q_values = tf.layers.dense(layer, 1,
                                    trainable=trainable, reuse=reuse,
-                                   activation=tf.nn.relu, name='dense_1')
-        hidden_3 = tf.layers.dense(hidden_2, 8,
-                                   trainable=trainable, reuse=reuse,
-                                   activation=tf.nn.relu, name='dense_2')
-        q_values = tf.layers.dense(hidden_3, 1,
-                                   trainable=trainable, reuse=reuse,
-                                   name='dense_3')
+                                   name='dense_last')
     return q_values
 
 

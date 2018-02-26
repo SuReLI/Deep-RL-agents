@@ -21,9 +21,11 @@ class Settings:
     ###########################################################################
     # Network settings
 
-    CONV = False
-    if CONV:
-        CONV_LAYERS = [32, 32, 32]
+    # CONV_LAYERS = [
+    #                 {'filters': 32, 'kernel_size': [8, 8], 'strides': [4, 4]},
+    #                 {'filters': 64, 'kernel_size': [4, 4], 'strides': [2, 2]},
+    #                 {'filters': 64, 'kernel_size': [3, 3], 'strides': [1, 1]}
+    #               ]
 
     HIDDEN_ACTOR_LAYERS = [8, 8, 8]
     HIDDEN_CRITIC_LAYERS = [8, 8, 8]

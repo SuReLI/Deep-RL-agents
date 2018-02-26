@@ -47,7 +47,7 @@ class Agent:
         self.best_run = -1e10
         self.n_gif = 0
 
-        print("Agent initialized !")
+        print("Agent initialized !\n")
 
     def pre_train(self):
         """
@@ -56,7 +56,7 @@ class Agent:
         """
         print("Beginning of the pre-training...")
 
-        for i in range(Settings.PRE_TRAIN_STEPS):
+        for i in range(Settings.PRE_TRAIN_EPS):
 
             s = self.env.reset()
             done = False
@@ -73,7 +73,7 @@ class Agent:
                 episode_reward += r
                 episode_step += 1
 
-            if Settings.PRE_TRAIN_STEPS > 5 and i % (Settings.PRE_TRAIN_STEPS // 5) == 0:
+            if Settings.PRE_TRAIN_EPS > 5 and i % (Settings.PRE_TRAIN_EPS // 5) == 0:
                 print("Pre-train step n", i)
 
             # Set the best score to at least the max score the random agent got
@@ -100,7 +100,7 @@ class Agent:
         self.total_steps = 0
         self.nb_ep = 1
 
-        while self.nb_ep < Settings.TRAINING_STEPS and not self.gui.STOP:
+        while self.nb_ep < Settings.TRAINING_EPS and not self.gui.STOP:
 
             s = self.env.reset()
             episode_reward = 0

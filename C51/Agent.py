@@ -45,7 +45,7 @@ class Agent:
         self.best_run = -1e10
         self.n_gif = 0
 
-        print("Agent initialized !")
+        print("Agent initialized !\n")
 
     def pre_train(self):
         """

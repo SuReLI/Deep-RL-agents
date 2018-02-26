@@ -4,7 +4,7 @@ import tensorflow as tf
 from settings import Settings
 
 
-def build_model(states, trainable, scope):
+def build_critic(states, trainable, scope):
     """
     Define a deep neural network in tensorflow. The architecture of the network
     is defined in the 'settings' file : it can have convolution layers or just
@@ -20,38 +20,34 @@ def build_model(states, trainable, scope):
         scope    : the name of the tensorflow scope
     """
     with tf.variable_scope(scope):
-        if Settings.CONV:
-            with tf.variable_scope('Convolutional_Layers'):
-                conv1 = tf.layers.conv2d(inputs=states,
-                                         filters=32,
-                                         kernel_size=[8, 8],
-                                         strides=[4, 4],
-                                         padding='valid',
-                                         activation=tf.nn.relu,
-                                         trainable=trainable)
-                conv2 = tf.layers.conv2d(conv1, 64, [4, 4], [2, 2], 'valid',
-                                         activation=tf.nn.relu,
-                                         trainable=trainable)
-                conv3 = tf.layers.conv2d(conv2, 64, [3, 3], [1, 1], 'valid',
-                                         activation=tf.nn.relu,
-                                         trainable=trainable)
 
-            # Flatten the output
-            hidden = tf.layers.flatten(conv3)
+        layer = states
 
-        else:
-            hidden = tf.layers.dense(states, 64, tf.nn.relu,
-                                     name='hidden1', trainable=trainable)
-            hidden = tf.layers.dense(hidden, 64, tf.nn.relu,
-                                     name='hidden2', trainable=trainable)
+        # Convolution layers
+        if hasattr(Settings, 'CONV_LAYERS') and Settings.CONV_LAYERS:
+            for i, layer_settings in enumerate(Settings.CONV_LAYERS):
+                layer = tf.layers.conv2d(inputs=layer,
+                                         activation=tf.nn.relu,
+                                         trainable=trainable,
+                                         name='conv_' + str(i),
+                                         **layer_settings)
+
+            layer = tf.layers.flatten(layer)
+
+        # Fully connected layers
+        for i, nb_neurons in enumerate(Settings.HIDDEN_LAYERS):
+            layer = tf.layers.dense(layer, nb_neurons,
+                                    trainable=trainable,
+                                    activation=tf.nn.relu,
+                                    name='dense_' + str(i))
 
         # Distributional perspective : for each action, a fully-connected layer
         # with softmax activation predicts the Q-value distribution
         output = []
         for i in range(Settings.ACTION_SIZE):
-            output.append(tf.layers.dense(hidden, Settings.NB_ATOMS,
+            output.append(tf.layers.dense(layer, Settings.NB_ATOMS,
                                           activation=tf.nn.softmax,
-                                          name='hidden3_' + str(i + 1),
+                                          name='output_' + str(i),
                                           trainable=trainable))
         return tf.stack(output, axis=1)
 

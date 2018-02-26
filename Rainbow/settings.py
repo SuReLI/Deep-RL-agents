@@ -21,9 +21,11 @@ class Settings:
     ###########################################################################
     # Network settings
 
-    CONV = False
-    if CONV:
-        CONV_LAYERS = [32, 32, 32]
+    # CONV_LAYERS = [
+    #                 {'filters': 32, 'kernel_size': [8, 8], 'strides': [4, 4]},
+    #                 {'filters': 64, 'kernel_size': [4, 4], 'strides': [2, 2]},
+    #                 {'filters': 64, 'kernel_size': [3, 3], 'strides': [1, 1]}
+    #               ]
 
     HIDDEN_LAYERS = [32, 32]
 
@@ -35,6 +37,8 @@ class Settings:
     # Algorithm hyper-parameters
 
     DISCOUNT = 0.99
+    N_STEP_RETURN = 5
+    DISCOUNT_N = DISCOUNT ** N_STEP_RETURN
     MIN_Q    = 0
     MAX_Q    = 200
 

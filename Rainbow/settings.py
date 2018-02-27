@@ -36,11 +36,12 @@ class Settings:
     ###########################################################################
     # Algorithm hyper-parameters
 
-    DISCOUNT = 0.99
+    DISCOUNT      = 0.99
     N_STEP_RETURN = 5
-    DISCOUNT_N = DISCOUNT ** N_STEP_RETURN
-    MIN_Q    = 0
-    MAX_Q    = 200
+    DISCOUNT_N    = DISCOUNT ** N_STEP_RETURN
+
+    MIN_Q = 0
+    MAX_Q = 200
 
     BUFFER_SIZE = 100000
     BATCH_SIZE  = 64

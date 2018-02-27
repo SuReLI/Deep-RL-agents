@@ -149,7 +149,7 @@ class Agent:
 
             self.QNetwork.decrease_lr()
 
-            self.displayer.add_reward(episode_reward, self.gui.plot.get(self.nb_ep))
+            self.displayer.add_reward(episode_reward, plot=self.gui.plot.get(self.nb_ep))
             # if episode_reward > self.best_run:
             #     self.save_best(episode_reward)
             

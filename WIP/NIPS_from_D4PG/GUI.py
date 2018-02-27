@@ -57,25 +57,25 @@ STOP = False
 
 ep_reward = Feature('EP REWARD', settings.EP_REWARD_FREQ, 'display')
 plot = Feature('PLOT', settings.PLOT_FREQ, 'update')
+plot_distrib = Feature('PLOT DISTRIB', 0, 'update')
 render = Feature('RENDER', settings.RENDER_FREQ, 'render')
 save = Feature('MODEL SAVER', settings.SAVE_FREQ, 'save')
 
 
-
 def main():
-    global ep_reward, plot, render, save
-    from Actor import request_stop
 
     window = Tk()
     window.title("Control Panel")
     window.attributes('-topmost', 1)
 
     def stop_run():
+        global STOP
+        STOP = True
         window.destroy()
-        request_stop()
 
     ep_reward.build(window)
     plot.build(window)
+    plot_distrib.build(window)
     render.build(window)
     save.build(window)
 

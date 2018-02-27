@@ -43,9 +43,10 @@ class Saver:
             try:
                 ckpt = tf.train.get_checkpoint_state(Settings.MODEL_PATH)
                 self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+                print("Model loaded !\n")
                 return True
             except (ValueError, AttributeError):
-                print("No model is saved !")
+                print("No model is saved !\n")
                 return False
         else:
             return False

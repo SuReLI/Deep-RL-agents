@@ -74,7 +74,7 @@ class Network:
 
     def build_target(self):
         """
-        Build the target newtorks.
+        Build the target networks.
         """
         # Compute A(s_{t+1})
         self.target_next_actions = build_actor(self.next_state_ph,

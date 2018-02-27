@@ -89,8 +89,8 @@ class Agent:
         self.pre_train()
         self.network.init_target()
 
-        self.nb_ep = 1
         self.total_steps = 0
+        self.nb_ep = 1
 
         while self.nb_ep < Settings.TRAINING_EPS and not self.gui.STOP:
 
@@ -139,7 +139,7 @@ class Agent:
                 episode_step += 1
                 self.total_steps += 1
 
-            self.displayer.add_reward(episode_reward, self.gui.plot.get(self.nb_ep))
+            self.displayer.add_reward(episode_reward, plot=self.gui.plot.get(self.nb_ep))
             # if episode_reward > self.best_run:
             #     self.save_best(episode_reward)
 

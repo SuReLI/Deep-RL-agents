@@ -20,7 +20,6 @@ class Environment:
     def __init__(self):
 
         self.env = gym.make(Settings.ENV)
-        print()
         self.render = False
         self.gif = False
         self.name_gif = 'save_'
@@ -96,6 +95,8 @@ class Environment:
 
         self.n_gif[self.name_gif] = (number + 1) % Settings.MAX_NB_GIF
         self.name_gif = 'save_'
+        
+        print("Gif saved!\n")
 
     def close(self):
         """

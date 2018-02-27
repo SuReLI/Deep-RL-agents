@@ -29,7 +29,7 @@ class Settings:
 
     HIDDEN_LAYERS = [64, 64]
 
-    NB_ATOMS = 51
+    NB_ATOMS      = 51
     LEARNING_RATE = 7.5e-4
 
 
@@ -70,9 +70,9 @@ class Settings:
     # Save settings
 
     RESULTS_PATH = 'results/'
-    MODEL_PATH = 'model/'
-    GIF_PATH = 'results/gif/'
-    MAX_NB_GIF = 5
+    MODEL_PATH   = 'model/'
+    GIF_PATH     = 'results/gif/'
+    MAX_NB_GIF   = 5
 
 
     ###########################################################################
@@ -82,6 +82,6 @@ class Settings:
     print()
 
     ACTION_SIZE = setting_env.action_space.n
-    STATE_SIZE = list(setting_env.observation_space.shape)
+    STATE_SIZE  = list(setting_env.observation_space.shape)
 
     del setting_env

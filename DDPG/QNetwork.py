@@ -2,7 +2,8 @@
 import tensorflow as tf
 import numpy as np
 
-from Model import *
+from Model import build_actor, build_critic
+from network_utils import copy_vars, get_vars, l2_regularization
 from settings import Settings
 
 

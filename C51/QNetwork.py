@@ -2,7 +2,8 @@
 import tensorflow as tf
 import numpy as np
 
-from Model import build_critic, get_vars, copy_vars
+from Model import build_critic
+from network_utils import get_vars, copy_vars
 from settings import Settings
 
 

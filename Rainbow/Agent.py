@@ -137,6 +137,8 @@ class Agent:
 
                 memory.append((s, a, r))
 
+                # Keep the experience in memory until 'N_STEP_RETURN' steps has
+                # passed to get the delayed return r_1 + ... + gamma^n r_n
                 if len(memory) > Settings.N_STEP_RETURN:
                     s_mem, a_mem, discount_R = memory.popleft()
                     for i, (si, ai, ri) in enumerate(memory):

@@ -11,6 +11,10 @@ from settings import Settings
 
 
 class Agent:
+    """
+    This class builds an agent that interacts with an environment to gather
+    experiences and put them into a buffer.
+    """
 
     def __init__(self, sess, n_agent, gui, displayer, buffer):
         print("Initializing agent %i..." % n_agent)
@@ -29,7 +33,10 @@ class Agent:
         print("Agent initialized !\n")
 
     def build_actor(self):
-
+        """
+        Build a copy of the learner's actor network to allow the agent to
+        interact with the environment on its own.
+        """
         scope = 'worker_agent_' + str(self.n_agent)
         self.state_ph = tf.placeholder(dtype=tf.float32,
                                        shape=[None, *Settings.STATE_SIZE],
@@ -40,7 +47,10 @@ class Agent:
         self.vars = get_vars(scope, trainable=False)
 
     def build_update(self):
-
+        """
+        Build the operation to copy the weights of the learner's actor network
+        in the agent's network.
+        """
         with self.sess.as_default(), self.sess.graph.as_default():
 
             self.network_vars = get_vars('learner_actor', trainable=True)
@@ -48,12 +58,14 @@ class Agent:
                                     1, 'update_agent_'+str(self.n_agent))
 
     def predict_action(self, s):
+        """
+        Wrapper method to get the action outputted by the actor network.
+        """
         return self.sess.run(self.policy, feed_dict={self.state_ph: s[None]})[0]
 
     def run(self):
         """
-        Method to run the agent in the environment to collect experiences and
-        learn on these experiences by gradient descent.
+        Method to run the agent in the environment to collect experiences.
         """
         print("Beginning of the run agent {}...".format(self.n_agent))
 
@@ -96,11 +108,13 @@ class Agent:
 
                 memory.append((s, a, r))
 
+                # Keep the experience in memory until 'N_STEP_RETURN' steps has
+                # passed to get the delayed return r_1 + ... + gamma^n r_n
                 if len(memory) >= Settings.N_STEP_RETURN:
                     s_mem, a_mem, discount_r = memory.popleft()
                     for i, (si, ai, ri) in enumerate(memory):
                         discount_r += ri * Settings.DISCOUNT ** (i + 1)
-                    self.buffer.add(s_mem, a_mem, discount_r, s_, 1 if not done else 0)
+                    self.buffer.add((s_mem, a_mem, discount_r, s_, 1 if not done else 0))
 
                 s = s_
                 episode_step += 1

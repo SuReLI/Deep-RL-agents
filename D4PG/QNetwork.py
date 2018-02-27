@@ -19,8 +19,9 @@ class QNetwork:
         operations to apply a gradient descent and update the target network.
 
         Args:
-            sess : the main tensorflow session in which to create the networks
-            saver: a Saver instance to save the network weights
+            sess  : the main tensorflow session in which to create the networks
+            saver : a Saver instance to save the network weights
+            buffer: the buffer that keeps the experiences to learn from
         """
         print("QNetwork initializing...")
 
@@ -130,7 +131,10 @@ class QNetwork:
         and due to the architecture of tensorflow, the approach is slightly
         different : we don't keep track of the distribute probability of the
         projection in a vector m, instead for each atom we directly compute the
-        product with log Q(s_t, a_t)
+        product with log Q(s_t, a_t).
+
+        Also apply the Policy Gradient Theorem to the actor network to learn
+        from the previsions of the critic network.
         """
 
         # Extend the support for the whole batch (i.e. with batch_size lines)
@@ -180,6 +184,10 @@ class QNetwork:
         self.actor_train_op = actor_trainer.apply_gradients(zip(self.actor_grad, self.actor_vars))
 
     def run(self):
+        """
+        Compute continuously gradient descents by sampling batches from the
+        experience buffer.
+        """
         global TOTAL_EPS
 
         self.total_eps = 1

@@ -6,6 +6,8 @@ from settings import Settings
 
 def build_critic(states, trainable, reuse, scope):
 
+    params = {'trainable':trainable, 'reuse':reuse}
+
     with tf.variable_scope(scope):
 
         layer = states
@@ -15,9 +17,8 @@ def build_critic(states, trainable, reuse, scope):
             for i, layer_settings in enumerate(Settings.CONV_LAYERS):
                 layer = tf.layers.conv2d(inputs=layer,
                                          activation=tf.nn.relu,
-                                         trainable=trainable,
-                                         reuse=reuse,
                                          name='conv_'+str(i),
+                                         **params,
                                          **layer_settings)
 
             layer = tf.layers.flatten(layer)
@@ -25,32 +26,63 @@ def build_critic(states, trainable, reuse, scope):
         # Fully connected layers
         for i, nb_neurons in enumerate(Settings.HIDDEN_LAYERS[:-1]):
             layer = tf.layers.dense(layer, nb_neurons,
-                                    trainable=trainable, reuse=reuse,
                                     activation=tf.nn.relu,
-                                    name='dense_'+str(i))
+                                    name='dense_'+str(i),
+                                    **params)
 
         last_nb_neurons = Settings.HIDDEN_LAYERS[-1]
 
-        # Advantage prediction
-        adv_stream = tf.layers.dense(layer, last_nb_neurons,
-                                     trainable=trainable, reuse=reuse,
-                                     activation=tf.nn.relu, name='adv_stream')
+        if Settings.DUELING_DQN:
 
-        advantage = tf.layers.dense(adv_stream, Settings.NB_ATOMS * Settings.ACTION_SIZE,
-                                    trainable=trainable, reuse=reuse, name='adv')
-        advantage = tf.reshape(advantage, [-1, Settings.ACTION_SIZE, Settings.NB_ATOMS])
+            adv_stream = tf.layers.dense(layer, last_nb_neurons,
+                                         activation=tf.nn.relu,
+                                         name='adv_stream' **params)
 
-        advantage_mean = tf.reduce_mean(advantage, axis=1, keepdims=True)
+            value_stream = tf.layers.dense(layer, last_nb_neurons,
+                                         activation=tf.nn.relu,
+                                         name='value_stream', **params)
 
-        # Value prediction
-        value_stream = tf.layers.dense(layer, last_nb_neurons,
-                                     trainable=trainable, reuse=reuse,
-                                     activation=tf.nn.relu, name='value_stream')
-        value = tf.layers.dense(value_stream, Settings.NB_ATOMS,
-                                     trainable=trainable, reuse=reuse,
-                                     activation=tf.nn.relu, name='value')
-        value = tf.reshape(value, [-1, 1, Settings.NB_ATOMS])
+            if Settings.DISTRIBUTIONAL:
+                # Advantage prediction
+                advantage = tf.layers.dense(adv_stream, Settings.NB_ATOMS * Settings.ACTION_SIZE,
+                                            name='adv', **params)
+                advantage = tf.reshape(advantage, [-1, Settings.ACTION_SIZE, Settings.NB_ATOMS])
+                advantage_mean = tf.reduce_mean(advantage, axis=1, keepdims=True)
 
-        Qdistrib = tf.nn.softmax(value + advantage - advantage_mean, axis=2)
+                # Value prediction
+                value = tf.layers.dense(value_stream, Settings.NB_ATOMS,
+                                        name='value', **params)
+                value = tf.reshape(value, [-1, 1, Settings.NB_ATOMS])
+    
+                # Qdistrib
+                return tf.nn.softmax(value + advantage - advantage_mean, axis=2)
 
-    return Qdistrib
+            else:
+                advantage = tf.layers.dense(adv_stream, Settings.ACTION_SIZE,
+                                            name='adv', **params)
+
+                value = tf.layers.dense(value_stream, 1, name='value', **params)
+                advantage_mean = tf.reduce_mean(advantage, axis=1, keepdims=True)
+                # Qvalues
+                return value + tf.subtract(advantage, advantage_mean)
+
+        else:
+            layer = tf.layers.dense(layer, last_nb_neurons, activation=tf.nn.relu,
+                                    name='last_dense', **params)
+
+            if Settings.DISTRIBUTIONAL:
+                # Distributional perspective : for each action, a fully-connected layer
+                # with softmax activation predicts the Q-value distribution
+                output = []
+                for i in range(Settings.ACTION_SIZE):
+                    output.append(tf.layers.dense(layer, Settings.NB_ATOMS,
+                                                  activation=tf.nn.softmax,
+                                                  name='output_' + str(i)),
+                                                  **params)
+                # Qdistrib
+                return tf.stack(output, axis=1)
+
+            else:
+                # Qvalues
+                return tf.layers.dense(layer, Settings.ACTION_SIZE,
+                                       name='output_layer', **params)

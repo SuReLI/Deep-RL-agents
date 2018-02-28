@@ -19,6 +19,16 @@ class Settings:
 
 
     ###########################################################################
+    # Switches
+
+    DOUBLE_DQN     = True
+    DUELING_DQN    = True
+    PIORITIZED_ER  = True
+    DISTRIBUTIONAL = True
+    N_STEP         = True
+
+
+    ###########################################################################
     # Network settings
 
     # CONV_LAYERS = [
@@ -98,3 +108,6 @@ class Settings:
     STATE_SIZE = list(setting_env.observation_space.shape)
 
     del setting_env
+
+    if not N_STEP:
+        N_STEP_RETURN = 1

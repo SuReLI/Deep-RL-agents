@@ -37,5 +37,4 @@ class Environment:
         return self.env.step(action)
 
     def close(self):
-        self.env.render(close=True)
         self.env.close()

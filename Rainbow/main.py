@@ -1,8 +1,8 @@
 
 import os
 import sys
-s = os.getcwd()
-sys.path.append(s[:s.find('RL-Agents') + 10] + 'utils')  # Include utils module
+s = "/".join(os.getcwd().split("/")[:-1]) + '/utils'
+sys.path.append(s)                  # Include utils module
 
 import threading
 import tensorflow as tf

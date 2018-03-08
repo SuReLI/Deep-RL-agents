@@ -66,5 +66,4 @@ class Environment:
         self.images = []
 
     def close(self):
-        self.env.render(close=True)
         self.env.close()

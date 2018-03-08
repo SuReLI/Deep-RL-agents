@@ -23,7 +23,7 @@ class Environment:
 
     def set_render(self, render):
         if not render:
-            self.env.render(close=True)
+            self.env.close()
         # if render != self.render:
         #     self.env = RunEnv(visualize=render)
         #     self.env.reset(difficulty=0)
@@ -44,5 +44,4 @@ class Environment:
         return self.env.step(action)
 
     def close(self):
-        self.env.render(close=True)
         self.env.close()

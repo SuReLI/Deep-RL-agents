@@ -45,7 +45,7 @@ class Environment:
 
     def set_render(self, render):
         if not render:
-            self.env.render(close=True)
+            self.env.close()
         self.render = render and Settings.DISPLAY
 
     def set_gif(self, gif, name=None):
@@ -136,7 +136,6 @@ class Environment:
         """
         Close the environment and save gif under the name 'last_gif'
         """
-        self.env.render(close=True)
         if self.gif:
             self.name_gif = 'last_gif_'
             self.save_gif()

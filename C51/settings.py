@@ -11,7 +11,7 @@ class Settings:
     GUI     = True
 
     TRAINING_EPS  = 100000
-    PRE_TRAIN_EPS = 100
+    PRE_TRAIN_EPS = 10
 
     MAX_EPISODE_STEPS = 250
     FRAME_SKIP        = 4

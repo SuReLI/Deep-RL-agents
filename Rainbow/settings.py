@@ -23,7 +23,7 @@ class Settings:
 
     DOUBLE_DQN     = True
     DUELING_DQN    = True
-    PIORITIZED_ER  = True
+    PRIORITIZED_ER = True
     DISTRIBUTIONAL = True
     N_STEP         = True
 

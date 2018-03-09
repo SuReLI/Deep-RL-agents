@@ -36,7 +36,7 @@ def build_critic(states, trainable, reuse, scope):
 
             adv_stream = tf.layers.dense(layer, last_nb_neurons,
                                          activation=tf.nn.relu,
-                                         name='adv_stream' **params)
+                                         name='adv_stream', **params)
 
             value_stream = tf.layers.dense(layer, last_nb_neurons,
                                          activation=tf.nn.relu,

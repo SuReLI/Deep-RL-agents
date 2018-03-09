@@ -135,7 +135,13 @@ class QNetwork:
 
         # Take the mean loss on the batch
         self.loss = tf.negative(self.loss)
+
         mean_loss = tf.reduce_mean(self.loss * self.weights)
+
+        # if Settings.PRIORITIZED_ER:
+        #     mean_loss = tf.reduce_mean(self.loss * self.weights)
+        # else:
+        #     mean_loss = tf.reduce_mean(self.loss)
 
         # Gradient descent
         trainer = tf.train.AdamOptimizer(self.learning_rate)
@@ -183,16 +189,20 @@ class QNetwork:
         if self.learning_rate > self.delta_lr:
             self.learning_rate -= self.delta_lr
 
-    def train(self, batch):
+    def train(self, batch, weights=None):
         """
         Wrapper method to train the network given a minibatch of experiences.
         """
-        feed_dict = {self.state_ph: batch[0],
-                     self.action_ph: batch[1],
-                     self.reward_ph: batch[2],
-                     self.next_state_ph: batch[3],
-                     self.not_done_ph: batch[4],
-                     self.weights: batch[5]}
-        loss, _ = self.sess.run([self.loss, self.train_op], feed_dict=feed_dict)
+        feed_dict = {self.state_ph: np.stack(batch[:, 0]),
+                     self.action_ph: batch[:, 1],
+                     self.reward_ph: batch[:, 2],
+                     self.next_state_ph: np.stack(batch[:, 3]),
+                     self.not_done_ph: batch[:, 4]}
 
-        return loss
+        if Settings.PRIORITIZED_ER:
+            feed_dict[self.weights] = weights
+            loss, _ = self.sess.run([self.loss, self.train_op], feed_dict=feed_dict)
+            return loss
+
+        else:
+            self.sess.run(self.train_op, feed_dict=feed_dict)

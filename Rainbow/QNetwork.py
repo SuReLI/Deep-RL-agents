@@ -41,13 +41,13 @@ class QNetwork:
         self.z = tf.range(Settings.MIN_Q, Settings.MAX_Q + self.delta_z, self.delta_z)
 
         # Build the networks
-        self.build_main_network()
+        self.build_networks()
         self.build_train_operation()
         self.build_update()
 
         print("QNetwork created !\n")
 
-    def build_main_network(self):
+    def build_networks(self):
         """
         Build the main network that predicts the Q-value distribution of a
         given state.
@@ -56,37 +56,45 @@ class QNetwork:
         descent.
         Reminder :
             if simple DQN:
-                y_t = r_t + gamma * max_a Q(s_{t+1}, a)
+                y_t = r_t + gamma * max_a Q_target(s_{t+n}, a)
+                    = r_t + gamma * Q_target( s_{t+n}, argmax_a Q_target(s_{t+n}, a) )
             elif double DQN:
-                y_t = r_t + gamma * Q_target( s_{t+1}, argmax_a Q(s_{t+1}, a) )
+                y_t = r_t + gamma * Q_target( s_{t+n}, argmax_a Q(s_{t+n}, a) )
             TD-error = y_t - Q(s_t, a_t)
         """
-        if Settings.DOUBLE_DQN:
-            
-            # Compute Q(s_t, .)
-            self.Q_distrib = build_critic(self.state_ph, trainable=True,
-                                          reuse=False, scope='main_network')
+        # Compute Q(s_t, .)
+        self.Q_st = build_critic(self.state_ph, trainable=True,
+                                 reuse=False, scope='main_network')
 
-            # Compute Q(s_t, a_t)
-            ind = tf.stack((tf.range(Settings.BATCH_SIZE), self.action_ph), axis=1)
-            self.Q_distrib_main_action = tf.gather_nd(self.Q_distrib, ind)
+        # Compute Q(s_t, a_t)
+        ind = tf.stack((tf.range(Settings.BATCH_SIZE), self.action_ph), axis=1)
+        self.Q_st_at = tf.gather_nd(self.Q_st, ind)
 
-            # Compute Q(s_{t+1}, .)
-            self.Q_distrib_next = build_critic(self.next_state_ph, trainable=True,
-                                               reuse=True, scope='main_network')
+        # Compute Q_target(s_{t+n}, .)
+        Q_target_st_n = build_critic(self.next_state_ph, trainable=False,
+                                          reuse=False, scope='target_network')
 
-            self.Q_value_next = tf.reduce_sum(self.z * self.Q_distrib_next, axis=2)
+        # If not double DQN, choose the best next action of the target network
+        # Elif double DQN, choose the best next action of the main network
+        if not Settings.DOUBLE_DQN:
+            # Reuse Q_target(s_{t+n}, .)
+            Q_st_n_max_a = Q_target_st_n
+        else:
+            # Compute Q(s_{t+n}, .)
+            Q_st_n_max_a = build_critic(self.next_state_ph, trainable=True,
+                                        reuse=True, scope='main_network')
 
-            # Compute argmax_a Q(s_{t+1}, a)
-            self.best_next_action = tf.argmax(self.Q_value_next, 1, output_type=tf.int32)
+        # Transform the distribution into the value to get the argmax
+        if Settings.DISTRIBUTIONAL:
+            Q_st_n_max_a = tf.reduce_sum(self.z * Q_st_n_max_a, axis=2)
 
-            # Compute Q_target(s_{t+1}, .)
-            self.Q_distrib_next_target = build_critic(self.next_state_ph, trainable=False,
-                                                      reuse=False, scope='target_network')
+        # Compute argmax_a Q[_target](s_{t+n}, a)
+        best_at_n = tf.argmax(Q_st_n_max_a, 1, output_type=tf.int32)
 
-            # Compute Q_target(s_{t+1}, argmax_a Q(s_{t+1}, a))
-            ind = tf.stack((tf.range(Settings.BATCH_SIZE), self.best_next_action), axis=1)
-            self.Q_distrib_next_target_best_action = tf.gather_nd(self.Q_distrib_next_target, ind)
+        # Compute Q_target(s_{t+n}, argmax_a Q[_target](s_{t+n}, a))
+        ind = tf.stack((tf.range(Settings.BATCH_SIZE), best_at_n), axis=1)
+        self.Q_target_st_n_at_n = tf.gather_nd(Q_target_st_n, ind)
+
 
     def build_train_operation(self):
         """
@@ -119,15 +127,15 @@ class QNetwork:
             l_index = tf.stack((tf.range(self.batch_size), l_ind[:, j]), axis=1)
             u_index = tf.stack((tf.range(self.batch_size), u_ind[:, j]), axis=1)
 
-            Q_distrib_l = tf.gather_nd(self.Q_distrib_main_action, l_index)
-            Q_distrib_u = tf.gather_nd(self.Q_distrib_main_action, u_index)
+            Q_distrib_l = tf.gather_nd(self.Q_st_at, l_index)
+            Q_distrib_u = tf.gather_nd(self.Q_st_at, u_index)
 
             Q_distrib_l = tf.clip_by_value(Q_distrib_l, 1e-10, 1.0)
             Q_distrib_u = tf.clip_by_value(Q_distrib_u, 1e-10, 1.0)
 
-            # loss +=   Q(s_{t+1}, a*) * (u - bj) * log Q[l](s_t, a_t)
-            #         + Q(s_{t+1}, a*) * (bj - l) * log Q[u](s_t, a_t)
-            self.loss += self.Q_distrib_next_target_best_action[:, j] * (
+            # loss +=   Q(s_{t+n}, a*) * (u - bj) * log Q[l](s_t, a_t)
+            #         + Q(s_{t+n}, a*) * (bj - l) * log Q[u](s_t, a_t)
+            self.loss += self.Q_target_st_n_at_n[:, j] * (
                 (u[:, j] - bj[:, j]) * tf.log(Q_distrib_l) +
                 (bj[:, j] - l[:, j]) * tf.log(Q_distrib_u))
 
@@ -180,7 +188,7 @@ class QNetwork:
         """
         Wrapper method to compute the Q-value distribution given a single state.
         """
-        return self.sess.run(self.Q_distrib, feed_dict={self.state_ph: [state]})[0]
+        return self.sess.run(self.Q_st, feed_dict={self.state_ph: [state]})[0]
 
     def decrease_lr(self):
         """

@@ -24,7 +24,11 @@ if __name__ == '__main__':
         saver = Saver.Saver(sess)
         displayer = Displayer.Displayer()
 
-        gui = GUI.Interface(['ep_reward', 'plot', 'plot_distrib', 'render', 'gif', 'save'])
+        features = ['ep_reward', 'plot', 'render', 'gif', 'save']
+        if Settings.DISTRIBUTIONAL:
+            features.append('plot_distrib')
+
+        gui = GUI.Interface(features)
         gui_thread = threading.Thread(target=gui.run)
 
         agent = Agent(sess, gui, displayer, saver)

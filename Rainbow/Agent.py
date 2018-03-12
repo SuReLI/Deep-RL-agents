@@ -124,8 +124,12 @@ class Agent:
                 if random.random() < self.epsilon:
                     a = self.env.act_random()
                 else:
-                    Qdistrib = self.QNetwork.act(s)
-                    Qvalue = np.sum(self.z * Qdistrib, axis=1)
+                    if Settings.DISTRIBUTIONAL:
+                        Qdistrib = self.QNetwork.act(s)
+                        Qvalue = np.sum(self.z * Qdistrib, axis=1)
+                    else:
+                        Qvalue = self.QNetwork.act(s)
+                    
                     a = np.argmax(Qvalue, axis=0)
 
                     if plot_distrib:

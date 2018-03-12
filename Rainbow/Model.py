@@ -77,8 +77,8 @@ def build_critic(states, trainable, reuse, scope):
                 for i in range(Settings.ACTION_SIZE):
                     output.append(tf.layers.dense(layer, Settings.NB_ATOMS,
                                                   activation=tf.nn.softmax,
-                                                  name='output_' + str(i)),
-                                                  **params)
+                                                  name='output_' + str(i),
+                                                  **params))
                 # Qdistrib
                 return tf.stack(output, axis=1)
 

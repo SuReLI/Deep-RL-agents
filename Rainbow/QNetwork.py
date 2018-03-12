@@ -95,8 +95,16 @@ class QNetwork:
         ind = tf.stack((tf.range(Settings.BATCH_SIZE), best_at_n), axis=1)
         self.Q_target_st_n_at_n = tf.gather_nd(Q_target_st_n, ind)
 
+    def build_classical_loss(self):
+        """
+        Build the classical DQN loss :
+        loss = [ target - Q(s_t, a_t) ]**2
+        """
 
-    def build_train_operation(self):
+        target =  self.reward_ph + Settings.DISCOUNT_N * self.not_done_ph * self.Q_target_st_n_at_n
+        self.loss = tf.square(target - self.Q_st_at)
+
+    def build_distributional_loss(self):
         """
         Apply the categorical algorithm to compute the cross-entropy loss
         (Cf https://arxiv.org/pdf/1707.06887.pdf)
@@ -107,7 +115,7 @@ class QNetwork:
         projection in a vector m, instead for each atom we directly compute the
         product with log Q(s_t, a_t)
         """
-
+        
         # Extend the support for the whole batch (i.e. with batch_size lines)
         zz = tf.tile(self.z[None], [self.batch_size, 1])
 
@@ -139,17 +147,24 @@ class QNetwork:
                 (u[:, j] - bj[:, j]) * tf.log(Q_distrib_l) +
                 (bj[:, j] - l[:, j]) * tf.log(Q_distrib_u))
 
-        self.weights = tf.placeholder(tf.float32, [None], name='weights')
 
         # Take the mean loss on the batch
-        self.loss = tf.negative(self.loss)
+        self.loss = tf.negative(self.loss)        
 
+    def build_train_operation(self):
+
+        if Settings.DISTRIBUTIONAL:
+            self.build_distributional_loss()
+        else:
+            self.build_classical_loss()
+
+        self.weights = tf.placeholder(tf.float32, [None], name='weights')
         mean_loss = tf.reduce_mean(self.loss * self.weights)
 
-        # if Settings.PRIORITIZED_ER:
-        #     mean_loss = tf.reduce_mean(self.loss * self.weights)
-        # else:
-        #     mean_loss = tf.reduce_mean(self.loss)
+        if Settings.PRIORITIZED_ER:
+            mean_loss = tf.reduce_mean(self.loss * self.weights)
+        else:
+            mean_loss = tf.reduce_mean(self.loss)
 
         # Gradient descent
         trainer = tf.train.AdamOptimizer(self.learning_rate)

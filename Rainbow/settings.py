@@ -7,8 +7,8 @@ class Settings:
     ENV = "CartPole-v0"
 
     LOAD    = False
-    DISPLAY = True
-    GUI     = True
+    DISPLAY = False
+    GUI     = False
 
     TRAINING_EPS  = 100000
     PRE_TRAIN_EPS = 1000

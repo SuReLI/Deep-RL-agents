@@ -140,7 +140,7 @@ class Interface:
             self.list_features.append(self.ep_reward)
 
         if ' plot ' in features:
-            self.plot = Feature('PLOT', Settings.PLOT_FREQ, 'update', True)
+            self.plot = Feature('PLOT', Settings.PLOT_FREQ, 'update')
             self.list_features.append(self.plot)
 
         if 'plot_distrib' in features:

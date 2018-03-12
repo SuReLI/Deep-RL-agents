@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 
 from settings import Settings
 
-plt.ion()       # Set matplotlib to interactive mode (to display in real-time)
+if Settings.DISPLAY:
+    plt.ion()     # Set matplotlib to interactive mode (to display in real-time)
 
 
 class Displayer:
@@ -43,23 +44,15 @@ class Displayer:
                                 not possible
             fig_name: the name of the figure to be saved
         """
+        fig = plt.figure(1)
+        fig.clf()
+        for path, data in curves:
+            plt.plot(data)
+        os.makedirs(os.path.dirname(fig_name), exist_ok=True)
+        fig.savefig(fig_name)
         if Settings.DISPLAY:
-            fig = plt.figure(1)
-            fig.clf()
-            for path, data in curves:
-                plt.plot(data)
-            os.makedirs(os.path.dirname(fig_name), exist_ok=True)
-            fig.savefig(fig_name)
             plt.show(block=False)
             plt.pause(0.05)      # gives plt the time to display
-
-        # If DISPLAY is False, save the data as raw strings
-        else:
-            for path, data in curves:
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                data = " ".join(map(str, data))
-                with open(path, "w") as file:
-                    file.write(data)
 
     def add_reward(self, reward, n_agent=0, plot=False):
         """
@@ -72,10 +65,7 @@ class Displayer:
         """
         self.rewards[n_agent].append(reward)
         if plot:
-            if Settings.DISPLAY:
-                self.disp()
-            else:
-                print(self.rewards[n_agent][-10:])
+            self.disp()
         plt.close(2)       # Close the distrib graph if it was drawn previously
 
     def disp(self, mode='one'):

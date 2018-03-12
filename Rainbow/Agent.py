@@ -5,7 +5,8 @@ import random
 from collections import deque
 
 from QNetwork import QNetwork
-from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
+# from baselines.deepq.replay_buffer import PrioritizedReplayBuffer
+from ExperienceBuffer import ExperienceBuffer
 from Environment import Environment
 
 from settings import Settings
@@ -36,8 +37,7 @@ class Agent:
 
         self.env = Environment()
         self.QNetwork = QNetwork(sess)
-        self.buffer = PrioritizedReplayBuffer(Settings.BUFFER_SIZE,
-                                              Settings.ALPHA)
+        self.buffer = ExperienceBuffer(prioritized=Settings.PRIORITIZED_ER)
         self.epsilon = Settings.EPSILON_START
         self.beta = Settings.BETA_START
 
@@ -67,7 +67,7 @@ class Agent:
 
                 a = self.env.act_random()
                 s_, r, done, info = self.env.act(a)
-                self.buffer.add(s, a, r, s_, 1 if not done else 0)
+                self.buffer.add((s, a, r, s_, 1 if not done else 0))
 
                 s = s_
                 episode_reward += r
@@ -124,8 +124,12 @@ class Agent:
                 if random.random() < self.epsilon:
                     a = self.env.act_random()
                 else:
-                    Qdistrib = self.QNetwork.act(s)
-                    Qvalue = np.sum(self.z * Qdistrib, axis=1)
+                    if Settings.DISTRIBUTIONAL:
+                        Qdistrib = self.QNetwork.act(s)
+                        Qvalue = np.sum(self.z * Qdistrib, axis=1)
+                    else:
+                        Qvalue = self.QNetwork.act(s)
+                    
                     a = np.argmax(Qvalue, axis=0)
 
                     if plot_distrib:
@@ -143,12 +147,16 @@ class Agent:
                     s_mem, a_mem, discount_R = memory.popleft()
                     for i, (si, ai, ri) in enumerate(memory):
                         discount_R += ri * Settings.DISCOUNT ** (i + 1)
-                    self.buffer.add(s_mem, a_mem, discount_R, s_, 1 if not done else 0)
+                    self.buffer.add((s_mem, a_mem, discount_R, s_, 1 if not done else 0))
 
                 if episode_step % Settings.TRAINING_FREQ == 0:
-                    batch = self.buffer.sample(Settings.BATCH_SIZE, self.beta)
-                    loss = self.QNetwork.train(batch)
-                    self.buffer.update_priorities(batch[6], loss)
+                    if Settings.PRIORITIZED_ER:
+                        batch, idx, weights = self.buffer.sample(self.beta)
+                    else:
+                        batch = self.buffer.sample(self.beta)
+                        idx = weights = None
+                    loss = self.QNetwork.train(np.asarray(batch), weights)
+                    self.buffer.update(idx, loss)
                     self.QNetwork.update_target()
 
                 s = s_

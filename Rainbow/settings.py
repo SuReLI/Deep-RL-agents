@@ -7,8 +7,8 @@ class Settings:
     ENV = "CartPole-v0"
 
     LOAD    = False
-    DISPLAY = True
-    GUI     = True
+    DISPLAY = False
+    GUI     = False
 
     TRAINING_EPS  = 100000
     PRE_TRAIN_EPS = 1000
@@ -16,6 +16,16 @@ class Settings:
     MAX_EPISODE_STEPS = 200
     FRAME_SKIP        = 0
     EP_ELONGATION     = 10
+
+
+    ###########################################################################
+    # Switches
+
+    DOUBLE_DQN     = True
+    DUELING_DQN    = True
+    PRIORITIZED_ER = True
+    DISTRIBUTIONAL = True
+    N_STEP         = True
 
 
     ###########################################################################
@@ -98,3 +108,6 @@ class Settings:
     STATE_SIZE = list(setting_env.observation_space.shape)
 
     del setting_env
+
+    if not N_STEP:
+        N_STEP_RETURN = 1

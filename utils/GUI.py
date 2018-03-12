@@ -106,6 +106,9 @@ class Feature:
             return False
         return self.freq > 0 and nb_ep % self.freq == 0
 
+class NullFeature:
+    def get(self, *args, **kwargs):
+        return False
 
 class Interface:
     """
@@ -137,7 +140,7 @@ class Interface:
             self.list_features.append(self.ep_reward)
 
         if ' plot ' in features:
-            self.plot = Feature('PLOT', Settings.PLOT_FREQ, 'update', True)
+            self.plot = Feature('PLOT', Settings.PLOT_FREQ, 'update')
             self.list_features.append(self.plot)
 
         if 'plot_distrib' in features:
@@ -184,3 +187,12 @@ class Interface:
             stop_button.grid(column=0, row=4, columnspan=Feature.nb_features, sticky='NSEW')
 
             self.window.mainloop()
+
+    def __getattr__(self, attr):
+        """
+        If the user wants to access a feature that doesn't exist (not
+        implemented or not declared in the feature initialization list), we
+        create a new Null Feature with a method get that always return False.
+        """
+        setattr(self, attr, NullFeature())
+        return getattr(self, attr)

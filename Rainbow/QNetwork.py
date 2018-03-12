@@ -41,43 +41,70 @@ class QNetwork:
         self.z = tf.range(Settings.MIN_Q, Settings.MAX_Q + self.delta_z, self.delta_z)
 
         # Build the networks
-        self.build_main_network()
-        self.build_target()
+        self.build_networks()
         self.build_train_operation()
         self.build_update()
 
         print("QNetwork created !\n")
 
-    def build_main_network(self):
-
+    def build_networks(self):
+        """
+        Build the main network that predicts the Q-value distribution of a
+        given state.
+        
+        Also build the operation to compute Q(s_t, a_t) for the gradient
+        descent.
+        Reminder :
+            if simple DQN:
+                y_t = r_t + gamma * max_a Q_target(s_{t+n}, a)
+                    = r_t + gamma * Q_target( s_{t+n}, argmax_a Q_target(s_{t+n}, a) )
+            elif double DQN:
+                y_t = r_t + gamma * Q_target( s_{t+n}, argmax_a Q(s_{t+n}, a) )
+            TD-error = y_t - Q(s_t, a_t)
+        """
         # Compute Q(s_t, .)
-        self.Q_distrib = build_critic(self.state_ph, trainable=True,
-                                      reuse=False, scope='main_network')
+        self.Q_st = build_critic(self.state_ph, trainable=True,
+                                 reuse=False, scope='main_network')
 
         # Compute Q(s_t, a_t)
         ind = tf.stack((tf.range(Settings.BATCH_SIZE), self.action_ph), axis=1)
-        self.Q_distrib_main_action = tf.gather_nd(self.Q_distrib, ind)
+        self.Q_st_at = tf.gather_nd(self.Q_st, ind)
 
-        # Compute Q(s_{t+1}, .)
-        self.Q_distrib_next = build_critic(self.next_state_ph, trainable=True,
-                                           reuse=True, scope='main_network')
+        # Compute Q_target(s_{t+n}, .)
+        Q_target_st_n = build_critic(self.next_state_ph, trainable=False,
+                                          reuse=False, scope='target_network')
 
-        self.Q_value_next = tf.reduce_sum(self.z * self.Q_distrib_next, axis=2)
+        # If not double DQN, choose the best next action of the target network
+        # Elif double DQN, choose the best next action of the main network
+        if not Settings.DOUBLE_DQN:
+            # Reuse Q_target(s_{t+n}, .)
+            Q_st_n_max_a = Q_target_st_n
+        else:
+            # Compute Q(s_{t+n}, .)
+            Q_st_n_max_a = build_critic(self.next_state_ph, trainable=True,
+                                        reuse=True, scope='main_network')
 
-        # Compute argmax_a Q(s_{t+1}, a)
-        self.best_next_action = tf.argmax(self.Q_value_next, 1, output_type=tf.int32)
+        # Transform the distribution into the value to get the argmax
+        if Settings.DISTRIBUTIONAL:
+            Q_st_n_max_a = tf.reduce_sum(self.z * Q_st_n_max_a, axis=2)
 
-    def build_target(self):
+        # Compute argmax_a Q[_target](s_{t+n}, a)
+        best_at_n = tf.argmax(Q_st_n_max_a, 1, output_type=tf.int32)
 
-        # Compute Q_target(s_{t+1}, .)
-        self.Q_distrib_next_target = build_critic(self.next_state_ph, trainable=False,
-                                                  reuse=False, scope='target_network')
+        # Compute Q_target(s_{t+n}, argmax_a Q[_target](s_{t+n}, a))
+        ind = tf.stack((tf.range(Settings.BATCH_SIZE), best_at_n), axis=1)
+        self.Q_target_st_n_at_n = tf.gather_nd(Q_target_st_n, ind)
 
-        # Compute Q_target(s_{t+1}, argmax_a Q(s_{t+1}, a))
-        ind = tf.stack((tf.range(Settings.BATCH_SIZE), self.best_next_action), axis=1)
-        self.Q_distrib_next_target_best_action = tf.gather_nd(self.Q_distrib_next_target, ind)
+    def build_classical_loss(self):
+        """
+        Build the classical DQN loss :
+        loss = [ target - Q(s_t, a_t) ]**2
+        """
 
-    def build_train_operation(self):
+        target =  self.reward_ph + Settings.DISCOUNT_N * self.not_done_ph * self.Q_target_st_n_at_n
+        self.loss = tf.square(target - self.Q_st_at)
+
+    def build_distributional_loss(self):
         """
         Apply the categorical algorithm to compute the cross-entropy loss
         (Cf https://arxiv.org/pdf/1707.06887.pdf)
@@ -88,7 +115,7 @@ class QNetwork:
         projection in a vector m, instead for each atom we directly compute the
         product with log Q(s_t, a_t)
         """
-
+        
         # Extend the support for the whole batch (i.e. with batch_size lines)
         zz = tf.tile(self.z[None], [self.batch_size, 1])
 
@@ -108,23 +135,36 @@ class QNetwork:
             l_index = tf.stack((tf.range(self.batch_size), l_ind[:, j]), axis=1)
             u_index = tf.stack((tf.range(self.batch_size), u_ind[:, j]), axis=1)
 
-            Q_distrib_l = tf.gather_nd(self.Q_distrib_main_action, l_index)
-            Q_distrib_u = tf.gather_nd(self.Q_distrib_main_action, u_index)
+            Q_distrib_l = tf.gather_nd(self.Q_st_at, l_index)
+            Q_distrib_u = tf.gather_nd(self.Q_st_at, u_index)
 
             Q_distrib_l = tf.clip_by_value(Q_distrib_l, 1e-10, 1.0)
             Q_distrib_u = tf.clip_by_value(Q_distrib_u, 1e-10, 1.0)
 
-            # loss +=   Q(s_{t+1}, a*) * (u - bj) * log Q[l](s_t, a_t)
-            #         + Q(s_{t+1}, a*) * (bj - l) * log Q[u](s_t, a_t)
-            self.loss += self.Q_distrib_next_target_best_action[:, j] * (
+            # loss +=   Q(s_{t+n}, a*) * (u - bj) * log Q[l](s_t, a_t)
+            #         + Q(s_{t+n}, a*) * (bj - l) * log Q[u](s_t, a_t)
+            self.loss += self.Q_target_st_n_at_n[:, j] * (
                 (u[:, j] - bj[:, j]) * tf.log(Q_distrib_l) +
                 (bj[:, j] - l[:, j]) * tf.log(Q_distrib_u))
 
-        self.weights = tf.placeholder(tf.float32, [None], name='weights')
 
         # Take the mean loss on the batch
-        self.loss = tf.negative(self.loss)
+        self.loss = tf.negative(self.loss)        
+
+    def build_train_operation(self):
+
+        if Settings.DISTRIBUTIONAL:
+            self.build_distributional_loss()
+        else:
+            self.build_classical_loss()
+
+        self.weights = tf.placeholder(tf.float32, [None], name='weights')
         mean_loss = tf.reduce_mean(self.loss * self.weights)
+
+        if Settings.PRIORITIZED_ER:
+            mean_loss = tf.reduce_mean(self.loss * self.weights)
+        else:
+            mean_loss = tf.reduce_mean(self.loss)
 
         # Gradient descent
         trainer = tf.train.AdamOptimizer(self.learning_rate)
@@ -163,7 +203,7 @@ class QNetwork:
         """
         Wrapper method to compute the Q-value distribution given a single state.
         """
-        return self.sess.run(self.Q_distrib, feed_dict={self.state_ph: [state]})[0]
+        return self.sess.run(self.Q_st, feed_dict={self.state_ph: [state]})[0]
 
     def decrease_lr(self):
         """
@@ -172,16 +212,20 @@ class QNetwork:
         if self.learning_rate > self.delta_lr:
             self.learning_rate -= self.delta_lr
 
-    def train(self, batch):
+    def train(self, batch, weights=None):
         """
         Wrapper method to train the network given a minibatch of experiences.
         """
-        feed_dict = {self.state_ph: batch[0],
-                     self.action_ph: batch[1],
-                     self.reward_ph: batch[2],
-                     self.next_state_ph: batch[3],
-                     self.not_done_ph: batch[4],
-                     self.weights: batch[5]}
-        loss, _ = self.sess.run([self.loss, self.train_op], feed_dict=feed_dict)
+        feed_dict = {self.state_ph: np.stack(batch[:, 0]),
+                     self.action_ph: batch[:, 1],
+                     self.reward_ph: batch[:, 2],
+                     self.next_state_ph: np.stack(batch[:, 3]),
+                     self.not_done_ph: batch[:, 4]}
 
-        return loss
+        if Settings.PRIORITIZED_ER:
+            feed_dict[self.weights] = weights
+            loss, _ = self.sess.run([self.loss, self.train_op], feed_dict=feed_dict)
+            return loss
+
+        else:
+            self.sess.run(self.train_op, feed_dict=feed_dict)

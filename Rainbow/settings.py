@@ -10,8 +10,8 @@ class Settings:
     DISPLAY = False
     GUI     = False
 
-    TRAINING_EPS  = 100000
-    PRE_TRAIN_EPS = 1000
+    TRAINING_EPS  = 7500
+    PRE_TRAIN_EPS = 5000
 
     MAX_EPISODE_STEPS = 200
     FRAME_SKIP        = 0
@@ -21,11 +21,11 @@ class Settings:
     ###########################################################################
     # Switches
 
-    DOUBLE_DQN     = True
-    DUELING_DQN    = True
-    PRIORITIZED_ER = True
-    DISTRIBUTIONAL = True
-    N_STEP         = True
+    DOUBLE_DQN     = False
+    DUELING_DQN    = False
+    PRIORITIZED_ER = False
+    DISTRIBUTIONAL = False
+    N_STEP         = False
 
 
     ###########################################################################
@@ -37,7 +37,7 @@ class Settings:
     #                 {'filters': 64, 'kernel_size': [3, 3], 'strides': [1, 1]}
     #               ]
 
-    HIDDEN_LAYERS = [32, 32]
+    HIDDEN_LAYERS = [16, 16]
 
     NB_ATOMS = 51
     LEARNING_RATE = 7.5e-4
@@ -57,7 +57,7 @@ class Settings:
     BATCH_SIZE  = 64
 
     TRAINING_FREQ      = 4
-    UPDATE_TARGET_RATE = 0.005
+    UPDATE_TARGET_RATE = 0.001
 
 
     ###########################################################################
@@ -75,18 +75,17 @@ class Settings:
     ALPHA = 0.5
     BETA_START = 0.4
     BETA_STOP = 1
-    BETA_STEPS = 25000
-    BETA_INCR = (BETA_STOP - BETA_START) / BETA_STEPS
+    BETA_INCR = (BETA_STOP - BETA_START) / TRAINING_EPS
 
 
     ###########################################################################
     # Features frequencies
     
-    EP_REWARD_FREQ = 50
-    PLOT_FREQ      = 100
-    RENDER_FREQ    = 500
-    GIF_FREQ       = 2000
-    SAVE_FREQ      = 1000
+    EP_REWARD_FREQ = -1
+    PLOT_FREQ      = 50
+    RENDER_FREQ    = -1
+    GIF_FREQ       = -1
+    SAVE_FREQ      = -1
 
 
     ###########################################################################

@@ -167,18 +167,16 @@ class Agent:
             if self.epsilon > Settings.EPSILON_STOP:
                 self.epsilon -= Settings.EPSILON_DECAY
 
-            self.QNetwork.decrease_lr()
-
             self.displayer.add_reward(episode_reward, plot=self.gui.plot.get(self.nb_ep))
             # if episode_reward > self.best_run:
             #     self.save_best(episode_reward)
             
             # Episode display
             if self.gui.ep_reward.get(self.nb_ep):
-                print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %i'
-                      ', Max steps: %i' % (self.nb_ep, episode_reward,
-                                           episode_step, self.epsilon,
-                                           max_step))
+                print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %f'
+                      ', Max steps: %i, Learning rate: %fe-4' % (self.nb_ep,
+                        episode_reward, episode_step, self.epsilon, max_step,
+                        self.QNetwork.learning_rate*10e4))
 
             # Save the model
             if self.gui.save.get(self.nb_ep):

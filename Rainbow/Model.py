@@ -1,12 +1,67 @@
 
 import tensorflow as tf
+import numpy as np
 
 from settings import Settings
 
 
+def fully_connected(*args, **kwargs):
+    """
+    Layer factory.
+    """
+    if Settings.NOISY:
+        return noisy_layer(*args, **kwargs)
+    else:
+        return tf.layers.dense(*args, **kwargs)
+
+def noisy_layer(inputs, units, activation=tf.identity, trainable=True, name=None, reuse=None):
+    """
+    Implementation of NoisyNets : layer with gaussian noise on its weights and
+    biases. We use the Factorised Gaussian noise here (cf. paper)
+    """
+
+    with tf.variable_scope('noisy_layer', reuse=reuse):
+
+        def f(x):
+            return tf.multiply(tf.sign(x), tf.sqrt(tf.abs(x)))
+
+        # Input and output size
+        p = inputs.get_shape().as_list()[1]
+        q = units
+
+        # Weight initializer
+        init_lim = 1 / np.sqrt(p)
+        mu_init = tf.random_uniform_initializer(minval=-init_lim, 
+                                                maxval=init_lim)
+        sigma_init = tf.constant_initializer(0.5*init_lim)
+
+        # Factorised Gaussian noise generation
+        f_epsilon_i = f(tf.random_normal([p, 1]))
+        f_epsilon_j = f(tf.random_normal([1, q]))
+
+        epsilon_w = f_epsilon_i * f_epsilon_j
+        epsilon_b = tf.squeeze(f_epsilon_j)
+
+        # Weight noise
+        mu_w = tf.get_variable(name + '/mu_w', [p, q], initializer=mu_init,
+                               trainable=trainable)
+        sigma_w = tf.get_variable(name +'/sigma_w', [p, q], initializer=sigma_init,
+                                  trainable=trainable)
+        w = mu_w + sigma_w * epsilon_w
+
+        # Bias noise
+        mu_b = tf.get_variable(name + '/mu_b', [q], initializer=mu_init,
+                                trainable=trainable)
+        sigma_b = tf.get_variable(name +'/sigma_b', [q], initializer=sigma_init,
+                                  trainable=trainable)
+        b = mu_b + sigma_b * epsilon_b
+
+        return activation(tf.matmul(inputs, w) + b)
+
+
 def build_critic(states, trainable, reuse, scope):
 
-    params = {'trainable':trainable, 'reuse':reuse}
+    params = {'trainable': trainable, 'reuse': reuse}
 
     with tf.variable_scope(scope):
 
@@ -25,7 +80,7 @@ def build_critic(states, trainable, reuse, scope):
 
         # Fully connected layers
         for i, nb_neurons in enumerate(Settings.HIDDEN_LAYERS[:-1]):
-            layer = tf.layers.dense(layer, nb_neurons,
+            layer = fully_connected(layer, nb_neurons,
                                     activation=tf.nn.relu,
                                     name='dense_'+str(i),
                                     **params)
@@ -34,23 +89,23 @@ def build_critic(states, trainable, reuse, scope):
 
         if Settings.DUELING_DQN:
 
-            adv_stream = tf.layers.dense(layer, last_nb_neurons,
+            adv_stream = fully_connected(layer, last_nb_neurons,
                                          activation=tf.nn.relu,
                                          name='adv_stream', **params)
 
-            value_stream = tf.layers.dense(layer, last_nb_neurons,
-                                         activation=tf.nn.relu,
-                                         name='value_stream', **params)
+            value_stream = fully_connected(layer, last_nb_neurons,
+                                           activation=tf.nn.relu,
+                                           name='value_stream', **params)
 
             if Settings.DISTRIBUTIONAL:
                 # Advantage prediction
-                advantage = tf.layers.dense(adv_stream, Settings.NB_ATOMS * Settings.ACTION_SIZE,
+                advantage = fully_connected(adv_stream, Settings.NB_ATOMS * Settings.ACTION_SIZE,
                                             name='adv', **params)
                 advantage = tf.reshape(advantage, [-1, Settings.ACTION_SIZE, Settings.NB_ATOMS])
                 advantage_mean = tf.reduce_mean(advantage, axis=1, keepdims=True)
 
                 # Value prediction
-                value = tf.layers.dense(value_stream, Settings.NB_ATOMS,
+                value = fully_connected(value_stream, Settings.NB_ATOMS,
                                         name='value', **params)
                 value = tf.reshape(value, [-1, 1, Settings.NB_ATOMS])
     
@@ -58,16 +113,16 @@ def build_critic(states, trainable, reuse, scope):
                 return tf.nn.softmax(value + advantage - advantage_mean, axis=2)
 
             else:
-                advantage = tf.layers.dense(adv_stream, Settings.ACTION_SIZE,
+                advantage = fully_connected(adv_stream, Settings.ACTION_SIZE,
                                             name='adv', **params)
 
-                value = tf.layers.dense(value_stream, 1, name='value', **params)
+                value = fully_connected(value_stream, 1, name='value', **params)
                 advantage_mean = tf.reduce_mean(advantage, axis=1, keepdims=True)
                 # Qvalues
                 return value + tf.subtract(advantage, advantage_mean)
 
         else:
-            layer = tf.layers.dense(layer, last_nb_neurons, activation=tf.nn.relu,
+            layer = fully_connected(layer, last_nb_neurons, activation=tf.nn.relu,
                                     name='last_dense', **params)
 
             if Settings.DISTRIBUTIONAL:
@@ -75,7 +130,7 @@ def build_critic(states, trainable, reuse, scope):
                 # with softmax activation predicts the Q-value distribution
                 output = []
                 for i in range(Settings.ACTION_SIZE):
-                    output.append(tf.layers.dense(layer, Settings.NB_ATOMS,
+                    output.append(fully_connected(layer, Settings.NB_ATOMS,
                                                   activation=tf.nn.softmax,
                                                   name='output_' + str(i),
                                                   **params))
@@ -84,5 +139,5 @@ def build_critic(states, trainable, reuse, scope):
 
             else:
                 # Qvalues
-                return tf.layers.dense(layer, Settings.ACTION_SIZE,
+                return fully_connected(layer, Settings.ACTION_SIZE,
                                        name='output_layer', **params)

@@ -7,8 +7,8 @@ class Settings:
     ENV = "CartPole-v0"
 
     LOAD    = False
-    DISPLAY = False
-    GUI     = False
+    DISPLAY = True
+    GUI     = True
 
     TRAINING_EPS  = 7500
     PRE_TRAIN_EPS = 5000
@@ -21,11 +21,12 @@ class Settings:
     ###########################################################################
     # Switches
 
-    DOUBLE_DQN     = False
-    DUELING_DQN    = False
-    PRIORITIZED_ER = False
-    DISTRIBUTIONAL = False
-    N_STEP         = False
+    DOUBLE_DQN     = True
+    DUELING_DQN    = True
+    PRIORITIZED_ER = True
+    DISTRIBUTIONAL = True
+    NOISY          = True
+    N_STEP         = True
 
 
     ###########################################################################
@@ -101,10 +102,12 @@ class Settings:
 
     import gym
     setting_env = gym.make(ENV)
-    print()
-
+    
+    if 'CONV_LAYERS' in locals():
+        STATE_SIZE = [84, 84, 4]
+    else:
+        STATE_SIZE = list(setting_env.observation_space.shape)
     ACTION_SIZE = setting_env.action_space.n
-    STATE_SIZE = list(setting_env.observation_space.shape)
 
     del setting_env
 

@@ -120,8 +120,8 @@ class Agent:
 
             while episode_step <= max_step and not done:
 
-                # Exploration by epsilon-greedy policy
-                if random.random() < self.epsilon:
+                # Exploration by NoisyNets or epsilon-greedy policy
+                if not Settings.NOISY and random.random() < self.epsilon:
                     a = self.env.act_random()
                 else:
                     if Settings.DISTRIBUTIONAL:

@@ -79,7 +79,6 @@ class Settings:
 
     import gym
     setting_env = gym.make(ENV)
-    print()
 
     if 'CONV_LAYERS' in locals():
         STATE_SIZE = [84, 84, 4]

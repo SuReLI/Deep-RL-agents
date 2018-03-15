@@ -80,10 +80,12 @@ class Settings:
 
     import gym
     setting_env = gym.make(ENV)
-    print()
 
+    if 'CONV_LAYERS' in locals():
+        STATE_SIZE = [84, 84, 4]
+    else:
+        STATE_SIZE  = list(setting_env.observation_space.shape)
     ACTION_SIZE = setting_env.action_space.shape[0]
-    STATE_SIZE  = list(setting_env.observation_space.shape)
     LOW_BOUND   = setting_env.action_space.low
     HIGH_BOUND  = setting_env.action_space.high
 

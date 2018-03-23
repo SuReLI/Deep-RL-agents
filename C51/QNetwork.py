@@ -29,7 +29,7 @@ class QNetwork:
         self.sess = sess
 
         self.learning_rate = Settings.LEARNING_RATE
-        self.delta_lr = Settings.LEARNING_RATE / Settings.TRAINING_EPS
+        self.steps = 0
 
         # Batch placeholders
         self.state_ph = tf.placeholder(tf.float32, [None, *Settings.STATE_SIZE], name='state')
@@ -186,8 +186,8 @@ class QNetwork:
         """
         Method to decrease the network learning rate.
         """
-        if self.learning_rate > self.delta_lr:
-            self.learning_rate -= self.delta_lr
+        self.learning_rate = Settings.LEARNING_RATE * np.exp(-self.steps / Settings.TRAINING_EPS / 1000)
+        self.steps += 1
 
     def train(self, batch):
         """
@@ -199,3 +199,5 @@ class QNetwork:
                      self.next_state_ph: np.stack(batch[:, 3]),
                      self.not_done_ph: batch[:, 4]}
         self.sess.run(self.train_op, feed_dict=feed_dict)
+
+        self.decrease_lr()

@@ -8,10 +8,10 @@ class Settings:
 
     LOAD    = False
     DISPLAY = True
-    GUI     = True
+    GUI     = False
 
     TRAINING_EPS  = 7500
-    PRE_TRAIN_EPS = 5000
+    PRE_TRAIN_EPS = 5
 
     MAX_EPISODE_STEPS = 200
     FRAME_SKIP        = 0

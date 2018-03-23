@@ -36,10 +36,29 @@ class Agent:
         self.network = Network(sess)
         self.buffer = ExperienceBuffer()
 
+        self.create_summaries()
+
         self.best_run = -1e10
         self.n_gif = 0
 
         print("Agent initialized !")
+
+    def create_summaries(self):
+
+        self.ep_reward_ph = tf.placeholder(tf.float32)
+        ep_reward_summary = tf.summary.scalar("Episode/Episode reward", self.ep_reward_ph)
+
+        self.steps_ph = tf.placeholder(tf.float32)
+        steps_summary = tf.summary.scalar("Episode/Nb steps", self.steps_ph)
+
+        self.noise_ph = tf.placeholder(tf.float32)
+        noise_summary = tf.summary.scalar("Settings/Noise", self.noise_ph)
+
+        self.ep_summary = tf.summary.merge([ep_reward_summary,
+                                            noise_summary,
+                                            steps_summary])
+
+        self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
 
     def pre_train(self):
         """
@@ -147,6 +166,13 @@ class Agent:
             if self.gui.ep_reward.get(self.nb_ep):
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Final noise scale: %7.3f' %
                       (self.nb_ep, episode_reward, episode_step, noise_scale))
+
+            # Write the summary
+            feed_dict = {self.ep_reward_ph: episode_reward,
+                         self.noise_ph: noise_scale[0],
+                         self.steps_ph: episode_step}
+            summary = self.sess.run(self.ep_summary, feed_dict=feed_dict)
+            self.writer.add_summary(summary, self.nb_ep)
 
             # Save the model
             if self.gui.save.get(self.nb_ep):

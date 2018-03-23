@@ -44,10 +44,32 @@ class Agent:
         self.delta_z = (Settings.MAX_Q - Settings.MIN_Q) / (Settings.NB_ATOMS - 1)
         self.z = np.linspace(Settings.MIN_Q, Settings.MAX_Q, Settings.NB_ATOMS)
 
+        self.create_summaries()
+
         self.best_run = -1e10
         self.n_gif = 0
 
         print("Agent initialized !\n")
+
+    def create_summaries(self):
+
+        self.ep_reward_ph = tf.placeholder(tf.float32)
+        ep_reward_summary = tf.summary.scalar("Episode/Episode reward", self.ep_reward_ph)
+
+        self.steps_ph = tf.placeholder(tf.float32)
+        steps_summary = tf.summary.scalar("Episode/Nb steps", self.steps_ph)
+
+        self.epsilon_ph = tf.placeholder(tf.float32)
+        epsilon_summary = tf.summary.scalar("Settings/Epsilon", self.epsilon_ph)
+
+        self.ep_summary = tf.summary.merge([ep_reward_summary,
+                                            epsilon_summary,
+                                            steps_summary])
+
+        self.lr_ph = tf.placeholder(tf.float32)
+        self.lr_summary = tf.summary.scalar("Settings/Learning rate", self.lr_ph)
+
+        self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
 
     def pre_train(self):
         """
@@ -97,8 +119,8 @@ class Agent:
         self.pre_train()
         self.QNetwork.init_target()
 
-        self.total_steps = 0
         self.nb_ep = 1
+        learning_steps = 0
 
         while self.nb_ep < Settings.TRAINING_EPS and not self.gui.STOP:
 
@@ -159,9 +181,13 @@ class Agent:
                     self.buffer.update(idx, loss)
                     self.QNetwork.update_target()
 
+                    feed_dict = {self.lr_ph: self.QNetwork.learning_rate}
+                    summary = self.sess.run(self.lr_summary, feed_dict=feed_dict)
+                    self.writer.add_summary(summary, learning_steps)
+                    learning_steps += 1
+
                 s = s_
                 episode_step += 1
-                self.total_steps += 1
 
             # Decay epsilon
             if self.epsilon > Settings.EPSILON_STOP:
@@ -177,6 +203,13 @@ class Agent:
                       ', Max steps: %i, Learning rate: %fe-4' % (self.nb_ep,
                         episode_reward, episode_step, self.epsilon, max_step,
                         self.QNetwork.learning_rate*10e4))
+
+            # Write the summary
+            feed_dict = {self.ep_reward_ph: episode_reward,
+                         self.epsilon_ph: self.epsilon,
+                         self.steps_ph: episode_step}
+            summary = self.sess.run(self.ep_summary, feed_dict=feed_dict)
+            self.writer.add_summary(summary, self.nb_ep)
 
             # Save the model
             if self.gui.save.get(self.nb_ep):

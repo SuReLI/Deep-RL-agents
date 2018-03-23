@@ -209,7 +209,7 @@ class QNetwork:
         """
         Method to decrease the network learning rate.
         """
-        self.learning_rate = Settings.LEARNING_RATE * np.exp(-self.steps / Settings.TRAINING_EPS)
+        self.learning_rate = Settings.LEARNING_RATE * np.exp(-self.steps / Settings.TRAINING_EPS / 1000)
         self.steps += 1
 
     def train(self, batch, weights=None):

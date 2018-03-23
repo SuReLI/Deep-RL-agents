@@ -26,7 +26,7 @@ class Saver:
         print("Saving model", n_episode, "...")
 
         os.makedirs(os.path.dirname(Settings.MODEL_PATH), exist_ok=True)
-        self.saver.save(self.sess, Settings.MODEL_PATH + "Model_" + str(n_episode) + ".cptk")
+        self.saver.save(self.sess, Settings.MODEL_PATH + "Model_" + str(n_episode) + ".ckpt")
 
         print("Model saved !")
 

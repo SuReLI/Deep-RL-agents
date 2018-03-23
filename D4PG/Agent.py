@@ -30,7 +30,27 @@ class Agent:
         self.build_actor()
         self.build_update()
 
+        self.create_summaries()
+
         print("Agent initialized !\n")
+
+    def create_summaries(self):
+
+        self.ep_reward_ph = tf.placeholder(tf.float32)
+        ep_reward_summary = tf.summary.scalar("Episode/Episode reward", self.ep_reward_ph)
+
+        self.steps_ph = tf.placeholder(tf.float32)
+        steps_summary = tf.summary.scalar("Episode/Nb steps", self.steps_ph)
+
+        self.noise_ph = tf.placeholder(tf.float32)
+        noise_summary = tf.summary.scalar("Settings/Noise", self.noise_ph)
+
+        self.ep_summary = tf.summary.merge([ep_reward_summary,
+                                            noise_summary,
+                                            steps_summary])
+
+        self.writer = tf.summary.FileWriter(f"./logs/Agent_{self.n_agent}",
+                                            self.sess.graph)
 
     def build_actor(self):
         """
@@ -130,7 +150,14 @@ class Agent:
 
                 plot = (self.n_agent == 1 and self.gui.plot.get(self.nb_ep))
                 self.displayer.add_reward(episode_reward, self.n_agent, plot=plot)
-            
+
+                # Write the summary
+                feed_dict = {self.ep_reward_ph: episode_reward,
+                             self.noise_ph: noise_scale,
+                             self.steps_ph: episode_step}
+                summary = self.sess.run(self.ep_summary, feed_dict=feed_dict)
+                self.writer.add_summary(summary, self.nb_ep)
+
                 self.nb_ep += 1
 
         self.env.close()

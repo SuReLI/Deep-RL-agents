@@ -2,12 +2,17 @@
 import os
 
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib
 
 from settings import Settings
 
 if Settings.DISPLAY:
+    import matplotlib.pyplot as plt
     plt.ion()     # Set matplotlib to interactive mode (to display in real-time)
+
+else:
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
 
 
 class Displayer:

@@ -8,6 +8,10 @@ Requirements :
 - tensorflow-gpu >= 1.5
 
 
+For the Supervised benchmark, the number of GPUs used can be set with the option --nb_gpu n (for example "python main.py --nb_gpu 2").
+The GPUs used will be the 0th to the (n-1)th.
+
+
 Reinforcement :
     After initializing the network, the algorithm will apply gradient descents and print the time spent every 100 descents.
 

@@ -194,6 +194,10 @@ class DCGAN:
         if not os.path.exists('./results'):
             os.mkdir('./results')
 
+        # Run just once to initialize ops and don't mess the time of the first batch
+        self.sess.run([self.D_train, self.G_train, self.summary],
+                      feed_dict={self.inputs: X[:self.real_batch_size]})
+
         start_time = time.time()
         for epoch in range(1, epochs+1):
             print(f"Epoch : {epoch} / {epochs}")

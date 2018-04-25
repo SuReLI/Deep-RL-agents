@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(map(str, range(args.nb_gpu)))
 
-    config = tf.ConfigProto(log_device_placement=True,
+    config = tf.ConfigProto(log_device_placement=False,
                             device_count={"CPU":cpu_count()-1, "GPU":args.nb_gpu})
 
     sess = tf.InteractiveSession(config=config)

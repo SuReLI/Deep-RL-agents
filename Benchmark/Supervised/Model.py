@@ -17,7 +17,7 @@ class DCGAN:
         self.G_learning_rate = 2e-4
         self.batch_size = batch_size
         self.nb_gpu = nb_gpu
-        self.real_batch_size = batch_size * nb_gpu
+        self.real_batch_size = batch_size * max(nb_gpu, 1)
         self.fixed_noise = np.random.uniform(-1, 1, (batch_size, 1, 1, 100))
 
         self.global_step = tf.get_variable('global_step', [],
@@ -147,20 +147,33 @@ class DCGAN:
 
         self.generators = []
 
-        for i in range(self.nb_gpu):
+        # If no GPU are available
+        if self.nb_gpu == 0:
 
-            with tf.device(f'/gpu:{i}'), tf.name_scope(f'Tower_{i}') as scope:
+            D_loss, G_loss, D_vars, G_vars, summary = self.build_tower(0, self.inputs, self.z)
 
-                next_batch = self.inputs[i*self.batch_size:(i+1)*self.batch_size]
+            tf.get_variable_scope().reuse_variables()
 
-                D_loss, G_loss, D_vars, G_vars, summary = self.build_tower(i, next_batch, self.z)
+            D_grads.append(D_optimizer.compute_gradients(D_loss, var_list=D_vars))
+            G_grads.append(G_optimizer.compute_gradients(G_loss, var_list=G_vars))
 
-                tf.get_variable_scope().reuse_variables()
+            summaries.append(summary)
 
-                D_grads.append(D_optimizer.compute_gradients(D_loss, var_list=D_vars))
-                G_grads.append(G_optimizer.compute_gradients(G_loss, var_list=G_vars))
+        else:
+            for i in range(self.nb_gpu):
 
-                summaries.append(summary)
+                with tf.device(f'/gpu:{i}'), tf.name_scope(f'Tower_{i}') as scope:
+
+                    next_batch = self.inputs[i*self.batch_size:(i+1)*self.batch_size]
+
+                    D_loss, G_loss, D_vars, G_vars, summary = self.build_tower(i, next_batch, self.z)
+
+                    tf.get_variable_scope().reuse_variables()
+
+                    D_grads.append(D_optimizer.compute_gradients(D_loss, var_list=D_vars))
+                    G_grads.append(G_optimizer.compute_gradients(G_loss, var_list=G_vars))
+
+                    summaries.append(summary)
 
         with tf.variable_scope('optimization', reuse=tf.AUTO_REUSE):
 

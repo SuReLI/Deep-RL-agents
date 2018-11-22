@@ -1,4 +1,7 @@
 
+import signal
+import threading
+
 import tensorflow as tf
 import numpy as np
 import random
@@ -32,8 +35,10 @@ class Agent:
 
         self.sess = sess
         self.gui = gui
+        self.gui_thread = threading.Thread(target=self.gui.run)
         self.displayer = displayer
         self.saver = saver
+        signal.signal(signal.SIGINT, self.interrupt)
 
         self.env = Environment()
         self.QNetwork = QNetwork(sess)
@@ -118,6 +123,7 @@ class Agent:
 
         self.pre_train()
         self.QNetwork.init_target()
+        self.gui_thread.start()
 
         self.nb_ep = 1
         learning_steps = 0
@@ -217,7 +223,10 @@ class Agent:
 
             self.nb_ep += 1
 
+        print("Training completed !")
         self.env.close()
+        self.display()
+        self.gui_thread.join()
 
     def play(self, number_run, name=None):
         """
@@ -257,5 +266,11 @@ class Agent:
             print("End of the demo")
             self.env.close()
 
+    def display(self):
+        self.displayer.disp()
+
     def stop(self):
         self.env.close()
+
+    def interrupt(self, sig, frame):
+        self.gui.stop_run()

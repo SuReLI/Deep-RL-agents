@@ -115,7 +115,7 @@ class Interface:
     Defines the main tkinter window that wraps the different Features.
     """
 
-    def __init__(self, features):
+    def __init__(self, features=None):
         """
         Build the tkinter window.
 
@@ -132,6 +132,8 @@ class Interface:
                     - save : save the weights of the network
         """
 
+        if features is None:
+            features = ['ep_reward', 'plot', 'render', 'gif', 'save']
         features = " ".join(features).lower()
         self.list_features = []
 
@@ -139,7 +141,7 @@ class Interface:
             self.ep_reward = Feature('EP REWARD', Settings.EP_REWARD_FREQ, 'display')
             self.list_features.append(self.ep_reward)
 
-        if ' plot ' in features:
+        if ' plot' in features or features.endswith(' plot'):
             self.plot = Feature('PLOT', Settings.PLOT_FREQ, 'update')
             self.list_features.append(self.plot)
 
@@ -166,8 +168,10 @@ class Interface:
         """
         Method that kills the current GUI and request the algorithm to stop.
         """
+        print("Stopping the run...")
         self.STOP = True
-        self.window.destroy()
+        if Settings.GUI:
+            self.window.quit()
 
     def run(self):
         """

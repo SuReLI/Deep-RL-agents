@@ -4,7 +4,6 @@ import sys
 s = "/".join(os.getcwd().split("/")[:-1]) + '/utils'
 sys.path.append(s)                  # Include utils module
 
-import threading
 import tensorflow as tf
 
 from Agent import Agent
@@ -27,26 +26,18 @@ if __name__ == '__main__':
         features = ['ep_reward', 'plot', 'render', 'gif', 'save']
         if Settings.DISTRIBUTIONAL:
             features.append('plot_distrib')
-
         gui = GUI.Interface(features)
-        gui_thread = threading.Thread(target=gui.run)
 
         agent = Agent(sess, gui, displayer, saver)
 
         if not saver.load():
             sess.run(tf.global_variables_initializer())
 
-        gui_thread.start()
-        try:
-            agent.run()
-        except KeyboardInterrupt:
-            pass
-        print("End of the run")
+        agent.run()
 
         saver.save(agent.nb_ep)
-        displayer.disp()
+        agent.display()
 
-        gui_thread.join()
         # agent.play(3)
 
     agent.stop()

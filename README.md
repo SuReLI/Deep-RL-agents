@@ -24,13 +24,6 @@ Others directories include :
 - **GIF** : a set of GIF saved after having trained different agents on many environments
 
 
-# TODO
-
-New file: define the architecture of a super-rainbow (discrete actions) with switches and super-DDPG (continuous actions) with switches.
-
-New files: benchmarks for CPU/GPU tests.
-
-
 [A3C]: https://arxiv.org/pdf/1602.01783.pdf
 [C51]: https://arxiv.org/pdf/1707.06887.pdf
 [DDPG]: https://arxiv.org/pdf/1509.02971.pdf

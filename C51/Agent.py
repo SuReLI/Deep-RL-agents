@@ -34,7 +34,7 @@ class Agent:
 
         self.sess = sess
         self.gui = gui
-        self.gui_thread = threading.Thread(target=self.gui.run)
+        self.gui_thread = threading.Thread(target=lambda: self.gui.run(self))
         self.displayer = displayer
         self.saver = saver
         signal.signal(signal.SIGINT, self.interrupt)
@@ -204,45 +204,35 @@ class Agent:
         print("Training completed !")
         self.env.close()
         self.display()
+        self.gui.end_training()
         self.gui_thread.join()
 
-    def play(self, number_run, name=None):
+    def play(self, number_run=1, gif=False, name=None):
         """
         Method to evaluate the policy without exploration.
 
         Args:
             number_run: the number of episodes to perform
+            gif       : whether to save a gif or not
             name      : the name of the gif that will be saved
         """
-        print("Playing for", number_run, "runs")
-
         self.env.set_render(Settings.DISPLAY)
-        try:
-            for i in range(number_run):
+        for i in range(number_run):
 
-                s = self.env.reset()
-                episode_reward = 0
-                done = False
-                self.env.set_gif(True, name)
+            s = self.env.reset()
+            episode_reward = 0
+            done = False
+            self.env.set_gif(gif, name)
 
-                while not done:
-                    Qdistrib = self.QNetwork.act(s)
-                    Qvalue = np.sum(self.z * Qdistrib, axis=1)
-                    a = np.argmax(Qvalue, axis=0)
-                    s, r, done, info = self.env.act(a)
+            while not done:
+                Qdistrib = self.QNetwork.act(s)
+                Qvalue = np.sum(self.z * Qdistrib, axis=1)
+                a = np.argmax(Qvalue, axis=0)
+                s, r, done, info = self.env.act(a)
+                episode_reward += r
 
-                    episode_reward += r
-
-                print("Episode reward :", episode_reward)
-
-        except KeyboardInterrupt as e:
-            pass
-
-        except Exception as e:
-            print("Exception :", e)
-
-        finally:
-            print("End of the demo")
+            if gif: self.env.save_gif()
+            print("Episode reward :", episode_reward)
 
     def display(self):
         self.displayer.disp()

@@ -58,10 +58,10 @@ if __name__ == '__main__':
         buffer = ExperienceBuffer()
 
         gui = GUI.Interface(['ep_reward', 'plot', 'render', 'gif', 'save'])
-        gui_thread = threading.Thread(target=gui.run)
 
+        main_agent = Agent(sess, 0, gui, displayer, buffer)
         threads = []
-        for i in range(Settings.NB_ACTORS):
+        for i in range(1, Settings.NB_ACTORS):
             agent = Agent(sess, i, gui, displayer, buffer)
             threads.append(threading.Thread(target=agent.run))
 
@@ -72,18 +72,13 @@ if __name__ == '__main__':
         if not saver.load():
             sess.run(tf.global_variables_initializer())
 
+        gui_thread = threading.Thread(target=lambda: gui.run(main_agent))
         gui_thread.start()
         for t in threads:
             t.start()
 
         print("Running...")
-
-        try:
-            while not gui.STOP:
-                time.sleep(1)
-
-        except KeyboardInterrupt:
-            pass
+        main_agent.run()
 
         for t in threads:
             t.join()

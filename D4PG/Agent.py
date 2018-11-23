@@ -1,4 +1,6 @@
 
+import signal
+
 import tensorflow as tf
 import numpy as np
 from collections import deque
@@ -24,6 +26,9 @@ class Agent:
         self.gui = gui
         self.displayer = displayer
         self.buffer = buffer
+
+        if self.n_agent == 0:
+            signal.signal(signal.SIGINT, self.interrupt)
 
         self.env = Environment()
 
@@ -110,8 +115,8 @@ class Agent:
             noise_scale = Settings.NOISE_SCALE * Settings.NOISE_DECAY**(self.nb_ep//20)
 
             # Render Settings
-            self.env.set_render(self.gui.render.get(self.nb_ep))
-            self.env.set_gif(self.gui.gif.get(self.nb_ep))
+            self.env.set_render(self.n_agent == 0 and self.gui.render.get(self.nb_ep))
+            self.env.set_gif(self.n_agent == 0 and self.gui.gif.get(self.nb_ep))
 
             while episode_step < max_step and not done and not self.gui.STOP:
 
@@ -145,10 +150,10 @@ class Agent:
                 self.sess.run(self.update)
 
             if not self.gui.STOP:
-                if self.n_agent == 1 and self.gui.ep_reward.get(self.nb_ep):
+                if self.n_agent == 0 and self.gui.ep_reward.get(self.nb_ep):
                     print("Episode %i : reward %i, steps %i, noise scale %f" % (self.nb_ep, episode_reward, episode_step, noise_scale))
 
-                plot = (self.n_agent == 1 and self.gui.plot.get(self.nb_ep))
+                plot = (self.n_agent == 0 and self.gui.plot.get(self.nb_ep))
                 self.displayer.add_reward(episode_reward, self.n_agent, plot=plot)
 
                 # Write the summary
@@ -161,3 +166,33 @@ class Agent:
                 self.nb_ep += 1
 
         self.env.close()
+
+    def play(self, number_run=1, gif=False, name=None):
+        """
+        Method to evaluate the policy without exploration.
+
+        Args:
+            number_run: the number of episodes to perform
+            gif       : whether to save a gif or not
+            name      : the name of the gif that will be saved
+        """        
+        self.env.set_render(Settings.DISPLAY)
+
+        for i in range(number_run):
+
+            s = self.env.reset()
+            episode_reward = 0
+            done = False
+            self.env.set_gif(gif, name)
+
+            while not done:
+                a = np.clip(self.predict_action(s),
+                            Settings.LOW_BOUND, Settings.HIGH_BOUND)
+                s, r, done, info = self.env.act(a)
+                episode_reward += r
+
+            if gif: self.env.save_gif()
+            print("Episode reward :", episode_reward)
+
+    def interrupt(self, sig, frame):
+        self.gui.stop_run()

@@ -57,6 +57,12 @@ class Feature:
         self.freq_entry.grid(column=Feature.nb_features, row=3)
         Feature.nb_features += 1
 
+    def remove(self):
+        self.label.grid_remove()
+        self.update.grid_remove()
+        self.switch.grid_remove()
+        self.freq_entry.grid_remove()
+
     def update_cmd(self):
         """
         The command bound to the update button to activate the Feature once.
@@ -164,21 +170,41 @@ class Interface:
 
         self.STOP = False
 
+    def end_training(self):
+        """
+        Method that end the training and display only three buttons : play a 
+        run in the environment, save a gif or exit all.
+        """
+        print("Stopping the training...")
+        if self.STOP:
+            return
+        self.STOP = True
+
+        if Settings.DISPLAY and Settings.GUI:
+            for feature in self.list_features:
+                feature.remove()
+            self.play_button.grid_remove()
+
+            play_button = Button(self.window, text='Play', command=self.agent.play)
+            gif_button = Button(self.window, text='Gif', command=lambda: self.agent.play(gif=True))
+
+            play_button.grid(column=0, row=0)
+            gif_button.grid(column=1, row=0)
+
     def stop_run(self):
         """
         Method that kills the current GUI and request the algorithm to stop.
         """
         print("Stopping the run...")
         self.STOP = True
-        if Settings.GUI:
+        if Settings.DISPLAY and Settings.GUI:
             self.window.quit()
 
-    def run(self):
+    def run(self, agent):
         """
         Method that display the GUI and run the main event-loop.
         """
-
-        if Settings.GUI:
+        if Settings.DISPLAY and Settings.GUI:
             self.window = Tk()
             self.window.title("Control Panel")
             self.window.attributes('-topmost', 1)
@@ -186,9 +212,13 @@ class Interface:
             for feature in self.list_features:
                 feature.build(self.window)
 
-            # Build the stop button
+            # Build the play and stop buttons
+            self.agent = agent
+            self.play_button = Button(self.window, text='Stop training and play', command=self.end_training)
+            self.play_button.grid(column=0, row=4, columnspan=Feature.nb_features, sticky='NSEW')
+
             stop_button = Button(self.window, text='Stop the Run', command=self.stop_run)
-            stop_button.grid(column=0, row=4, columnspan=Feature.nb_features, sticky='NSEW')
+            stop_button.grid(column=0, row=5, columnspan=Feature.nb_features, sticky='NSEW')
 
             self.window.mainloop()
 

@@ -18,7 +18,7 @@ def switch_file(event):
     disp()
 
 def read(name, pos):
-    img = mpimg.imread('results_'+name+'/Reward'+str(FILE)+'.png')
+    img = mpimg.imread('switch_results_'+name+'/Reward'+str(FILE)+'.png')
     plt.subplot(*pos)
     plt.axis('off')
     plt.imshow(img)

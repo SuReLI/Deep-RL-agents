@@ -157,7 +157,7 @@ class Agent:
                         Qvalue = np.sum(self.z * Qdistrib, axis=1)
                     else:
                         Qvalue = self.QNetwork.act(s)
-                    
+
                     a = np.argmax(Qvalue, axis=0)
 
                     if plot_distrib:
@@ -167,15 +167,19 @@ class Agent:
                 s_, r, done, info = self.env.act(a)
                 episode_reward += r
 
-                memory.append((s, a, r))
+                memory.append((s, a, r, s_, done))
 
                 # Keep the experience in memory until 'N_STEP_RETURN' steps has
                 # passed to get the delayed return r_1 + ... + gamma^n r_n
-                if len(memory) > Settings.N_STEP_RETURN:
-                    s_mem, a_mem, discount_R = memory.popleft()
-                    for i, (si, ai, ri) in enumerate(memory):
-                        discount_R += ri * Settings.DISCOUNT ** (i + 1)
-                    self.buffer.add((s_mem, a_mem, discount_R, s_, 1 if not done else 0))
+                while len(memory) >= Settings.N_STEP_RETURN or (memory and memory[-1][4]):
+                    s_mem, a_mem, discount_R, si_, done_ = memory.popleft()
+                    if not done_ and memory:
+                        for i in range(Settings.N_STEP_RETURN-1):
+                            si, ai, ri, si_, done_ = memory[i]
+                            discount_R += ri * Settings.DISCOUNT ** (i + 1)
+                            if done_:
+                                break
+                    self.buffer.add((s_mem, a_mem, discount_R, si_, 1 if not done_ else 0))
 
                 if episode_step % Settings.TRAINING_FREQ == 0:
                     if Settings.PRIORITIZED_ER:
@@ -202,13 +206,13 @@ class Agent:
             self.displayer.add_reward(episode_reward, plot=self.gui.plot.get(self.nb_ep))
             # if episode_reward > self.best_run:
             #     self.save_best(episode_reward)
-            
+
             # Episode display
             if self.gui.ep_reward.get(self.nb_ep):
                 print('Episode %2i, Reward: %7.3f, Steps: %i, Epsilon: %f'
                       ', Max steps: %i, Learning rate: %fe-4' % (self.nb_ep,
                         episode_reward, episode_step, self.epsilon, max_step,
-                        self.QNetwork.learning_rate*10e4))
+                        self.QNetwork.learning_rate*1e4))
 
             # Write the summary
             feed_dict = {self.ep_reward_ph: episode_reward,

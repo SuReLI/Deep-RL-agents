@@ -10,8 +10,8 @@ class Settings:
     DISPLAY = True
     GUI     = True
 
-    TRAINING_EPS  = 150
-    PRE_TRAIN_EPS = 5
+    TRAINING_EPS  = 500
+    PRE_TRAIN_EPS = 50
 
     MAX_EPISODE_STEPS = 200
     FRAME_SKIP        = 0
@@ -52,21 +52,21 @@ class Settings:
     DISCOUNT_N    = DISCOUNT ** N_STEP_RETURN
 
     MIN_Q = 0
-    MAX_Q = 200
+    MAX_Q = 10
 
-    BUFFER_SIZE = 100000
+    BUFFER_SIZE = 1000000
     BATCH_SIZE  = 64
 
-    TRAINING_FREQ      = 4
+    TRAINING_FREQ      = 1
     UPDATE_TARGET_RATE = 0.001
 
 
     ###########################################################################
     # Exploration settings
 
-    EPSILON_START = 0.6
+    EPSILON_START = 0.8
     EPSILON_STOP  = 0.01
-    EPSILON_STEPS = 5000
+    EPSILON_STEPS = 300
     EPSILON_DECAY = (EPSILON_START - EPSILON_STOP) / EPSILON_STEPS
     
 
